@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
-		<TargetFramework Condition="'$(OS)' == 'Windows_NT'">net8.0-windows10.0.17763.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework Condition="'$(OS)' == 'Windows_NT'">net8.0-windows10.0.17763.0</TargetFramework>
         <Nullable>annotations</Nullable>
-		<BuiltInComInteropSupport Condition="'$(OS)' == 'Windows_NT'">true</BuiltInComInteropSupport>
-		<PublishSingleFile>true</PublishSingleFile>
-		<Platforms>x64</Platforms>
+        <BuiltInComInteropSupport Condition="'$(OS)' == 'Windows_NT'">true</BuiltInComInteropSupport>
+        <PublishSingleFile>true</PublishSingleFile>
+        <Platforms>x64</Platforms>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
@@ -20,19 +20,19 @@
     </ItemGroup>
 
 
-	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
-		<PackageReference Update="Packaging.Targets">
-		  <Version>0.1.232</Version>
-		</PackageReference>
-		<PackageReference Include="SharpDX" Version="4.2.0" />
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+        <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+        <PackageReference Update="Packaging.Targets">
+            <Version>0.1.232</Version>
+        </PackageReference>
+        <PackageReference Include="SharpDX" Version="4.2.0" />
         <PackageReference Include="SharpDX.Direct3D12" Version="4.2.0" />
-	</ItemGroup>
+    </ItemGroup>
 
     <PropertyGroup>
         <NoWarn>NU1701</NoWarn>
     </PropertyGroup>
-	
+
     <!-- Version -->
     <PropertyGroup>
         <ApplicationRevision>0</ApplicationRevision>
@@ -45,39 +45,39 @@
 
     <!-- Build and Publish -->
     <PropertyGroup>
-		<DebianPackageDependencies>dotnet-runtime-8.0;libc6;libgtk-3-0</DebianPackageDependencies>
-        <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;win-arm64;linux-arm64;osx-arm64</RuntimeIdentifiers> 
-		<OutputPath>..\bin\$(Platform)\$(Configuration)\</OutputPath>
-		<IntermediateOutputPath>obj\$(Platform)\$(Configuration)\$(TargetFramework)\</IntermediateOutputPath>
+        <DebianPackageDependencies>dotnet-runtime-8.0;libc6;libgtk-3-0</DebianPackageDependencies>
+        <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;win-arm64;linux-arm64;osx-arm64</RuntimeIdentifiers>
+        <OutputPath>..\bin\$(Platform)\$(Configuration)\</OutputPath>
+        <IntermediateOutputPath>obj\$(Platform)\$(Configuration)\$(TargetFramework)\</IntermediateOutputPath>
         <PublishReadyToRun>false</PublishReadyToRun>
         <PublishSingleFile>true</PublishSingleFile>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishTrimmed>false</PublishTrimmed>
         <SelfContained>false</SelfContained>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<GenerateResource>Always</GenerateResource>
-		<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+        <GenerateResource>Always</GenerateResource>
+        <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.3" />
+        <PackageReference Include="Avalonia" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.2" />
         <PackageReference Include="AvaloniaEdit.TextMate" Version="11.3.0" />
         <PackageReference Include="AvaloniaExtensions.Axaml" Version="1.0.4.1" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		<PackageReference Include="Avalonia.Xaml.Interactions" Version="11.3.0.6" />
-		<PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.3.0.6" />
+        <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.3.0.6" />
+        <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.3.0.6" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-		<PackageReference Include="DesktopNotifications.Windows" Version="1.3.1" />
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.3" />
+        <PackageReference Include="DesktopNotifications.Windows" Version="1.3.1" />
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.2" />
         <PackageReference Include="CalcBindingAva" Version="2.5.3" />
-		<PackageReference Include="DesktopNotifications.Apple" Version="1.3.1" />
+        <PackageReference Include="DesktopNotifications.Apple" Version="1.3.1" />
         <PackageReference Include="DesktopNotifications.Avalonia" Version="1.3.1" />
         <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="1.1.303" />
         <PackageReference Include="Maa.AgentBinary" Version="1.1.0" />
@@ -88,14 +88,14 @@
         <PackageReference Include="Maa.Framework.Runtimes" Version="4.4.1" />
         <PackageReference Include="MailKit" Version="4.13.0" />
         <PackageReference Include="Markdown.Avalonia" Version="11.0.3-a1" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.2.25163.2" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.0-preview.2.25163.2" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.2.25163.2" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.2.25163.2" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.0-preview.2.25163.2" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.2.25163.2" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.2.25163.2" />
         <PackageReference Include="NETCore.Encrypt" Version="2.1.1" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -105,110 +105,110 @@
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
         <PackageReference Include="SharpCompress" Version="0.40.0" />
         <PackageReference Include="SharpHook" Version="6.2.0" />
-		<PackageReference Include="SkiaSharp" Version="3.119.0" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.7" />
+        <PackageReference Include="SkiaSharp" Version="3.119.0" />
+        <PackageReference Include="System.Drawing.Common" Version="9.0.7" />
         <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.7" />
         <PackageReference Include="System.Management" Version="10.0.0-preview.2.25163.2" />
 
-		<ProjectReference Include="../LazyStaticGenerator/LazyStaticGenerator.csproj" OutputItemType="Analyzer" ExcludeAssets="runtime;build;native;contentfiles" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="../LazyStaticGenerator/LazyStaticGenerator.csproj" OutputItemType="Analyzer" ExcludeAssets="runtime;build;native;contentfiles" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\MFAUpdater\MFAUpdater.csproj" />
 
-	    <ProjectReference Include="../SukiUI/SukiUI.csproj" />
-	</ItemGroup>
-	<PropertyGroup>
-		<LazyStaticGeneratedDir>$(BaseIntermediateOutputPath)\LazyStaticGenerated</LazyStaticGeneratedDir>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-	</PropertyGroup>
-
-	<ItemGroup>
-		<Compile Include="$(LazyStaticGeneratedDir)/**/*.cs" Condition="'$(EnableLazyStaticGenerator)' == 'true'" />
-		<Compile Update="Assets\Localization\LangKeys.cs">
-		  <AutoGen>True</AutoGen>
-		  <DesignTime>True</DesignTime>
-		  <DependentUpon>LangKeys.tt</DependentUpon>
-		</Compile>
-		<Compile Update="Assets\Localization\Strings.Designer.cs">
-		  <DesignTime>True</DesignTime>
-		  <AutoGen>True</AutoGen>
-		  <DependentUpon>Strings.resx</DependentUpon>
-		</Compile>
-		<Compile Update="Helper\LangKeys.cs">
-		  <AutoGen>True</AutoGen>
-		  <DesignTime>True</DesignTime>
-		  <DependentUpon>LangKeys.tt</DependentUpon>
-		</Compile>
-		<Compile Update="Views\Pages\ScreenshotView.axaml.cs">
-		  <DependentUpon>ScreenshotView.axaml</DependentUpon>
-		  <SubType>Code</SubType>
-		</Compile>
-	</ItemGroup>
-    <ItemGroup>
-      <Compile Update="Assets\Localization\Strings.Designer.cs">
-        <DesignTime>True</DesignTime>
-        <AutoGen>True</AutoGen>
-        <DependentUpon>Strings.resx</DependentUpon>
-      </Compile>
+        <ProjectReference Include="../SukiUI/SukiUI.csproj" />
     </ItemGroup>
-	
-	<ItemGroup>
-		<Content Include="..\cliff.toml">
-		  <Link>cliff.toml</Link>
-		</Content>
-		<Content Include="..\README_en.md">
-		  <Link>README_en.md</Link>
-		</Content>
-		<Content Include="MFAAvalonia.desktop" CopyToPublishDirectory="PreserveNewest">
-			<LinuxPath>/usr/share/applications/MFAAvalonia.desktop</LinuxPath>
-		</Content>
-		<Content Include="Assets/logo.ico" CopyToPublishDirectory="PreserveNewest">
-			<LinuxPath>/usr/share/icons/MFAAvalonia.ico</LinuxPath>
-		</Content>
-	</ItemGroup>
+    <PropertyGroup>
+        <LazyStaticGeneratedDir>$(BaseIntermediateOutputPath)\LazyStaticGenerated</LazyStaticGeneratedDir>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="..\README.md">
-        <Link>README.md</Link>
-      </Content>
+        <Compile Include="$(LazyStaticGeneratedDir)/**/*.cs" Condition="'$(EnableLazyStaticGenerator)' == 'true'" />
+        <Compile Update="Assets\Localization\LangKeys.cs">
+            <AutoGen>True</AutoGen>
+            <DesignTime>True</DesignTime>
+            <DependentUpon>LangKeys.tt</DependentUpon>
+        </Compile>
+        <Compile Update="Assets\Localization\Strings.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Strings.resx</DependentUpon>
+        </Compile>
+        <Compile Update="Helper\LangKeys.cs">
+            <AutoGen>True</AutoGen>
+            <DesignTime>True</DesignTime>
+            <DependentUpon>LangKeys.tt</DependentUpon>
+        </Compile>
+        <Compile Update="Views\Pages\ScreenshotView.axaml.cs">
+            <DependentUpon>ScreenshotView.axaml</DependentUpon>
+            <SubType>Code</SubType>
+        </Compile>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Update="Assets\Localization\Strings.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Strings.resx</DependentUpon>
+        </Compile>
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Assets\Localization\LangKeys.tt">
-        <Generator>TextTemplatingFileGenerator</Generator>
-        <LastGenOutput>LangKeys.cs</LastGenOutput>
-      </None>
-      <None Update="Helper\LangKeys.tt">
-        <Generator>TextTemplatingFileGenerator</Generator>
-        <LastGenOutput>LangKeys.cs</LastGenOutput>
-      </None>
+        <Content Include="..\cliff.toml">
+            <Link>cliff.toml</Link>
+        </Content>
+        <Content Include="..\README_en.md">
+            <Link>README_en.md</Link>
+        </Content>
+        <Content Include="MFAAvalonia.desktop" CopyToPublishDirectory="PreserveNewest">
+            <LinuxPath>/usr/share/applications/MFAAvalonia.desktop</LinuxPath>
+        </Content>
+        <Content Include="Assets/logo.ico" CopyToPublishDirectory="PreserveNewest">
+            <LinuxPath>/usr/share/icons/MFAAvalonia.ico</LinuxPath>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Update="Assets\Localization\Strings.resx">
-        <Generator>PublicResXFileCodeGenerator</Generator>
-        <LastGenOutput>Strings.Designer.cs</LastGenOutput>
-      </EmbeddedResource>
+        <Content Include="..\README.md">
+            <Link>README.md</Link>
+        </Content>
     </ItemGroup>
-	<Target Name="CopyUpdaterAfterPublish" AfterTargets="Publish">
-	  <PropertyGroup>
-		<!-- 标准化路径分隔符 -->
-		<UpdaterOutputDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)\..\MFAUpdater\bin\$(Configuration)\net8.0\$(RuntimeIdentifier)'))</UpdaterOutputDir>
-	    <UpdaterPublishOutputDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)\..\MFAUpdater\bin\$(Configuration)\net8.0\$(RuntimeIdentifier)\publish'))</UpdaterPublishOutputDir>
-		<MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
-	  </PropertyGroup>
+
+    <ItemGroup>
+        <None Update="Assets\Localization\LangKeys.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>LangKeys.cs</LastGenOutput>
+        </None>
+        <None Update="Helper\LangKeys.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>LangKeys.cs</LastGenOutput>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Update="Assets\Localization\Strings.resx">
+            <Generator>PublicResXFileCodeGenerator</Generator>
+            <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+    <Target Name="CopyUpdaterAfterPublish" AfterTargets="Publish">
+        <PropertyGroup>
+            <!-- 标准化路径分隔符 -->
+            <UpdaterOutputDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)\..\MFAUpdater\bin\$(Configuration)\net8.0\$(RuntimeIdentifier)'))</UpdaterOutputDir>
+            <UpdaterPublishOutputDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)\..\MFAUpdater\bin\$(Configuration)\net8.0\$(RuntimeIdentifier)\publish'))</UpdaterPublishOutputDir>
+            <MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
+        </PropertyGroup>
 
 
-	  <!-- 平台智能匹配 -->
-	  <ItemGroup>
-		<!-- Windows 匹配 .exe -->
-		<WinUpdaterFiles Include="$(UpdaterPublishOutputDir)MFAUpdater.exe" Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-arm64'" />
-		
-		<!-- Linux/macOS 匹配无扩展名文件 -->
-		<UnixUpdaterFiles Include="$(UpdaterPublishOutputDir)MFAUpdater" Condition="'$(RuntimeIdentifier)' == 'linux-x64' OR '$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'linux-arm64' OR '$(RuntimeIdentifier)' == 'osx-arm64'" />
-	  </ItemGroup>
+        <!-- 平台智能匹配 -->
+        <ItemGroup>
+            <!-- Windows 匹配 .exe -->
+            <WinUpdaterFiles Include="$(UpdaterPublishOutputDir)MFAUpdater.exe" Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-arm64'" />
 
-	  <!-- 执行复制操作 -->
-	  <Copy SourceFiles="@(WinUpdaterFiles);@(UnixUpdaterFiles)" DestinationFolder="$(MainPublishDir)" OverwriteReadOnlyFiles="true" />
-	  
-	  <Exec Condition="'$(OS)' != 'Windows_NT' AND '$(RuntimeIdentifier)' != 'win-x64'" Command="chmod +x '$(MainPublishDir)/MFAUpdater'" />
-	</Target>
+            <!-- Linux/macOS 匹配无扩展名文件 -->
+            <UnixUpdaterFiles Include="$(UpdaterPublishOutputDir)MFAUpdater" Condition="'$(RuntimeIdentifier)' == 'linux-x64' OR '$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'linux-arm64' OR '$(RuntimeIdentifier)' == 'osx-arm64'" />
+        </ItemGroup>
+
+        <!-- 执行复制操作 -->
+        <Copy SourceFiles="@(WinUpdaterFiles);@(UnixUpdaterFiles)" DestinationFolder="$(MainPublishDir)" OverwriteReadOnlyFiles="true" />
+
+        <Exec Condition="'$(OS)' != 'Windows_NT' AND '$(RuntimeIdentifier)' != 'win-x64'" Command="chmod +x '$(MainPublishDir)/MFAUpdater'" />
+    </Target>
 </Project>

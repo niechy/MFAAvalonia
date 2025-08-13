@@ -25,9 +25,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Skia" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.3" />
+        <PackageReference Include="Avalonia" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Skia" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
         <PackageReference Include="CalcBindingAva" Version="2.5.3" />
         <PackageReference Include="SkiaSharp" Version="3.119.0">
         </PackageReference>
@@ -36,11 +36,11 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.0" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.3" />
-        <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.3" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.2" />
         <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.7" />
         <PackageReference Update="Packaging.Targets">
-          <Version>0.1.232</Version>
+            <Version>0.1.232</Version>
         </PackageReference>
     </ItemGroup>
 
@@ -102,7 +102,7 @@
             <DependentUpon>ChatUI.axaml</DependentUpon>
             <SubType>Code</SubType>
         </Compile>
-		<Compile Update="Locale\zh-hans.axaml.cs">
+        <Compile Update="Locale\zh-hans.axaml.cs">
             <DependentUpon>zh-hans.axaml</DependentUpon>
             <SubType>Code</SubType>
         </Compile>
@@ -141,11 +141,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Reference Include="CalcBindingAva">
-        <HintPath>..\..\..\nuget\packages\calcbindingava\2.5.3\lib\net6.0\CalcBindingAva.dll</HintPath>
-      </Reference>
+        <Reference Include="CalcBindingAva">
+            <HintPath>..\..\..\nuget\packages\calcbindingava\2.5.3\lib\net6.0\CalcBindingAva.dll</HintPath>
+        </Reference>
     </ItemGroup>
-    
+
     <PropertyGroup>
         <!-- 禁用所有编译器警告 -->
         <WarningLevel>0</WarningLevel>
