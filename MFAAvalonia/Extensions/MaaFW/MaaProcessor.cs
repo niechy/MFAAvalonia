@@ -703,7 +703,7 @@ public class MaaProcessor
                 }
                 catch (Exception ex)
                 {
-                    LoggerHelper.Error($"{"AgentStartFailed".ToLocalization()}: {ex.Message}");
+                    LoggerHelper.Error($"{"AgentStartFailed".ToLocalization()}: {ex}");
                     ToastHelper.Error("AgentStartFailed".ToLocalization(), ex.Message);
                 }
 
