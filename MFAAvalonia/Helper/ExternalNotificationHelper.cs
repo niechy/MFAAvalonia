@@ -89,6 +89,13 @@ public static class ExternalNotificationHelper
                         Instances.ExternalNotificationSettingsUserControlModel.QmsgUser,
                         Instances.ExternalNotificationSettingsUserControlModel.QmsgBot, message, cancellationToken);
                     break;
+                case Key.ServerChanKey:
+                    await ServerChan.SendAsync(
+                        Instances.ExternalNotificationSettingsUserControlModel.ServerChanSendKey,
+                        message,
+                        cancellationToken
+                    );
+                    break;
             }
         }
     }
@@ -109,6 +116,7 @@ public static class ExternalNotificationHelper
         public const string OneBotKey = "OneBot"; // OneBot
         public const string QmsgKey = "Qmsg"; // QMsg酱
         public const string SmtpKey = "SMTP"; // SMTP协议
+        public const string ServerChanKey = "ServerChan"; // Server酱
 
         public static readonly IReadOnlyList<string> AllKeys =
         [
@@ -121,6 +129,7 @@ public static class ExternalNotificationHelper
             DiscordWebhookKey,
             SmtpKey,
             QmsgKey,
+            ServerChanKey,
         ];
     }
 
@@ -691,6 +700,66 @@ public static class ExternalNotificationHelper
             }
         }
     }
+#endregion
 
-    #endregion
+#region ServerChan通知
+
+public static class ServerChan
+{
+    public async static Task<bool> SendAsync(string sendKey, string info, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            string url;
+            
+            // 判断 sendkey 是否以 "sctp" 开头并提取数字部分
+            if (sendKey.StartsWith("sctp"))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(sendKey, @"^sctp(\d+)t");
+                if (match.Success)
+                {
+                    var num = match.Groups[1].Value;
+                    url = $"https://{num}.push.ft07.com/send/{sendKey}.send";
+                }
+                else
+                {
+                    LoggerHelper.Error("ServerChan: 无效的 sctp 类型 key 格式");
+                    return false;
+                }
+            }
+            else
+            {
+                url = $"https://sctapi.ftqq.com/{sendKey}.send";
+            }
+
+            var postData = $"title={WebUtility.UrlEncode("[MFA] Notification Service")}&desp={WebUtility.UrlEncode(info)}";
+            
+            using var client = VersionChecker.CreateHttpClientWithProxy();
+            var content = new StringContent(postData, Encoding.UTF8, "application/x-www-form-urlencoded");
+            var response = await client.PostAsync(url, content, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                LoggerHelper.Info("ServerChan消息发送成功");
+                return true;
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            LoggerHelper.Error($"ServerChan消息发送失败: {errorContent}");
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            LoggerHelper.Warning("ServerChan消息发送操作已取消");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"ServerChan消息发送错误: {ex.Message}");
+            return false;
+        }
+    }
+}
+
+#endregion
 }

@@ -34,6 +34,7 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
         DiscordEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.DiscordKey);
         DiscordWebhookEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.DiscordWebhookKey);
         OnebotEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.OneBotKey);
+        ServerChanEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.ServerChanKey);
     }
 
     public static readonly List<string> EnabledExternalNotificationProviderList = ExternalNotificationProviders
@@ -295,6 +296,16 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
 
     [ObservableProperty] private string _onebotUser = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationOneBotUser, string.Empty);
     partial void OnOnebotUserChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationOneBotUser, SimpleEncryptionHelper.Encrypt(value));
+
+    #endregion
+
+    #region ServerChan
+
+    [ObservableProperty] private bool _serverChanEnabled;
+    partial void OnServerChanEnabledChanged(bool value) => UpdateEnabledExternalNotificationProviderList(ExternalNotificationHelper.Key.ServerChanKey, value);
+
+    [ObservableProperty] private string _serverChanSendKey = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationServerChanKey, string.Empty);
+    partial void OnServerChanSendKeyChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationServerChanKey, SimpleEncryptionHelper.Encrypt(value));
 
     #endregion
 }

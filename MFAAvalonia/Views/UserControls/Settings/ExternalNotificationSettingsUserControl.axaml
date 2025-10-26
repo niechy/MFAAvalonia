@@ -665,5 +665,38 @@
             </StackPanel>
 
         </suki:GlassCard>
+        <suki:GlassCard Padding="25,5,25,5">
+            <StackPanel Spacing="8">
+                <DockPanel>
+                    <ToggleSwitch
+                        Classes="Switch"
+                        DockPanel.Dock="Right"
+                        IsChecked="{Binding ServerChanEnabled}"
+                        VerticalAlignment="Top" />
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Text="Server酱"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </DockPanel>
+                <StackPanel Spacing="8" IsVisible="{Binding ServerChanEnabled}">
+                    <DockPanel>
+                        <TextBox
+                            DockPanel.Dock="Right"
+                            HorizontalAlignment="Center"
+                            Text="{Binding ServerChanSendKey}"
+                            Width="215" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="16"
+                                Text="{markup:I18n {x:Static helper:LangKeys.ExternalNotificationServerChanSendKey}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </StackPanel>
+        </suki:GlassCard>
     </StackPanel>
 </UserControl>
