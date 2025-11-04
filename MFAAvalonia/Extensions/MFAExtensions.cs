@@ -1,4 +1,6 @@
-﻿using Avalonia.Media.Imaging;
+﻿using Avalonia;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using AvaloniaExtensions.Axaml.Markup;
 using MaaFramework.Binding.Buffers;
 using MFAAvalonia.Extensions.MaaFW;
@@ -16,6 +18,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
+using Pen = System.Drawing.Pen;
 
 namespace MFAAvalonia.Extensions;
 
@@ -351,19 +354,49 @@ public static class MFAExtensions
             return null;
         }
     }
-    public static System.Drawing.Bitmap? ToDrawingBitmap(this Bitmap? bitmap)
+    // public static System.Drawing.Bitmap? ToDrawingBitmap(this Bitmap? bitmap)
+    // {
+    //     if (bitmap == null)
+    //         return null;
+    //
+    //     using var memory = new MemoryStream();
+    //
+    //     bitmap.Save(memory);
+    //     memory.Position = 0;
+    //     
+    //     return new System.Drawing.Bitmap(memory);
+    // }
+    public static Bitmap DrawRectangle(this Bitmap sourceBitmap, MaaRectBuffer rect, IBrush color, double thickness = 1.5)
     {
-        if (bitmap == null)
-            return null;
+        if (sourceBitmap == null)
+            throw new ArgumentNullException(nameof(sourceBitmap));
 
-        using var memory = new MemoryStream();
+        var renderBitmap = new RenderTargetBitmap(
+            sourceBitmap.PixelSize,
+            sourceBitmap.Dpi);
 
-        bitmap.Save(memory);
-        memory.Position = 0;
-        
-        return new System.Drawing.Bitmap(memory);
+        DispatcherHelper.PostOnMainThread(() =>
+        {
+            // 使用 DrawingContext 绘制
+            using var context = renderBitmap.CreateDrawingContext();
+
+            // 1. 绘制原始图像作为背景
+            context.DrawImage(sourceBitmap, new Rect(sourceBitmap.Size));
+
+            // 2. 创建抗锯齿画笔
+            var pen = new Avalonia.Media.Pen(color, thickness)
+            {
+                LineJoin = PenLineJoin.Round,
+                LineCap = PenLineCap.Round
+            };
+
+            // 3. 绘制矩形边框
+            context.DrawRectangle(pen, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
+
+        });
+        return renderBitmap;
     }
-    
+
     public static Bitmap? ToAvaloniaBitmap(this System.Drawing.Bitmap? bitmap)
     {
         if (bitmap == null)

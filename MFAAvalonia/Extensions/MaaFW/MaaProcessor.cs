@@ -32,9 +32,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 using Brushes = Avalonia.Media.Brushes;
-using Color = System.Drawing.Color;
 using Pen = Avalonia.Media.Pen;
-using Point = System.Drawing.Point;
 using Size = Avalonia.Size;
 
 namespace MFAAvalonia.Extensions.MaaFW;
@@ -627,8 +625,8 @@ public class MaaProcessor
                 {
                     _agentClient = MaaAgentClient.Create(identifier, maaResource);
                     _agentClient.AttachDisposeToResource();
-                    _agentClient.Releasing += (_,_) => LoggerHelper.Info("退出Agent进程");
-                    
+                    _agentClient.Releasing += (_, _) => LoggerHelper.Info("退出Agent进程");
+
                     LoggerHelper.Info($"Agent Client Hash: {_agentClient?.GetHashCode()}");
                     if (!Directory.Exists($"{AppContext.BaseDirectory}"))
                         Directory.CreateDirectory($"{AppContext.BaseDirectory}");
@@ -712,7 +710,7 @@ public class MaaProcessor
             }
             // RegisterCustomRecognitionsAndActions(tasker);
             Instances.TaskQueueViewModel.SetConnected(true);
-          //  tasker.Utility.SetOption_Recording(ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false));
+            //  tasker.Utility.SetOption_Recording(ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false));
             tasker.Utility.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
             tasker.Utility.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
             tasker.Callback += (o, args) =>
@@ -740,16 +738,7 @@ public class MaaProcessor
                             var bitmap = imageBuffer.ToBitmap();
                             if (hit && bitmap != null)
                             {
-                                var db = bitmap.ToDrawingBitmap();
-                                using var g = Graphics.FromImage(db);
-
-                                g.SmoothingMode = SmoothingMode.AntiAlias;
-
-                                using var pen = new System.Drawing.Pen(Color.LightGreen, 1.5f);
-
-                                g.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height);
-
-                                bitmap = db.ToAvaloniaBitmap();
+                                bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
                             }
 
                             DispatcherHelper.PostOnMainThread(() =>
