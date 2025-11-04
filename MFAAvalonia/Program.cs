@@ -40,16 +40,18 @@ sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     public static Dictionary<string, string> Args { get; private set; } = new();
-    private static Mutex _mutex;
+    private static Mutex? _mutex;
     public static bool IsNewInstance = false;
     public static void ReleaseMutex()
     {
         try
         {
-            _mutex.ReleaseMutex();
+            _mutex?.ReleaseMutex();
+            _mutex = null;
         }
-        catch (ApplicationException)
+        catch (Exception e)
         {
+            LoggerHelper.Error(e);
         }
     }
 

@@ -150,6 +150,7 @@ public partial class RootView : SukiWindow
             MaaProcessor.Instance.SetTasker();
             LoggerHelper.DisposeLogger();
             GlobalHotkeyService.Shutdown();
+            Program.ReleaseMutex();
         }
     }
 

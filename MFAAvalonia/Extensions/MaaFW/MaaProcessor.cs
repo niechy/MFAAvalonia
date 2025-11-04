@@ -105,7 +105,6 @@ public class MaaProcessor
         if (maaTasker == null)
         {
             MaaTasker?.Stop().Wait();
-            MaaTasker?.Dispose();
             _agentClient = null;
             _agentStarted = false;
             _agentProcess?.Kill();
