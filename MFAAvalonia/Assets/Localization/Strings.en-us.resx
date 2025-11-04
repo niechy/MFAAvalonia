@@ -846,10 +846,10 @@
         <value>Startup</value>
     </data>
     <data name="StartupSoftware" xml:space="preserve">
-        <value>Startup software</value>
+        <value>Startup game</value>
     </data>
     <data name="StartupSoftwareAndScript" xml:space="preserve">
-        <value>Startup software and script</value>
+        <value>Startup game and script</value>
     </data>
     <data name="Stopping" xml:space="preserve">
         <value>Stopping......</value>
@@ -966,7 +966,7 @@
         <value>Use GPU for inference acceleration</value>
     </data>
     <data name="WaitSoftware" xml:space="preserve">
-        <value>Wait time for Software to start (seconds)</value>
+        <value>Wait time for game to start (seconds)</value>
     </data>
     <data name="WaitSoftwareTime" xml:space="preserve">
         <value>Wait time for {0} to start (seconds): {1}(s)</value>

@@ -853,10 +853,10 @@
         <value>启动设置</value>
     </data>
     <data name="StartupSoftware" xml:space="preserve">
-        <value>启动软件</value>
+        <value>启动游戏</value>
     </data>
     <data name="StartupSoftwareAndScript" xml:space="preserve">
-        <value>启动软件并启动脚本</value>
+        <value>启动游戏并启动脚本</value>
     </data>
     <data name="Stopping" xml:space="preserve">
         <value>正在停止......</value>
@@ -973,7 +973,7 @@
         <value>使用 GPU 加速推理</value>
     </data>
     <data name="WaitSoftware" xml:space="preserve">
-        <value>等待软件启动时间(秒)</value>
+        <value>等待游戏启动时间(秒)</value>
     </data>
     <data name="WaitSoftwareTime" xml:space="preserve">
         <value>等待{0}启动时间(秒): {1}(s)</value>

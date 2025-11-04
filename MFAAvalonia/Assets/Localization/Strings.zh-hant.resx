@@ -846,10 +846,10 @@
         <value>啟動設定</value>
     </data>
     <data name="StartupSoftware" xml:space="preserve">
-        <value>啟動軟體</value>
+        <value>啟動遊戲</value>
     </data>
     <data name="StartupSoftwareAndScript" xml:space="preserve">
-        <value>啟動軟體並啟動腳本</value>
+        <value>啟動遊戲並啟動腳本</value>
     </data>
     <data name="Stopping" xml:space="preserve">
         <value>正在停止......</value>
@@ -966,7 +966,7 @@
         <value>使用 GPU 加速推理</value>
     </data>
     <data name="WaitSoftware" xml:space="preserve">
-        <value>等待軟體啟動時間(秒)</value>
+        <value>等待遊戲啟動時間(秒)</value>
     </data>
     <data name="WaitSoftwareTime" xml:space="preserve">
         <value>等待{0}啟動時間(秒): {1}(s)</value>
