@@ -630,7 +630,7 @@
         <value>Hide to tray when minimized</value>
     </data>
     <data name="MiniTouch" xml:space="preserve">
-        <value>MiniTouch (Default)</value>
+        <value>MiniTouch (Old)</value>
     </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
         <value>Please purchase the Mirror Chyan service to enable automatic updates, or switch the download source to GitHub</value>

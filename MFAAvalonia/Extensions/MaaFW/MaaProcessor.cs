@@ -1071,8 +1071,9 @@ public class MaaProcessor
         public string AdbPath { get; set; } = "adb";
         public string AdbSerial { get; set; } = "";
         public string Config { get; set; } = "{}";
-        public AdbInputMethods Input { get; set; } = AdbInputMethods.Maatouch;
-        public AdbScreencapMethods ScreenCap { get; set; } = AdbScreencapMethods.Default;
+        public AdbInputMethods Input { get; set; } = AdbInputMethods.None;
+        public AdbScreencapMethods ScreenCap { get; set; } = AdbScreencapMethods.None;
+        public AdbDeviceInfo? Info { get; set; } = null;
     }
 
     public static (string Name, string Version, string CustomTitle) ReadInterface()
@@ -1364,12 +1365,20 @@ public class MaaProcessor
 
     private static AdbInputMethods ConfigureAdbInputTypes()
     {
-        return Instances.ConnectSettingsUserControlModel.AdbControlInputType;
+        return Instances.ConnectSettingsUserControlModel.AdbControlInputType switch
+        {
+            AdbInputMethods.None => Config.AdbDevice.Info?.InputMethods ?? Instances.ConnectSettingsUserControlModel.AdbControlInputType,
+            _ => Instances.ConnectSettingsUserControlModel.AdbControlInputType
+        };
     }
 
     private static AdbScreencapMethods ConfigureAdbScreenCapTypes()
     {
-        return Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType;
+        return Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType switch
+        {
+            AdbScreencapMethods.None => Config.AdbDevice.Info?.ScreencapMethods ?? Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType,
+            _ => Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType
+        };
     }
 
     private void ConfigureMaaProcessorForWin32()

@@ -19,6 +19,8 @@ public partial class AdbEditorDialogViewModel : ObservableObject
     [ObservableProperty] private string _adbPath = string.Empty;
     [ObservableProperty] private string _adbSerial = string.Empty;
     [ObservableProperty] private string _adbConfig = "{}";
+    private readonly AdbScreencapMethods _screencapMethods;
+    private readonly AdbInputMethods _adbInputMethods;
     public ISukiDialog Dialog { get; set; }
     public AdbEditorDialogViewModel(AdbDeviceInfo? info, ISukiDialog dialog)
     {
@@ -26,6 +28,8 @@ public partial class AdbEditorDialogViewModel : ObservableObject
         AdbPath = info?.AdbPath ?? AdbPath;
         AdbSerial = info?.AdbSerial ?? AdbSerial;
         AdbConfig = info?.Config ?? AdbConfig;
+        _screencapMethods = info?.ScreencapMethods ?? AdbScreencapMethods.Default;
+        _adbInputMethods = info?.InputMethods ?? AdbInputMethods.Maatouch;
         Dialog = dialog;
     }
 
@@ -46,7 +50,7 @@ public partial class AdbEditorDialogViewModel : ObservableObject
                 }
             ]
         };
-        
+
         var result = await storageProvider.OpenFilePickerAsync(options);
 
         // 处理选择结果
@@ -65,6 +69,6 @@ public partial class AdbEditorDialogViewModel : ObservableObject
         Dialog.Dismiss();
     }
 
-    public AdbDeviceInfo Output => new(AdbName, AdbPath, AdbSerial, AdbScreencapMethods.Default,
-        AdbInputMethods.MinitouchAndAdbKey, AdbConfig);
+    public AdbDeviceInfo Output => new(AdbName, AdbPath, AdbSerial, _screencapMethods,
+        _adbInputMethods, AdbConfig);
 }

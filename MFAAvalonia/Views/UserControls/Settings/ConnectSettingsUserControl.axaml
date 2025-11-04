@@ -24,11 +24,12 @@
                 <DockPanel>
                     <ComboBox
                         DockPanel.Dock="Right"
-                        HorizontalAlignment="Center"
+                        HorizontalAlignment="Center" DisplayMemberBinding="{Binding Name}"
                         IsEnabled="{calcBinding:Binding Idle,
                                                         Source={x:Static helper:Instances.RootViewModel}}"
                         ItemsSource="{Binding AdbControlScreenCapTypes}"
                         SelectedValue="{Binding AdbControlScreenCapType}"
+                        SelectedValueBinding="{Binding Other}"
                         Width="215" />
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
                         <TextBlock

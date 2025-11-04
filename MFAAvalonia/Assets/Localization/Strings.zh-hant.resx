@@ -630,7 +630,7 @@
         <value>最小化時隱藏至工作列</value>
     </data>
     <data name="MiniTouch" xml:space="preserve">
-        <value>MiniTouch (預設)</value>
+        <value>MiniTouch (舊)</value>
     </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
         <value>請購買 Mirror 醬服務以實現自動更新，或將下載源切換至 GitHub</value>

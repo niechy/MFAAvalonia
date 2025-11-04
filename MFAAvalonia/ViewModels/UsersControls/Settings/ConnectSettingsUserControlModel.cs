@@ -17,14 +17,48 @@ public partial class ConnectSettingsUserControlModel : ViewModelBase
         ConfigurationManager.Current.SetValue(ConfigurationKeys.RememberAdb, value);
     }
 
-    public static ObservableCollection<AdbScreencapMethods> AdbControlScreenCapTypes =>
+    public static ObservableCollection<LocalizationViewModel> AdbControlScreenCapTypes =>
     [
-        AdbScreencapMethods.Default, AdbScreencapMethods.RawWithGzip, AdbScreencapMethods.RawByNetcat, AdbScreencapMethods.Encode, AdbScreencapMethods.EncodeToFileAndPull, AdbScreencapMethods.MinicapDirect,
-        AdbScreencapMethods.MinicapStream, AdbScreencapMethods.EmulatorExtras
+        new("Default")
+        {
+            Other = AdbScreencapMethods.None
+        },
+        new("RawWithGzip")
+        {
+            Other = AdbScreencapMethods.RawWithGzip
+        },
+        new("RawByNetcat") 
+        {
+            Other = AdbScreencapMethods.RawByNetcat
+        },
+        new("Encode") 
+        {
+            Other = AdbScreencapMethods.Encode
+        },
+        new("EncodeToFileAndPull") 
+        {
+            Other = AdbScreencapMethods.EncodeToFileAndPull
+        },
+        new("MinicapDirect")
+        {
+            Other = AdbScreencapMethods.MinicapDirect
+        },
+        new("MinicapStream") 
+        {
+            Other = AdbScreencapMethods.MinicapStream
+        },
+        new("EmulatorExtras") 
+        {
+            Other = AdbScreencapMethods.EmulatorExtras
+        }
     ];
 
     public static ObservableCollection<LocalizationViewModel> AdbControlInputTypes =>
     [
+        new("AutoDetect")
+        {
+            Other = AdbInputMethods.None
+        },
         new("MiniTouch")
         {
             Other = AdbInputMethods.MinitouchAndAdbKey
@@ -41,18 +75,14 @@ public partial class ConnectSettingsUserControlModel : ViewModelBase
         {
             Other = AdbInputMethods.EmulatorExtras
         },
-        new("AutoDetect")
-        {
-            Other = AdbInputMethods.All
-        }
     ];
     public static ObservableCollection<Win32ScreencapMethod> Win32ControlScreenCapTypes => [Win32ScreencapMethod.FramePool, Win32ScreencapMethod.DXGIDesktopDup, Win32ScreencapMethod.GDI];
     public static ObservableCollection<Win32InputMethod> Win32ControlInputTypes => [Win32InputMethod.SendMessage, Win32InputMethod.Seize];
 
     [ObservableProperty] private AdbScreencapMethods _adbControlScreenCapType =
-        ConfigurationManager.Current.GetValue(ConfigurationKeys.AdbControlScreenCapType, AdbScreencapMethods.Default, AdbScreencapMethods.None, new UniversalEnumConverter<AdbScreencapMethods>());
+        ConfigurationManager.Current.GetValue(ConfigurationKeys.AdbControlScreenCapType, AdbScreencapMethods.None, [AdbScreencapMethods.All, AdbScreencapMethods.Default], new UniversalEnumConverter<AdbScreencapMethods>());
     [ObservableProperty] private AdbInputMethods _adbControlInputType =
-        ConfigurationManager.Current.GetValue(ConfigurationKeys.AdbControlInputType, AdbInputMethods.MinitouchAndAdbKey, AdbInputMethods.None, new UniversalEnumConverter<AdbInputMethods>());
+        ConfigurationManager.Current.GetValue(ConfigurationKeys.AdbControlInputType, AdbInputMethods.None, [AdbInputMethods.All, AdbInputMethods.Default],  new UniversalEnumConverter<AdbInputMethods>());
     [ObservableProperty] private Win32ScreencapMethod _win32ControlScreenCapType =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.Win32ControlScreenCapType, Win32ScreencapMethod.FramePool, Win32ScreencapMethod.None, new UniversalEnumConverter<Win32ScreencapMethod>());
     [ObservableProperty] private Win32InputMethod _win32ControlInputType =

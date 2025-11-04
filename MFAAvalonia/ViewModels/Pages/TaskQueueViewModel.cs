@@ -348,6 +348,7 @@ public partial class TaskQueueViewModel : ViewModelBase
             MaaProcessor.Config.AdbDevice.AdbPath = device.AdbPath;
             MaaProcessor.Config.AdbDevice.AdbSerial = device.AdbSerial;
             MaaProcessor.Config.AdbDevice.Config = device.Config;
+            MaaProcessor.Config.AdbDevice.Info = device;
             MaaProcessor.Instance.SetTasker();
             ConfigurationManager.Current.SetValue(ConfigurationKeys.AdbDevice, device);
         }

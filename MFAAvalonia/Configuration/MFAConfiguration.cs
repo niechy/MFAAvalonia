@@ -49,9 +49,9 @@ public partial class MFAConfiguration(string name, string fileName, Dictionary<s
     {
         if (Config == null || value == null) return;
         Config[key] = value;
-        JsonHelper.SaveConfig(FileName, Config,new MaaInterfaceSelectAdvancedConverter(false), new MaaInterfaceSelectOptionConverter(false));
+        JsonHelper.SaveConfig(FileName, Config, new MaaInterfaceSelectAdvancedConverter(false), new MaaInterfaceSelectOptionConverter(false));
     }
-    
+
     public T GetValue<T>(string key, T defaultValue, List<T> whitelist)
     {
         var value = GetValue(key, defaultValue);
@@ -157,7 +157,30 @@ public partial class MFAConfiguration(string name, string fileName, Dictionary<s
         }
         return defaultValue;
     }
+    public T GetValue<T>(string key, T defaultValue, List<T>? noValue = null, params JsonConverter[] valueConverters)
+    {
 
+        if (Config.TryGetValue(key, out var data))
+        {
+            try
+            {
+                var settings = new JsonSerializerSettings();
+                foreach (var converter in valueConverters)
+                {
+                    settings.Converters.Add(converter);
+                }
+                var result = JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(data), settings) ?? defaultValue;
+                if (noValue != null && noValue.Contains(result))
+                    return result;
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Error($"类型转换失败: {e.Message}");
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
     public bool TryGetValue<T>(string key, out T output, params JsonConverter[] valueConverters)
     {
         if (Config.TryGetValue(key, out var data))

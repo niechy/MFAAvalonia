@@ -637,7 +637,7 @@
         <value>最小化时隐藏至托盘</value>
     </data>
     <data name="MiniTouch" xml:space="preserve">
-        <value>MiniTouch (默认)</value>
+        <value>MiniTouch (旧)</value>
     </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
         <value>请购买 Mirror 酱服务以实现自动更新，或将下载源切换至 GitHub</value>
