@@ -161,6 +161,7 @@ public static class LangKeys
 	public static readonly string ExternalNotificationTips = "ExternalNotificationTips";
 	public static readonly string ExternalNotificationWebhookUrl = "ExternalNotificationWebhookUrl";
 	public static readonly string ExternalNotificationWxPusherUID = "ExternalNotificationWxPusherUID";
+	public static readonly string ExternalNotificationServerChanSendKey = "ExternalNotificationServerChanSendKey";
 	public static readonly string FailToGetCurrentVersionInfo = "FailToGetCurrentVersionInfo";
 	public static readonly string FailToGetDownloadUrl = "FailToGetDownloadUrl";
 	public static readonly string FailToGetLatestVersionInfo = "FailToGetLatestVersionInfo";

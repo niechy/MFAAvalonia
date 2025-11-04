@@ -104,10 +104,7 @@ public class MaaProcessor
     {
         if (maaTasker == null)
         {
-            if (_agentClient != null)
-                LoggerHelper.Info("退出Agent进程");
-            _agentClient?.LinkStop();
-            _agentClient?.Dispose();
+            MaaTasker?.Stop().Wait();
             MaaTasker?.Dispose();
             _agentClient = null;
             _agentStarted = false;
@@ -586,7 +583,7 @@ public class MaaProcessor
                 Resource = maaResource,
                 Utility = MaaProcessor.Utility,
                 Toolkit = MaaProcessor.Toolkit,
-                DisposeOptions = DisposeOptions.None,
+                DisposeOptions = DisposeOptions.All,
             };
 
             try
@@ -617,6 +614,7 @@ public class MaaProcessor
                 {
                     _agentClient.LinkStop();
                     _agentClient.Dispose();
+                    _agentClient.DetachDisposeToResource();
                     _agentClient = null;
                     _agentProcess?.Kill();
                     _agentProcess?.Dispose();
@@ -629,6 +627,9 @@ public class MaaProcessor
                 try
                 {
                     _agentClient = MaaAgentClient.Create(identifier, maaResource);
+                    _agentClient.AttachDisposeToResource();
+                    _agentClient.Releasing += (_,_) => LoggerHelper.Info("退出Agent进程");
+                    
                     LoggerHelper.Info($"Agent Client Hash: {_agentClient?.GetHashCode()}");
                     if (!Directory.Exists($"{AppContext.BaseDirectory}"))
                         Directory.CreateDirectory($"{AppContext.BaseDirectory}");

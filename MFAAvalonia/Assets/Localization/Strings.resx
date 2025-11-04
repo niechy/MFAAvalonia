@@ -1032,6 +1032,9 @@
     <data name="ExternalNotificationOneBotUser" xml:space="preserve">
         <value>用户 QQ</value>
     </data>
+    <data name="ExternalNotificationServerChanSendKey" xml:space="preserve">
+        <value>SendKey</value>
+    </data>
     <data name="CreateCustomTheme" xml:space="preserve">
         <value>创建自定义主题</value>
     </data>
