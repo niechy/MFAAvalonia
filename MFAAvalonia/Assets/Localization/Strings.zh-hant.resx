@@ -153,13 +153,13 @@
         <value>目前剪貼簿中資料不可轉換為文字</value>
     </data>
     <data name="CloseEmulator" xml:space="preserve">
-        <value>關閉軟體</value>
+        <value>關閉遊戲</value>
     </data>
     <data name="CloseEmulatorAndMFA" xml:space="preserve">
-        <value>關閉MFA和軟體</value>
+        <value>關閉MFA和遊戲</value>
     </data>
     <data name="CloseEmulatorAndRestartMFA" xml:space="preserve">
-        <value>重啟MFA和關閉軟體</value>
+        <value>重啟MFA和關閉遊戲</value>
     </data>
     <data name="CloseMFA" xml:space="preserve">
         <value>關閉MFA</value>
@@ -825,7 +825,7 @@
         <value>滑動獲取器</value>
     </data>
     <data name="SoftwarePath" xml:space="preserve">
-        <value>軟體路徑</value>
+        <value>遊戲路徑</value>
     </data>
     <data name="SoftwareUpdate" xml:space="preserve">
         <value>軟體更新</value>

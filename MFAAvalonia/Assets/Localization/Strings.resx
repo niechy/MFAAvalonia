@@ -160,13 +160,13 @@
         <value>目前剪贴板中数据不可转换为文本</value>
     </data>
     <data name="CloseEmulator" xml:space="preserve">
-        <value>关闭软件</value>
+        <value>关闭游戏</value>
     </data>
     <data name="CloseEmulatorAndMFA" xml:space="preserve">
-        <value>关闭MFA和软件</value>
+        <value>关闭MFA和游戏</value>
     </data>
     <data name="CloseEmulatorAndRestartMFA" xml:space="preserve">
-        <value>重启MFA和关闭软件</value>
+        <value>重启MFA和关闭游戏</value>
     </data>
     <data name="CloseMFA" xml:space="preserve">
         <value>关闭MFA</value>
@@ -832,7 +832,7 @@
         <value>滑动获取器</value>
     </data>
     <data name="SoftwarePath" xml:space="preserve">
-        <value>软件路径</value>
+        <value>游戏路径</value>
     </data>
     <data name="SoftwareUpdate" xml:space="preserve">
         <value>软件更新</value>

@@ -153,13 +153,13 @@
         <value>The data currently in the clipboard cannot be converted to text.</value>
     </data>
     <data name="CloseEmulator" xml:space="preserve">
-        <value>Disable Software</value>
+        <value>Disable Game</value>
     </data>
     <data name="CloseEmulatorAndMFA" xml:space="preserve">
-        <value>Disable MFA and Software</value>
+        <value>Disable MFA and Game</value>
     </data>
     <data name="CloseEmulatorAndRestartMFA" xml:space="preserve">
-        <value>Disable MFA and Restart Software</value>
+        <value>Restart MFA and Disable Game</value>
     </data>
     <data name="CloseMFA" xml:space="preserve">
         <value>Disable MFA</value>
@@ -825,7 +825,7 @@
         <value>Slider Control</value>
     </data>
     <data name="SoftwarePath" xml:space="preserve">
-        <value>Software Path</value>
+        <value>Game Path</value>
     </data>
     <data name="SoftwareUpdate" xml:space="preserve">
         <value>Update Software</value>
