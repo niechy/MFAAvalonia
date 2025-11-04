@@ -16,14 +16,44 @@ public static class SimpleEncryptionHelper
     public static string Generate()
     {
         // 跨平台系统特征参数
-        var osDescription = RuntimeInformation.OSDescription;
+        var originalOsDescription = RuntimeInformation.OSDescription;
+        var stableOsDescription = GetStableOSDescription(originalOsDescription);
         var osArchitecture = RuntimeInformation.OSArchitecture.ToString();
         var plainTextSpecificId = GetPlatformSpecificId();
         var machineName = Environment.MachineName;
 
         // 混合参数生成哈希
+        var combinedString = $"{stableOsDescription}_{osArchitecture}_{plainTextSpecificId}_{machineName}";
+        return EncryptProvider.Sha256(combinedString);
+    }
+
+    private static string GenerateLegacy()
+    {
+        // 保留原始逻辑（包含完整系统版本号）
+        var osDescription = RuntimeInformation.OSDescription;
+        var osArchitecture = RuntimeInformation.OSArchitecture.ToString();
+        var plainTextSpecificId = GetPlatformSpecificId();
+        var machineName = Environment.MachineName;
+
         var combinedString = $"{osDescription}_{osArchitecture}_{plainTextSpecificId}_{machineName}";
         return EncryptProvider.Sha256(combinedString);
+    }
+
+    private static string GetStableOSDescription(string originalOSDescription)
+    {
+        if (string.IsNullOrWhiteSpace(originalOSDescription))
+            return originalOSDescription;
+
+        // 匹配Windows版本格式（如 "Microsoft Windows 10.0.27975" 或 "Windows 11 Pro 10.0.22621"）
+        var match = Regex.Match(originalOSDescription, @"^(.*?Windows\s+(?:10|11|10\.0|11\.0))(?:\.\d+|.*)$", RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            // 保留大版本部分（如 "Microsoft Windows 10.0" 或 "Windows 11"）
+            return match.Groups[1].Value.Trim();
+        }
+
+        // 非Windows系统或匹配失败时，直接返回原始描述（通常Linux/macOS版本描述不包含易变小版本）
+        return originalOSDescription;
     }
 
     public static string GetPlatformSpecificId()
@@ -110,9 +140,8 @@ public static class SimpleEncryptionHelper
         }
         return string.Empty;
     }
-    private static string GetDeviceKeys()
+    private static string GetDeviceKeys(string fingerprint)
     {
-        var fingerprint = Generate();
         var key = fingerprint.Substring(0, 32);
         return key;
     }
@@ -122,7 +151,7 @@ public static class SimpleEncryptionHelper
     {
         if (string.IsNullOrWhiteSpace(plainText))
             return string.Empty;
-        var key = GetDeviceKeys();
+        var key = GetDeviceKeys(Generate());
         var encryptedData = EncryptProvider.AESEncrypt(plainText, key);
         return encryptedData;
     }
@@ -130,16 +159,27 @@ public static class SimpleEncryptionHelper
     // 解密（仅当前设备可用）
     public static string Decrypt(string encryptedBase64)
     {
+        if (string.IsNullOrWhiteSpace(encryptedBase64))
+            return string.Empty;
+
         try
         {
-            var key = GetDeviceKeys();
-            var decryptedData = string.IsNullOrWhiteSpace(encryptedBase64) ? encryptedBase64 : EncryptProvider.AESDecrypt(encryptedBase64, key);
-            return decryptedData;
+            // 1. 尝试用新机器码解密（稳定版本）
+            var newKey = GetDeviceKeys(Generate()); // 基于Generate()的新机器码
+            return EncryptProvider.AESDecrypt(encryptedBase64, newKey);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            LoggerHelper.Warning(e);
-            return string.Empty;
+            try
+            {
+                // 2. 尝试用旧机器码解密（包含完整版本号，兼容历史数据）
+                var legacyKey = GetDeviceKeys(GenerateLegacy());
+                return EncryptProvider.AESDecrypt(encryptedBase64, legacyKey);
+            }
+            catch (Exception legacyEx)
+            {
+                return string.Empty;
+            }
         }
     }
 }
