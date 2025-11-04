@@ -118,6 +118,7 @@ public static class ConfigurationKeys
     public const string ExternalNotificationOneBotServer = "ExternalNotificationOneBotServer";
     public const string ExternalNotificationOneBotKey = "ExternalNotificationOneBotKey";
     public const string ExternalNotificationOneBotUser = "ExternalNotificationOneBotUser";
+    public const string ExternalNotificationServerChanKey = "ExternalNotificationServerChanKey";
     
     #endregion
 
