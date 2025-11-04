@@ -71,7 +71,7 @@
                             Text="{markup:I18n {x:Static helper:LangKeys.ContinueRunningWhenError}}" />
                     </StackPanel>
                 </DockPanel>
-                <DockPanel>
+                <DockPanel IsVisible="False">
                     <ToggleSwitch
                         Classes="Switch"
                         DockPanel.Dock="Right"

@@ -1195,4 +1195,7 @@
     <data name="SwitchUiUpdateSourceToGithub" xml:space="preserve">
         <value>因 Mirror 酱无法指定特定版本进行更新，请到更新设置中把更新源切换为 GitHub。</value>
     </data>
+    <data name="MultiInstanceUnderSamePath" xml:space="preserve">
+        <value>同一路径下只能启动一个实例！</value>
+    </data>
 </root>

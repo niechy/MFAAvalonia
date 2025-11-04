@@ -1,14 +1,12 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using MFAAvalonia.Configuration;
-using MFAAvalonia.Views.Windows;
 using MFAAvalonia.Helper;
 using MFAAvalonia.ViewModels.Windows;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 namespace MFAAvalonia;
 
@@ -37,11 +35,24 @@ sealed class Program
         }
         return parameters;
     }
-    
+
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     public static Dictionary<string, string> Args { get; private set; } = new();
+    private static Mutex _mutex;
+    public static bool IsNewInstance = false;
+    public static void ReleaseMutex()
+    {
+        try
+        {
+            _mutex.ReleaseMutex();
+        }
+        catch (ApplicationException)
+        {
+        }
+    }
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -49,9 +60,12 @@ sealed class Program
         {
             Directory.SetCurrentDirectory(AppContext.BaseDirectory);
             var parsedArgs = ParseArguments(args);
+            string mutexName = "MFA_" + Directory.GetCurrentDirectory().Replace("\\", "_").Replace(":", string.Empty);
+            _mutex = new Mutex(true, mutexName, out IsNewInstance);
             LoggerHelper.Info("Args: " + JsonConvert.SerializeObject(parsedArgs, Formatting.Indented));
             LoggerHelper.Info("MFA version: " + RootViewModel.Version);
             Args = parsedArgs;
+
             BuildAvaloniaApp()
                 .StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
         }

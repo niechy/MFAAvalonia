@@ -1187,4 +1187,7 @@
     <data name="SwitchUiUpdateSourceToGithub" xml:space="preserve">
         <value>Since Mirror Chyan cannot specify a specific version for update, please go to update settings and switch the update source to GitHub.</value>
     </data>
+    <data name="MultiInstanceUnderSamePath" xml:space="preserve">
+        <value>Only one instance can be launched under the same path!</value>
+    </data>
 </root>
