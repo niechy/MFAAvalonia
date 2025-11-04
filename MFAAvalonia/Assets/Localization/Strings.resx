@@ -1190,7 +1190,7 @@
         <value>复制到剪切板</value>
     </data>
     <data name="UseDirectMLSupportedDevice" xml:space="preserve">
-        <value>使用 DirectML 支持设备</value>
+        <value>使用支持 DirectML 的设备</value>
     </data>
     <data name="SwitchUiUpdateSourceToGithub" xml:space="preserve">
         <value>因 Mirror 酱无法指定特定版本进行更新，请到更新设置中把更新源切换为 GitHub。</value>
