@@ -36,7 +36,7 @@ public partial class RootViewModel : ViewModelBase
             // var minor = version.Minor >= 0 ? version.Minor : 0;
             // var patch = version.Build >= 0 ? version.Build : 0;
             // return $"v{SemVersion.Parse($"{major}.{minor}.{patch}")}";
-            return "v1.7.0"; // Hardcoded version for now, replace with dynamic versioning later
+            return "v1.7.1"; // Hardcoded version for now, replace with dynamic versioning later
         }
     }
 
@@ -69,8 +69,11 @@ public partial class RootViewModel : ViewModelBase
     {
         if (IsDebugMode && _shouldTip)
         {
-            Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent("DebugModeWarning".ToLocalization()).WithActionButton("Ok".ToLocalization(), dialog => { }, true).TryShow();
-            _shouldTip = false;
+            DispatcherHelper.PostOnMainThread(() =>
+            {
+                Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent("DebugModeWarning".ToLocalization()).WithActionButton("Ok".ToLocalization(), dialog => { }, true).TryShow();
+                _shouldTip = false;
+            });
         }
     }
 

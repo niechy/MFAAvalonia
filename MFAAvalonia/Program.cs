@@ -41,7 +41,7 @@ sealed class Program
     // yet and stuff might break.
     public static Dictionary<string, string> Args { get; private set; } = new();
     private static Mutex? _mutex;
-    public static bool IsNewInstance = false;
+    public static bool IsNewInstance = true;
     public static void ReleaseMutex()
     {
         try

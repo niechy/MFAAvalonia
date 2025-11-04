@@ -171,7 +171,8 @@ public partial class MFAConfiguration(string name, string fileName, Dictionary<s
                 }
                 var result = JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(data), settings) ?? defaultValue;
                 if (noValue != null && noValue.Contains(result))
-                    return result;
+                    return defaultValue;
+                return result;
             }
             catch (Exception e)
             {
