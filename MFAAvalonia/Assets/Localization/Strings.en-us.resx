@@ -1167,7 +1167,7 @@
         <value>Execute</value>
     </data>
     <data name="StoppingInternalTask" xml:space="preserve">
-        <value>正在停止內部任務...</value>
+        <value>Stopping Internal Task...</value>
     </data>
     <data name="Verifying" xml:space="preserve">
         <value>Verifying</value>
@@ -1182,7 +1182,7 @@
         <value>Copy to clipboard</value>
     </data>
     <data name="UseDirectMLSupportedDevice" xml:space="preserve">
-        <value>使用 DirectML 支援設備</value>
+        <value>Use DirectML Supported Device</value>
     </data>
     <data name="SwitchUiUpdateSourceToGithub" xml:space="preserve">
         <value>Since Mirror Chyan cannot specify a specific version for update, please go to update settings and switch the update source to GitHub.</value>

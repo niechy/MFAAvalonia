@@ -1182,7 +1182,7 @@
         <value>複製到剪貼簿</value>
     </data>
     <data name="UseDirectMLSupportedDevice" xml:space="preserve">
-        <value>Use DirectML-supported devices</value>
+        <value>使用支援 DirectML 的設備</value>
     </data>
     <data name="SwitchUiUpdateSourceToGithub" xml:space="preserve">
         <value>因 Mirror 醬無法指定特定版本進行更新，請到更新設定中把更新源切換為 GitHub。</value>
