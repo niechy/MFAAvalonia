@@ -103,6 +103,7 @@ public class MaaProcessor
         if (maaTasker == null)
         {
             MaaTasker?.Stop().Wait();
+            MaaTasker?.Dispose();
             _agentClient = null;
             _agentStarted = false;
             _agentProcess?.Kill();
@@ -1071,8 +1072,8 @@ public class MaaProcessor
         public string AdbPath { get; set; } = "adb";
         public string AdbSerial { get; set; } = "";
         public string Config { get; set; } = "{}";
-        public AdbInputMethods Input { get; set; } = AdbInputMethods.None;
-        public AdbScreencapMethods ScreenCap { get; set; } = AdbScreencapMethods.None;
+        public AdbInputMethods Input { get; set; } = AdbInputMethods.Default;
+        public AdbScreencapMethods ScreenCap { get; set; } = AdbScreencapMethods.Default;
         public AdbDeviceInfo? Info { get; set; } = null;
     }
 
