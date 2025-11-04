@@ -22,7 +22,8 @@
     xmlns:suki="https://github.com/kikipoulet/SukiUI"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:behaviors="using:Avalonia.Xaml.Interactions.Core"
-    xmlns:interaction="using:Avalonia.Xaml.Interactivity">
+    xmlns:interaction="using:Avalonia.Xaml.Interactivity"
+    xmlns:avalonia="https://github.com/whistyun/Markdown.Avalonia.Tight">
     <Design.DataContext>
         <pages:TaskQueueViewModel />
     </Design.DataContext>
@@ -33,6 +34,7 @@
                       Header="{markup:I18n {x:Static helper:LangKeys.Execute}}" />
             <MenuItem Click="Delete" Header="{markup:I18n {x:Static helper:LangKeys.Delete}}" />
         </ContextMenu>
+        <helper:MFALinkCommand x:Key="myLinkCommand" />
     </UserControl.Resources>
     <Grid ClipToBounds="False" Margin="0,0,0,0" x:Name="MainGrid">
         <Grid.ColumnDefinitions>
@@ -351,6 +353,10 @@
 
                             Focusable="True" x:Name="Introduction"
                             Margin="10,0,10,0">
+                            <mdxaml:MarkdownScrollViewer.Engine>
+                                <avalonia:Markdown
+                                    HyperlinkCommand="{StaticResource myLinkCommand}" />
+                            </mdxaml:MarkdownScrollViewer.Engine>
                             <mdxaml:MarkdownScrollViewer.Styles>
                                 <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
                             </mdxaml:MarkdownScrollViewer.Styles>
