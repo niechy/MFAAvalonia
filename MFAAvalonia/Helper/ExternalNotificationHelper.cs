@@ -330,33 +330,75 @@ public static class ExternalNotificationHelper
 
     public static class WxPusher
     {
+        // 普通推送API地址
+        private const string NormalApiUrl = "https://wxpusher.zjiecode.com/api/send/message";
+        // 极简推送API地址
+        private const string SimpleApiUrl = "https://wxpusher.zjiecode.com/api/send/message/simple-push";
+
         public async static Task<bool> SendAsync(string appToken, string uid, string info, CancellationToken cancellationToken = default)
         {
-            const string apiUrl = "https://wxpusher.zjiecode.com/api/send/message";
-            var payload = new
-            {
-                appToken,
-                content = info,
-                contentType = 1,
-                uids = new[]
-                {
-                    uid
-                }
-            };
-
             try
             {
                 using var client = VersionChecker.CreateHttpClientWithProxy();
-                var response = await client.PostAsync(
-                    apiUrl,
-                    new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json"),
-                    cancellationToken
-                );
-                return response.IsSuccessStatusCode;
+                StringContent content;
+
+                if (!string.IsNullOrWhiteSpace(appToken))
+                {
+                    // 普通推送：使用appToken和uid
+                    var normalPayload = new
+                    {
+                        appToken,
+                        content = info,
+                        contentType = 1, // 默认文字类型
+                        uids = new[]
+                        {
+                            uid
+                        }
+                    };
+                    content = new StringContent(JsonConvert.SerializeObject(normalPayload), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(NormalApiUrl, content, cancellationToken);
+                    return response.IsSuccessStatusCode;
+                }
+                else
+                {
+                    // 极简推送：appToken为空时，uid作为SPT处理
+                    if (string.IsNullOrWhiteSpace(uid))
+                    {
+                        LoggerHelper.Error("极简推送模式下，SPT（uid参数）不能为空");
+                        return false;
+                    }
+
+                    var simplePayload = new
+                    {
+                        content = info,
+                        contentType = 1, // 默认文字类型
+                        summary = info.Substring(0, Math.Min(info.Length, 20)), // 摘要取前20字
+                        spt = uid // uid作为SPT传入
+                    };
+                    content = new StringContent(JsonConvert.SerializeObject(simplePayload), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(SimpleApiUrl, content, cancellationToken);
+
+                    // 可选：解析响应确认推送结果（按接口文档调整）
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = JsonConvert.DeserializeObject<dynamic>(await response.Content.ReadAsStringAsync(cancellationToken));
+                        return result?.success ?? true;
+                    }
+                    else
+                    {
+                        LoggerHelper.Error($"极简推送失败，状态码：{response.StatusCode}，响应：{await response.Content.ReadAsStringAsync(cancellationToken)}");
+                        return false;
+                    }
+                }
             }
             catch (OperationCanceledException)
             {
                 LoggerHelper.Warning("微信推送已取消");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Error($"推送异常：{ex.Message}", ex);
                 return false;
             }
         }
@@ -700,66 +742,67 @@ public static class ExternalNotificationHelper
             }
         }
     }
-#endregion
 
-#region ServerChan通知
+    #endregion
 
-public static class ServerChan
-{
-    public async static Task<bool> SendAsync(string sendKey, string info, CancellationToken cancellationToken = default)
+    #region ServerChan通知
+
+    public static class ServerChan
     {
-        try
+        public async static Task<bool> SendAsync(string sendKey, string info, CancellationToken cancellationToken = default)
         {
-            string url;
-            
-            // 判断 sendkey 是否以 "sctp" 开头并提取数字部分
-            if (sendKey.StartsWith("sctp"))
+            try
             {
-                var match = System.Text.RegularExpressions.Regex.Match(sendKey, @"^sctp(\d+)t");
-                if (match.Success)
+                string url;
+
+                // 判断 sendkey 是否以 "sctp" 开头并提取数字部分
+                if (sendKey.StartsWith("sctp"))
                 {
-                    var num = match.Groups[1].Value;
-                    url = $"https://{num}.push.ft07.com/send/{sendKey}.send";
+                    var match = System.Text.RegularExpressions.Regex.Match(sendKey, @"^sctp(\d+)t");
+                    if (match.Success)
+                    {
+                        var num = match.Groups[1].Value;
+                        url = $"https://{num}.push.ft07.com/send/{sendKey}.send";
+                    }
+                    else
+                    {
+                        LoggerHelper.Error("ServerChan: 无效的 sctp 类型 key 格式");
+                        return false;
+                    }
                 }
                 else
                 {
-                    LoggerHelper.Error("ServerChan: 无效的 sctp 类型 key 格式");
-                    return false;
+                    url = $"https://sctapi.ftqq.com/{sendKey}.send";
                 }
+
+                var postData = $"title={WebUtility.UrlEncode("[MFA] Notification Service")}&desp={WebUtility.UrlEncode(info)}";
+
+                using var client = VersionChecker.CreateHttpClientWithProxy();
+                var content = new StringContent(postData, Encoding.UTF8, "application/x-www-form-urlencoded");
+                var response = await client.PostAsync(url, content, cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    LoggerHelper.Info("ServerChan消息发送成功");
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                LoggerHelper.Error($"ServerChan消息发送失败: {errorContent}");
+                return false;
             }
-            else
+            catch (OperationCanceledException)
             {
-                url = $"https://sctapi.ftqq.com/{sendKey}.send";
+                LoggerHelper.Warning("ServerChan消息发送操作已取消");
+                return false;
             }
-
-            var postData = $"title={WebUtility.UrlEncode("[MFA] Notification Service")}&desp={WebUtility.UrlEncode(info)}";
-            
-            using var client = VersionChecker.CreateHttpClientWithProxy();
-            var content = new StringContent(postData, Encoding.UTF8, "application/x-www-form-urlencoded");
-            var response = await client.PostAsync(url, content, cancellationToken);
-
-            if (response.IsSuccessStatusCode)
+            catch (Exception ex)
             {
-                LoggerHelper.Info("ServerChan消息发送成功");
-                return true;
+                LoggerHelper.Error($"ServerChan消息发送错误: {ex.Message}");
+                return false;
             }
-
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            LoggerHelper.Error($"ServerChan消息发送失败: {errorContent}");
-            return false;
-        }
-        catch (OperationCanceledException)
-        {
-            LoggerHelper.Warning("ServerChan消息发送操作已取消");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"ServerChan消息发送错误: {ex.Message}");
-            return false;
         }
     }
-}
 
-#endregion
+    #endregion
 }
