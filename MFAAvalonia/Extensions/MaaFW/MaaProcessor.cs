@@ -1017,6 +1017,7 @@ public class MaaProcessor
 
     private MaaController InitializeController(bool isAdb)
     {
+        ConnectToMAA();
         if (isAdb)
         {
             LoggerHelper.Info($"AdbPath: {Config.AdbDevice.AdbPath}");
@@ -1185,7 +1186,6 @@ public class MaaProcessor
             TasksSource.Clear();
             LoadTasks(Interface.Task ?? new List<MaaInterface.MaaInterfaceTask>(), dragItem);
         }
-        ConnectToMAA();
 
         return LoadTask();
     }
@@ -1337,6 +1337,7 @@ public class MaaProcessor
 
     public void ConnectToMAA()
     {
+        LoggerHelper.Info("Loading MAA Controller Configuration...");
         ConfigureMaaProcessorForADB();
         ConfigureMaaProcessorForWin32();
     }
@@ -1350,7 +1351,6 @@ public class MaaProcessor
 
             Config.AdbDevice.Input = adbInputType;
             Config.AdbDevice.ScreenCap = adbScreenCapType;
-
             LoggerHelper.Info(
                 $"{"AdbInputMode".ToLocalization()}{adbInputType},{"AdbCaptureMode".ToLocalization()}{adbScreenCapType}");
         }
@@ -1368,7 +1368,7 @@ public class MaaProcessor
     {
         return Instances.ConnectSettingsUserControlModel.AdbControlInputType switch
         {
-            AdbInputMethods.None => Config.AdbDevice.Info?.InputMethods ?? Instances.ConnectSettingsUserControlModel.AdbControlInputType,
+            AdbInputMethods.None => Config.AdbDevice.Info?.InputMethods ?? AdbInputMethods.Default,
             _ => Instances.ConnectSettingsUserControlModel.AdbControlInputType
         };
     }
@@ -1377,7 +1377,7 @@ public class MaaProcessor
     {
         return Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType switch
         {
-            AdbScreencapMethods.None => Config.AdbDevice.Info?.ScreencapMethods ?? Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType,
+            AdbScreencapMethods.None => Config.AdbDevice.Info?.ScreencapMethods ?? AdbScreencapMethods.Default,
             _ => Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType
         };
     }
@@ -2068,7 +2068,6 @@ public class MaaProcessor
         if (InitializeData())
         {
             var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList().FindAll(task => task.IsChecked || task.IsCheckedWithNull == null);
-            ConnectToMAA();
             StartTask(tasks, onlyStart, checkUpdate);
         }
     }
@@ -2078,7 +2077,6 @@ public class MaaProcessor
         if (InitializeData())
         {
             var tasks = dragItemViewModels;
-            ConnectToMAA();
             StartTask(tasks, onlyStart, checkUpdate);
         }
     }
@@ -2089,6 +2087,7 @@ public class MaaProcessor
 
     public async Task StartTask(List<DragItemViewModel>? tasks, bool onlyStart = false, bool checkUpdate = false)
     {
+        Status = MFATask.MFATaskStatus.NOT_STARTED;
         CancellationTokenSource = new CancellationTokenSource();
 
         _startTime = DateTime.Now;
@@ -2498,7 +2497,10 @@ public class MaaProcessor
 
     public void Stop(MFATask.MFATaskStatus status, bool finished = false, bool onlyStart = false, Action? action = null)
     {
-        Status = MFATask.MFATaskStatus.NOT_STARTED;
+        LoggerHelper.Info("Stop Status: " + Status);
+        if (Status == MFATask.MFATaskStatus.STOPPING)
+            return;
+        Status = MFATask.MFATaskStatus.STOPPING;
         try
         {
             var isUpdateRelated = TaskQueue.Any(task => task.IsUpdateRelated);
@@ -2515,13 +2517,14 @@ public class MaaProcessor
             TaskQueue.Clear();
 
             Instances.RootViewModel.IsRunning = false;
-
-
+            
             ExecuteStopCore(finished, () =>
             {
                 var stopResult = MaaJobStatus.Succeeded;
+
                 if (status != MFATask.MFATaskStatus.FAILED)
                     stopResult = AbortCurrentTasker();
+
                 HandleStopResult(status, stopResult, onlyStart, action, isUpdateRelated);
             });
 
@@ -2568,6 +2571,7 @@ public class MaaProcessor
         if (MaaTasker == null)
             return MaaJobStatus.Succeeded;
         var status = MaaTasker.Stop().Wait();
+
         LoggerHelper.Info("Stopping tasker, status: " + status);
         return status;
     }

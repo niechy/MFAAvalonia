@@ -1,6 +1,7 @@
 using System;
 using Avalonia.Media;
 using SukiUI.Enums;
+using System.Text.Json.Serialization;
 
 namespace SukiUI.Models;
 
@@ -13,15 +14,15 @@ public record SukiColorTheme
     public IBrush PrimaryBrush => new SolidColorBrush(Primary);
     
     public Color PrimaryDark { get; }
-
+    [JsonIgnore]
     public IBrush PrimaryDarkBrush => new SolidColorBrush(PrimaryDark);
 
     public Color Accent { get; }
-
+    [JsonIgnore]
     public IBrush AccentBrush => new SolidColorBrush(Accent);
     
     public Color AccentDark { get; }
-
+    [JsonIgnore]
     public IBrush AccentDarkBrush => new SolidColorBrush(AccentDark);
 
     // Used in shaders to save calculating them per-frame.

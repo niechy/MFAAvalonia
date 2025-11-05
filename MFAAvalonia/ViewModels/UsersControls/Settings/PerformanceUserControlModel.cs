@@ -183,27 +183,27 @@ public partial class PerformanceUserControlModel : ViewModelBase
 
     public void ChangeGpuOption(MaaResource? resource, GpuDeviceOption? option)
     {
-        LoggerHelper.Info($"MaaResource: {resource != null}");
-        LoggerHelper.Info($"GpuDeviceOption: {option != null}");
+        // LoggerHelper.Info($"MaaResource: {resource != null}");
+        // LoggerHelper.Info($"GpuDeviceOption: {option != null}");
         if (option != null && resource != null)
         {
             if (option.IsDirectML)
             {
                 var v1 = resource.SetOption_InferenceExecutionProvider(InferenceExecutionProvider.DirectML);
                 var v2 = resource.SetOption_InferenceDevice(option.Adapter.AdapterId);
-                LoggerHelper.Info($"{"使用DirectML" + (v1 && v2 ? "成功" : "失败")}");
+                LoggerHelper.Info($"{"Use DirectML: " + (v1 && v2 ? "succeed" : "failed")}");
             }
             else if (option.Device == InferenceDevice.CPU)
             {
                 var v1 = resource.SetOption_InferenceExecutionProvider(InferenceExecutionProvider.CPU);
                 var v2 = resource.SetOption_InferenceDevice(option.Device);
-                LoggerHelper.Info($"{"使用CPU" + (v1 && v2 ? "成功" : "失败")}");
+                LoggerHelper.Info($"{"Use CPU: " + (v1 && v2 ? "succeed" : "failed")}");
             }
             else
             {
                 var v1 = resource.SetOption_InferenceExecutionProvider(InferenceExecutionProvider.Auto);
                 var v2 = resource.SetOption_InferenceDevice(option.Device);
-                LoggerHelper.Info($"{"使用GPU" + (v1 && v2 ? "成功" : "失败")}");
+                LoggerHelper.Info($"{"Use GPU: " + (v1 && v2 ? "succeed" : "failed")}");
             }
         }
     }

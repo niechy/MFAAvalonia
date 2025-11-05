@@ -47,7 +47,7 @@ public static class TaskManager
         bool catchException = true,
         bool shouldLog = true)
     {
-        LoggerHelper.Info($"异步任务 {name} 开始.");
+        LoggerHelper.Info($"MFA异步任务 {name} 开始.");
         try
         {
             Task.Run(() =>
@@ -68,7 +68,7 @@ public static class TaskManager
         }
         finally
         {
-            LoggerHelper.Info($"{prompt}异步任务 {name} 已完成.");
+            LoggerHelper.Info($"{prompt}MFA异步任务 {name} 已完成.");
         }
     }
 
@@ -89,7 +89,7 @@ public static class TaskManager
         bool catchException = true,
         bool shouldLog = true)
     {
-        LoggerHelper.Info($"异步任务 {name} 开始.");
+        LoggerHelper.Info($"MFA异步任务 {name} 开始.");
         if (catchException)
         {
             var task = Task.Run(action);
@@ -105,7 +105,7 @@ public static class TaskManager
         }
         else await Task.Run(action);
 
-        LoggerHelper.Info($"{prompt}异步任务 {name} 已完成.");
+        LoggerHelper.Info($"{prompt}MFA异步任务 {name} 已完成.");
     }
 
     public async static Task RunTaskAsync(
@@ -117,7 +117,7 @@ public static class TaskManager
         bool catchException = true,
         bool shouldLog = true)
     {
-        LoggerHelper.Info($"异步任务 {name} 开始.");
+        LoggerHelper.Info($"MFA异步任务 {name} 开始.");
         try
         {
             await Task.Run(() =>
@@ -138,7 +138,7 @@ public static class TaskManager
         }
         finally
         {
-            LoggerHelper.Info($"{prompt}异步任务 {name} 已完成.");
+            LoggerHelper.Info($"{prompt}MFA异步任务 {name} 已完成.");
         }
     }
 
@@ -171,7 +171,7 @@ public static class TaskManager
         }
         finally
         {
-            LoggerHelper.Info($">>> 异步任务 {name} 已完成.");
+            LoggerHelper.Info($">>> MFA异步任务 {name} 已完成.");
         }
     }
 }

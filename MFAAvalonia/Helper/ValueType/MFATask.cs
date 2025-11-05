@@ -22,9 +22,10 @@ public partial class MFATask : ObservableObject
     public enum MFATaskStatus
     {
         NOT_STARTED,
+        STOPPING,
         STOPPED,
         SUCCEEDED,
-        FAILED,
+        FAILED
     }
 
     [ObservableProperty] private string? _name = string.Empty;

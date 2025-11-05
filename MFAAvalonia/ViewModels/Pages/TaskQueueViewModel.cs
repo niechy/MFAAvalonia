@@ -309,6 +309,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     #endregion
 
     #region 连接
+
     [ObservableProperty] private int shouldShow = 0;
     [ObservableProperty] private ObservableCollection<object> _devices = [];
     [ObservableProperty] private object? _currentDevice;
@@ -320,6 +321,7 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     public void ChangedDevice(object? value)
     {
+        var igoreToast = false;
         if (value != null)
         {
             var now = DateTime.Now;
@@ -330,20 +332,21 @@ public partial class TaskQueueViewModel : ViewModelBase
             else
             {
                 if (now - _lastExecutionTime < TimeSpan.FromSeconds(2))
-                    return;
-                _lastExecutionTime = now;
+                    igoreToast = true;
+                else
+                    _lastExecutionTime = now;
             }
         }
         if (value is DesktopWindowInfo window)
         {
-            ToastHelper.Info("WindowSelectionMessage".ToLocalizationFormatted(false, ""), window.Name);
+            if (!igoreToast) ToastHelper.Info("WindowSelectionMessage".ToLocalizationFormatted(false, ""), window.Name);
             MaaProcessor.Config.DesktopWindow.Name = window.Name;
             MaaProcessor.Config.DesktopWindow.HWnd = window.Handle;
             MaaProcessor.Instance.SetTasker();
         }
         else if (value is AdbDeviceInfo device)
         {
-            ToastHelper.Info("EmulatorSelectionMessage".ToLocalizationFormatted(false, ""), device.Name);
+            if (!igoreToast)  ToastHelper.Info("EmulatorSelectionMessage".ToLocalizationFormatted(false, ""), device.Name);
             MaaProcessor.Config.AdbDevice.Name = device.Name;
             MaaProcessor.Config.AdbDevice.AdbPath = device.AdbPath;
             MaaProcessor.Config.AdbDevice.AdbSerial = device.AdbSerial;
@@ -630,6 +633,7 @@ public partial class TaskQueueViewModel : ViewModelBase
                 AutoDetectDevice(_refreshCancellationTokenSource.Token);
             return;
         }
+        LoggerHelper.Info("Reading saved ADB device from configuration.");
         DispatcherHelper.PostOnMainThread(() =>
         {
             Devices = [device];

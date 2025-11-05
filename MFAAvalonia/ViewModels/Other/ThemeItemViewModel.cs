@@ -13,7 +13,6 @@ public partial class ThemeItemViewModel(SukiColorTheme theme, GuiSettingsUserCon
 
     [ObservableProperty] private SukiColorTheme _theme = theme;
 
-
     partial void OnIsSelectedChanged(bool value)
     {
         if (value)
