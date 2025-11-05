@@ -144,7 +144,15 @@ public partial class SukiTheme : Styles
         _colorThemeHashset.Add(sukiColorTheme);
         _allThemes.Add(sukiColorTheme);
     }
-
+    
+    public void RemoveColorTheme(SukiColorTheme sukiColorTheme)
+    {
+        if (!_colorThemeHashset.Contains(sukiColorTheme))
+            return;
+        _colorThemeHashset.Remove(sukiColorTheme);
+        _allThemes.Remove(sukiColorTheme);
+    }
+    
     /// <summary>
     /// Adds multiple new <see cref="SukiColorTheme"/> to the ones available, without making any active.
     /// </summary>

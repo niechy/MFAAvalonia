@@ -35,7 +35,7 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
     [ObservableProperty] private ThemeVariant _baseTheme;
 
     [ObservableProperty] private SukiColorTheme _currentColorTheme;
-    [ObservableProperty] private IAvaloniaReadOnlyList<ThemeItemViewModel> _themeItems;
+    [ObservableProperty] private AvaloniaList<ThemeItemViewModel> _themeItems;
 
     public readonly IList<SukiColorTheme> OtherColorThemes = ConfigurationManager.Current.GetValue(ConfigurationKeys.OtherColorTheme, new List<SukiColorTheme>());
 
@@ -106,5 +106,14 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
     {
         OtherColorThemes.Add(color);
         ConfigurationManager.Current.SetValue(ConfigurationKeys.OtherColorTheme, OtherColorThemes);
+    }
+    
+    public void RemoveOtherColor(SukiColorTheme color)
+    {
+        OtherColorThemes.Remove(color);
+        ConfigurationManager.Current.SetValue(ConfigurationKeys.OtherColorTheme, OtherColorThemes);
+        ThemeItems = new AvaloniaList<ThemeItemViewModel>(
+            _theme.ColorThemes.ToList().Select(t => new ThemeItemViewModel(t, this))
+        );
     }
 }
