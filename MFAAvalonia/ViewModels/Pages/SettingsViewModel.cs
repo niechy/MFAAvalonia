@@ -49,7 +49,7 @@ public partial class SettingsViewModel : ViewModelBase
 
         var configDPath = Path.Combine(AppContext.BaseDirectory, "config");
         var configPath = Path.Combine(configDPath, $"{ConfigurationManager.GetActualConfiguration()}.json");
-        var newConfigPath = Path.Combine(configDPath, $"{NewConfigurationName}.json");
+        var newConfigPath = Path.Combine(configDPath, $"mfa_{NewConfigurationName}.json");
         bool configExists = Directory.GetFiles(configDPath, "*.json")
             .Select(Path.GetFileNameWithoutExtension)
             .Any(name => name.Equals(NewConfigurationName, StringComparison.OrdinalIgnoreCase));

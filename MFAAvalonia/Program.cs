@@ -47,6 +47,7 @@ sealed class Program
         try
         {
             _mutex?.ReleaseMutex();
+            _mutex?.Close();
             _mutex = null;
         }
         catch (Exception e)

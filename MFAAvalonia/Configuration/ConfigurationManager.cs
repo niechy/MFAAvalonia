@@ -27,7 +27,7 @@ public static class ConfigurationManager
     {
         if (ConfigName.Equals("Default", StringComparison.OrdinalIgnoreCase))
             return "config";
-        return GetCurrentConfiguration();
+        return $"mfa_{GetCurrentConfiguration()}";
     }
 
     public static void Initialize()
@@ -59,20 +59,25 @@ public static class ConfigurationManager
             Directory.CreateDirectory(_configDir);
         if (!File.Exists(defaultConfigPath))
             File.WriteAllText(defaultConfigPath, "{}");
+        if (ConfigName != "Default" && !File.Exists(Path.Combine(_configDir, $"mfa_{ConfigName}.json")))
+            ConfigName = "Default";
         collection.Add(Current.SetConfig(JsonHelper.LoadConfig("config", new Dictionary<string, object>())));
-        foreach (var file in Directory.EnumerateFiles(_configDir, "*.json"))
+        foreach (var file in Directory.EnumerateFiles(_configDir, "mfa_*.json"))
         {
             var fileName = Path.GetFileNameWithoutExtension(file);
             if (fileName == "maa_option" || fileName == "config") continue;
+            string nameWithoutPrefix = fileName.StartsWith("mfa_")
+                ? fileName.Substring("mfa_".Length)
+                : fileName;
             var configs = JsonHelper.LoadConfig(fileName, new Dictionary<string, object>());
 
-            var config = new MFAConfiguration(fileName, fileName, configs);
+            var config = new MFAConfiguration(nameWithoutPrefix, fileName, configs);
 
             collection.Add(config);
         }
 
         Maa.SetConfig(JsonHelper.LoadConfig("maa_option", new Dictionary<string, object>()));
-       
+
         if (Program.Args.TryGetValue("c", out var param) && !string.IsNullOrEmpty(param))
         {
             if (collection.Any(c => c.Name == param))
@@ -99,7 +104,7 @@ public static class ConfigurationManager
     {
         var configPath = Path.Combine(AppContext.BaseDirectory, "config");
         var newConfigPath = Path.Combine(configPath, $"{name}.json");
-        var newConfig = new MFAConfiguration(name.Equals("config", StringComparison.OrdinalIgnoreCase) ? "Default" : name, name, new Dictionary<string, object>());
+        var newConfig = new MFAConfiguration(name.Equals("config", StringComparison.OrdinalIgnoreCase) ? "Default" : name, name.Equals("config", StringComparison.OrdinalIgnoreCase) ? name : $"mfa_{name}", new Dictionary<string, object>());
         Configs.Add(newConfig);
         return newConfig;
     }
