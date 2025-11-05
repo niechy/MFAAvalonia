@@ -346,7 +346,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
         else if (value is AdbDeviceInfo device)
         {
-            if (!igoreToast)  ToastHelper.Info("EmulatorSelectionMessage".ToLocalizationFormatted(false, ""), device.Name);
+            if (!igoreToast) ToastHelper.Info("EmulatorSelectionMessage".ToLocalizationFormatted(false, ""), device.Name);
             MaaProcessor.Config.AdbDevice.Name = device.Name;
             MaaProcessor.Config.AdbDevice.AdbPath = device.AdbPath;
             MaaProcessor.Config.AdbDevice.AdbSerial = device.AdbSerial;
@@ -419,7 +419,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         _refreshCancellationTokenSource?.Cancel();
         _refreshCancellationTokenSource = new CancellationTokenSource();
-        TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token), _refreshCancellationTokenSource.Token, handleError: (e) => HandleDetectionError(e, CurrentController == MaaControllerTypes.Adb),
+        TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token), _refreshCancellationTokenSource.Token, name: "刷新", handleError: (e) => HandleDetectionError(e, CurrentController == MaaControllerTypes.Adb),
             catchException: true, shouldLog: true);
     }
     [RelayCommand]
@@ -628,7 +628,7 @@ public partial class TaskQueueViewModel : ViewModelBase
             _refreshCancellationTokenSource?.Cancel();
             _refreshCancellationTokenSource = new CancellationTokenSource();
             if (InTask)
-                TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token));
+                TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token), name: "刷新设备");
             else
                 AutoDetectDevice(_refreshCancellationTokenSource.Token);
             return;

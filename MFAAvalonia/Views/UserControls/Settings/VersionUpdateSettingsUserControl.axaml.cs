@@ -32,7 +32,7 @@ public partial class VersionUpdateSettingsUserControl : UserControl
                     await Task.Delay(1000);
                     DispatcherHelper.PostOnMainThread(() => ToolTip.SetIsOpen(textBlock, false));
                     DispatcherHelper.PostOnMainThread(() =>   textBlock.Bind(ToolTip.TipProperty, new I18nBinding("CopyToClipboard")));
-                });
+                }, name: "复制版本号");
             }
         }
     }

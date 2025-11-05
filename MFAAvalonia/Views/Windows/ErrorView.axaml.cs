@@ -100,7 +100,7 @@ public partial class ErrorView : SukiWindow
                 DispatcherHelper.PostOnMainThread(() => ToolTip.SetIsOpen(control, false));
                 DispatcherHelper.PostOnMainThread(() => control.Bind(ToolTip.TipProperty, new I18nBinding("CopyToClipboard")));
             }
-        });
+        },name:"复制错误信息到剪贴板");
     }
 
     // // 打开反馈链接

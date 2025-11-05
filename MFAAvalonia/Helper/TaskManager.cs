@@ -150,6 +150,7 @@ public static class TaskManager
         bool catchException = true,
         bool shouldLog = true)
     {
+        LoggerHelper.Info($"MFA异步任务 {name} 开始.");
         try
         {
             return await Task.Run(() =>

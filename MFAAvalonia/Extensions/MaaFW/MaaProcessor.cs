@@ -517,7 +517,7 @@ public class MaaProcessor
             {
                 token.ThrowIfCancellationRequested();
                 return new MaaResource(resources);
-            }, token, catchException: true, shouldLog: false, handleError: exception => HandleInitializationError(exception, "LoadResourcesFailed".ToLocalization()));
+            }, token: token, name: "资源检测", catchException: true, shouldLog: false, handleError: exception => HandleInitializationError(exception, "LoadResourcesFailed".ToLocalization()));
 
             Instances.PerformanceUserControlModel.ChangeGpuOption(maaResource, Instances.PerformanceUserControlModel.GpuOption);
 
@@ -548,7 +548,7 @@ public class MaaProcessor
             {
                 token.ThrowIfCancellationRequested();
                 return InitializeController(Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb);
-            }, token, catchException: true, shouldLog: false, handleError: exception => HandleInitializationError(exception,
+            }, token: token, name: "控制器检测", catchException: true, shouldLog: false, handleError: exception => HandleInitializationError(exception,
                 "ConnectingEmulatorOrWindow".ToLocalization()
                     .FormatWith(Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb
                         ? "Emulator".ToLocalization()
@@ -697,7 +697,7 @@ public class MaaProcessor
                     _agentProcess.BeginOutputReadLine();
                     _agentProcess.BeginErrorReadLine();
 
-                    TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token);
+                    TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token: token, name: "Agent程序启动");
 
                 }
                 catch (Exception ex)
@@ -2107,7 +2107,7 @@ public class MaaProcessor
         {
             await ExecuteTasks(token);
             Stop(Status, true, onlyStart);
-        }, token, name: "启动任务");
+        }, token: token, name: "启动任务");
 
     }
 
@@ -2234,7 +2234,7 @@ public class MaaProcessor
     {
         TaskQueue.Enqueue(CreateMFATask("启动脚本", async () =>
         {
-            await TaskManager.RunTaskAsync(async () => await RunScript(), token);
+            await TaskManager.RunTaskAsync(async () => await RunScript(), token: token, name: "启动附加开始脚本");
         }));
 
         TaskQueue.Enqueue(CreateMFATask("连接设备", async () =>
@@ -2251,7 +2251,7 @@ public class MaaProcessor
     public async Task MeasureScreencapPerformanceAsync(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        await MeasureExecutionTimeAsync(async () => await TaskManager.RunTaskAsync(() => MaaTasker?.Controller.Screencap().Wait(), token));
+        await MeasureExecutionTimeAsync(async () => await TaskManager.RunTaskAsync(() => MaaTasker?.Controller.Screencap().Wait(), token: token, name: "截图测试"));
     }
 
     async private Task HandleDeviceConnectionAsync(CancellationToken token, bool showMessage = true)
@@ -2365,7 +2365,7 @@ public class MaaProcessor
                 job.Wait();
             else
                 job.Wait().ThrowIfNot(MaaJobStatus.Succeeded);
-        }), token, (ex) => throw ex, catchException: true, shouldLog: false);
+        }), token, (ex) => throw ex, name: "队列任务", catchException: true, shouldLog: false);
     }
 
     async private Task RunScript(string str = "Prescript")
@@ -2458,7 +2458,7 @@ public class MaaProcessor
         {
             TaskQueue.Enqueue(CreateMFATask("结束脚本", async () =>
             {
-                await TaskManager.RunTaskAsync(async () => await RunScript("Post-script"), token);
+                await TaskManager.RunTaskAsync(async () => await RunScript("Post-script"), token: token, name: "启动附加结束脚本");
             }));
         }
         if (checkUpdate)
@@ -2517,7 +2517,7 @@ public class MaaProcessor
             TaskQueue.Clear();
 
             Instances.RootViewModel.IsRunning = false;
-            
+
             ExecuteStopCore(finished, () =>
             {
                 var stopResult = MaaJobStatus.Succeeded;

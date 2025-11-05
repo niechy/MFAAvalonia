@@ -16,7 +16,7 @@ namespace MFAAvalonia.ViewModels.Pages;
 
 public partial class ScreenshotViewModel : ViewModelBase
 {
-    #pragma warning disable CS4014  // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
     [ObservableProperty] private Bitmap? _screenshotImage;
     [ObservableProperty] private string _taskName = string.Empty;
     [RelayCommand]
@@ -55,7 +55,7 @@ public partial class ScreenshotViewModel : ViewModelBase
                             ScreenshotImage = bitmap;
                             TaskName = string.Empty;
                         }));
-                    }),
+                    }, name: "截图测试"),
                 });
                 MaaProcessor.Instance.Start(true, checkUpdate: false);
 
@@ -72,7 +72,7 @@ public partial class ScreenshotViewModel : ViewModelBase
                         ScreenshotImage = bitmap;
                         TaskName = string.Empty;
                     }));
-                });
+                }, name: "截图测试");
         }
         catch (Exception e)
         {

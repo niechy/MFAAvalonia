@@ -282,7 +282,7 @@ public partial class RootView : SukiWindow
                         Hide();
                     }
                 });
-            });
+            }, name: "公告和最新版本检测");
         }
         else
         {
