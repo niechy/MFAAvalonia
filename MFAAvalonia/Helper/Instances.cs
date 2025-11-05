@@ -59,6 +59,7 @@ public static partial class Instances
     /// </summary>
     public static void ShutdownApplication()
     {
+        Program.ReleaseMutex();
         DispatcherHelper.PostOnMainThread(() => ApplicationLifetime.Shutdown());
     }
 
@@ -67,6 +68,7 @@ public static partial class Instances
     /// </summary>
     public static void RestartApplication(bool noAutoStart = false,bool forgeStop = false)
     {
+        Program.ReleaseMutex();
         if (noAutoStart)
             GlobalConfiguration.SetValue(ConfigurationKeys.NoAutoStart, bool.TrueString);
         var process = new Process
