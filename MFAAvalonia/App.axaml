@@ -21,9 +21,8 @@
     </Application.Resources>
     <Application.Styles>
         <FluentTheme />
-        <styling:FluentAvaloniaTheme />
-        <sukiUi:SukiTheme  ThemeColor="Blue" />
-        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+        <styling:FluentAvaloniaTheme /> 
+        <sukiUi:SukiTheme ThemeColor="Blue" />
         <StyleInclude Source="avares://MFAAvalonia/Views/UserControls/HotKeyEditor.axaml" />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
     </Application.Styles>

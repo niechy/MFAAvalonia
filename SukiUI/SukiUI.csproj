@@ -141,6 +141,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Reference Include="Avalonia.Controls.ColorPicker">
+        <HintPath>C:\Users\Fox\.nuget\packages\avalonia.controls.colorpicker\11.3.8\lib\net8.0\Avalonia.Controls.ColorPicker.dll</HintPath>
+      </Reference>
       <Reference Include="CalcBindingAva">
         <HintPath>..\..\..\nuget\packages\calcbindingava\2.5.3\lib\net6.0\CalcBindingAva.dll</HintPath>
       </Reference>

@@ -127,7 +127,14 @@
         <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
 
     </Style>
-
+    
+    <Style Selector="RadioButton:disabled TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource SukiDisabledText}" />
+    </Style>
+    
+    <Style Selector="RadioButton:disabled AccessText">
+        <Setter Property="Foreground" Value="{DynamicResource SukiDisabledText}" />
+    </Style>
 
     <Style Selector="RadioButton.Chips:checked  TextBlock">
         <Setter Property="Foreground" Value="White" />

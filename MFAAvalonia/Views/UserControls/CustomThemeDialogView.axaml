@@ -16,8 +16,11 @@
         <StackPanel Spacing="20">
             <TextBox Text="{Binding DisplayName}" />
             <ColorPicker Color="{Binding PrimaryColor}" />
+
             <ColorPicker Color="{Binding AccentColor}" />
-            <Button Command="{Binding TryCreateThemeCommand}" Content="{markup:I18n {x:Static helper:LangKeys.ButtonAdd}}" />
+
+            <Button Command="{Binding TryCreateThemeCommand}"
+                    Content="{markup:I18n {x:Static helper:LangKeys.ButtonAdd}}" />
         </StackPanel>
     </suki:GroupBox>
 </UserControl>
