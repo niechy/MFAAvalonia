@@ -223,10 +223,17 @@ public static class VersionChecker
                 GetLatestVersionAndDownloadUrlFromGithub(out _, out latestVersion, out sha256);
             else
                 GetDownloadUrlFromMirror(localVersion, "MFAAvalonia", CDK(), out _, out latestVersion, out sha256, isUI: true, onlyCheck: true);
-
+            var mirrocS = false;
             if (IsNewVersionAvailable(latestVersion, GetMaxVersion()))
+            {
                 latestVersion = GetMaxVersion();
-            if (IsNewVersionAvailable(latestVersion, localVersion))
+                if (!isGithub) mirrocS = true;
+            }
+            if (mirrocS)
+            {
+                ToastHelper.Warn("Warning".ToLocalization(), "SwitchUiUpdateSourceToGithub".ToLocalization());
+            }
+            else if (IsNewVersionAvailable(latestVersion, localVersion))
             {
                 DispatcherHelper.RunOnMainThread(() =>
                 {
