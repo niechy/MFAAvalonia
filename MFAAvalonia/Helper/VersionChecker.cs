@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using MaaFramework.Binding.Interop.Native;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
 using MFAAvalonia.Extensions.MaaFW;
@@ -1141,7 +1142,7 @@ public static class VersionChecker
             // 版本信息获取（保持原有逻辑）
             SetProgress(progress, 10);
             var resId = "MaaFramework";
-            var currentVersion = MaaProcessor.Utility.Version;
+            var currentVersion = MaaUtility.MaaVersion();
             string downloadUrl = string.Empty, latestVersion = string.Empty, sha256 = string.Empty;
             try
             {

@@ -5,6 +5,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using MaaFramework.Binding;
 using MaaFramework.Binding.Buffers;
+using MaaFramework.Binding.Interop.Native;
 using MaaFramework.Binding.Notification;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions.MaaFW.Custom;
@@ -32,6 +33,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 using Brushes = Avalonia.Media.Brushes;
+using MaaAgentClient = MaaFramework.Binding.MaaAgentClient;
+using MaaController = MaaFramework.Binding.MaaController;
+using MaaGlobal = MaaFramework.Binding.MaaGlobal;
+using MaaResource = MaaFramework.Binding.MaaResource;
+using MaaTasker = MaaFramework.Binding.MaaTasker;
+using MaaToolkit = MaaFramework.Binding.MaaToolkit;
 using Pen = Avalonia.Media.Pen;
 using Size = Avalonia.Size;
 
@@ -48,8 +55,9 @@ public class MaaProcessor
     public static string ResourceBase => Path.Combine(Resource, "base");
     public static MaaProcessor Instance { get; } = new();
     public static MaaToolkit Toolkit { get; } = new(true);
-    public static MaaUtility Utility { get; } = new();
-
+    
+    public static MaaGlobal Global { get; } = new();
+    
     private static MaaInterface? _interface;
 
     // public Dictionary<string, MaaNode> BaseNodes = new();
@@ -579,8 +587,8 @@ public class MaaProcessor
             {
                 Controller = controller,
                 Resource = maaResource,
-                Utility = MaaProcessor.Utility,
                 Toolkit = MaaProcessor.Toolkit,
+                Global = MaaProcessor.Global,
                 DisposeOptions = DisposeOptions.All,
             };
 
@@ -712,8 +720,8 @@ public class MaaProcessor
             // RegisterCustomRecognitionsAndActions(tasker);
             Instances.TaskQueueViewModel.SetConnected(true);
             //  tasker.Utility.SetOption_Recording(ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false));
-            tasker.Utility.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
-            tasker.Utility.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
+            tasker.Global.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
+            tasker.Global.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
             tasker.Callback += (o, args) =>
             {
                 var jObject = JObject.Parse(args.Details);
@@ -1044,7 +1052,7 @@ public class MaaProcessor
             )
             : new MaaWin32Controller(
                 Config.DesktopWindow.HWnd,
-                Config.DesktopWindow.ScreenCap, Config.DesktopWindow.Input,
+                Config.DesktopWindow.ScreenCap, Config.DesktopWindow.Input, Config.DesktopWindow.Input,
                 Config.DesktopWindow.Link,
                 Config.DesktopWindow.Check);
     }

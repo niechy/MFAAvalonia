@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MaaFramework.Binding.Interop.Native;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
@@ -23,11 +24,11 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
     {
         try
         {
-            MaaFwVersion = MaaProcessor.Utility.Version;
+            MaaFwVersion = MaaUtility.MaaVersion();
         }
         catch (Exception e)
         {
-            MaaFwVersion = "v4.4.1";
+            MaaFwVersion = "v5.0.0";
             LoggerHelper.Error(e);
         }
         base.Initialize();
