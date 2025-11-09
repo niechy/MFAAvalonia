@@ -19,14 +19,14 @@ public partial class LogItemViewModel : ViewModelBase
         IBrush color,
         string weight = "Regular",
         bool useKey = false,
-        string dateFormat = "MM'-'dd'  'HH':'mm':'ss",
+        string dateFormat = "MM'-'dd'  'HH':'mm':'ss",  bool changeColor = true,
         bool showTime = true,
         params string[] formatArgsKeys)
     {
         _resourceKey = resourceKey;
 
         Time = DateTime.Now.ToString(dateFormat);
-
+        _changeColor = changeColor;
         Weight = weight;
         ShowTime = showTime;
         _baseBrush = color;
@@ -48,6 +48,7 @@ public partial class LogItemViewModel : ViewModelBase
         string weight = "Regular",
         bool useKey = false,
         string dateFormat = "MM'-'dd'  'HH':'mm':'ss",
+        bool changeColor = true,
         bool showTime = true,
         bool transformKey = true,
         params string[] formatArgsKeys)
@@ -55,6 +56,7 @@ public partial class LogItemViewModel : ViewModelBase
         _resourceKey = resourceKey;
         _transformKey = transformKey;
         Time = DateTime.Now.ToString(dateFormat);
+        _changeColor = changeColor;
         Color = color;
         Weight = weight;
         ShowTime = showTime;

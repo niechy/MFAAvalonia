@@ -245,10 +245,10 @@ public partial class TaskQueueViewModel : ViewModelBase
     public void AddLog(string content,
         IBrush? brush,
         string weight = "Regular",
+        bool changeColor = true,
         bool showTime = true)
     {
         brush ??= Brushes.Black;
-        var changeColor = true;
         if (content.StartsWith(INFO))
         {
             brush = Brushes.Black;
@@ -280,30 +280,31 @@ public partial class TaskQueueViewModel : ViewModelBase
     public void AddLog(string content,
         string color = "",
         string weight = "Regular",
+        bool changeColor = true,
         bool showTime = true)
     {
         var brush = BrushHelper.ConvertToBrush(color, Brushes.Black);
-        AddLog(content, brush, weight, showTime);
+        AddLog(content, brush, weight, changeColor, showTime);
     }
 
-    public void AddLogByKey(string key, IBrush? brush = null, bool transformKey = true, params string[] formatArgsKeys)
+    public void AddLogByKey(string key, IBrush? brush = null, bool changeColor = true, bool transformKey = true, params string[] formatArgsKeys)
     {
         brush ??= Brushes.Black;
         Task.Run(() =>
         {
             DispatcherHelper.RunOnMainThread(() =>
             {
-                var log = new LogItemViewModel(key, brush, "Regular", true, "HH':'mm':'ss", showTime: true, transformKey: transformKey, formatArgsKeys);
+                var log = new LogItemViewModel(key, brush, "Regular", true, "HH':'mm':'ss", changeColor: changeColor, showTime: true, transformKey: transformKey, formatArgsKeys);
                 LogItemViewModels.Add(log);
                 LoggerHelper.Info(log.Content);
             });
         });
     }
 
-    public void AddLogByKey(string key, string color = "", bool transformKey = true, params string[] formatArgsKeys)
+    public void AddLogByKey(string key, string color = "", bool changeColor = true, bool transformKey = true, params string[] formatArgsKeys)
     {
         var brush = BrushHelper.ConvertToBrush(color, Brushes.Black);
-        AddLogByKey(key, brush, transformKey, formatArgsKeys);
+        AddLogByKey(key, brush, changeColor, transformKey, formatArgsKeys);
     }
 
     #endregion

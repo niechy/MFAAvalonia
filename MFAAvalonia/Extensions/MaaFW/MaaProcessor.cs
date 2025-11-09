@@ -55,9 +55,9 @@ public class MaaProcessor
     public static string ResourceBase => Path.Combine(Resource, "base");
     public static MaaProcessor Instance { get; } = new();
     public static MaaToolkit Toolkit { get; } = new(true);
-    
+
     public static MaaGlobal Global { get; } = new();
-    
+
     private static MaaInterface? _interface;
 
     // public Dictionary<string, MaaNode> BaseNodes = new();
@@ -131,10 +131,15 @@ public class MaaProcessor
 
     public async Task<MaaTasker?> GetTaskerAsync(CancellationToken token = default)
     {
-        MaaTasker ??= await InitializeMaaTasker(token);
+        MaaTasker ??= (await InitializeMaaTasker(token)).Item1;
         return MaaTasker;
     }
-
+    public async Task<(MaaTasker?, bool)> GetTaskerAndBoolAsync(CancellationToken token = default)
+    {
+        var MaaTaskerTuple = await InitializeMaaTasker(token);
+        MaaTasker ??= MaaTaskerTuple.Item1;
+        return (MaaTasker, MaaTaskerTuple.Item2);
+    }
     public ObservableCollection<DragItemViewModel> TasksSource { get; private set; } =
         [];
     public AutoInitDictionary AutoInitDictionary { get; } = new();
@@ -505,8 +510,10 @@ public class MaaProcessor
         }
     }
 
-    async private Task<MaaTasker?> InitializeMaaTasker(CancellationToken token) // 添加 async 和 token
+    async private Task<(MaaTasker?, bool)> InitializeMaaTasker(CancellationToken token) // 添加 async 和 token
     {
+        var InvalidResource = false;
+
         AutoInitDictionary.Clear();
         LoggerHelper.Info("LoadingResources".ToLocalization());
 
@@ -525,7 +532,12 @@ public class MaaProcessor
             {
                 token.ThrowIfCancellationRequested();
                 return new MaaResource(resources);
-            }, token: token, name: "资源检测", catchException: true, shouldLog: false, handleError: exception => HandleInitializationError(exception, "LoadResourcesFailed".ToLocalization()));
+            }, token: token, name: "资源检测", catchException: true, shouldLog: false, handleError: exception =>
+            {
+                HandleInitializationError(exception, "LoadResourcesFailed".ToLocalization());
+                RootView.AddLog("LoadResourcesFailed".ToLocalization(), Brushes.OrangeRed, changeColor: false);
+                InvalidResource = true;
+            });
 
             Instances.PerformanceUserControlModel.ChangeGpuOption(maaResource, Instances.PerformanceUserControlModel.GpuOption);
 
@@ -536,16 +548,17 @@ public class MaaProcessor
         catch (OperationCanceledException)
         {
             LoggerHelper.Warning("Resource loading was canceled");
-            return null;
+            return (null, InvalidResource);
         }
         catch (MaaException)
         {
-            return null;
+            return (null, InvalidResource);
         }
         catch (Exception e)
         {
+
             LoggerHelper.Error("Initialization resource error", e);
-            return null;
+            return (null, InvalidResource);
         }
 
         // 初始化控制器部分同理
@@ -566,16 +579,16 @@ public class MaaProcessor
         catch (OperationCanceledException)
         {
             LoggerHelper.Warning("Controller initialization was canceled");
-            return null;
+            return (null, InvalidResource);
         }
         catch (MaaException)
         {
-            return null;
+            return (null, InvalidResource);
         }
         catch (Exception e)
         {
             LoggerHelper.Error("Initialization controller error", e);
-            return null;
+            return (null, InvalidResource);
         }
 
         try
@@ -773,21 +786,21 @@ public class MaaProcessor
                 }
             };
 
-            return tasker;
+            return (tasker, InvalidResource);
         }
         catch (OperationCanceledException)
         {
             LoggerHelper.Warning("Tasker initialization was canceled");
-            return null;
+            return (null, InvalidResource);
         }
         catch (MaaException)
         {
-            return null;
+            return (null, InvalidResource);
         }
         catch (Exception e)
         {
             LoggerHelper.Error("Initialization tasker error", e);
-            return null;
+            return (null, InvalidResource);
         }
     }
 
@@ -1662,17 +1675,17 @@ public class MaaProcessor
         switch (elapsedMilliseconds)
         {
             case >= 800:
-                RootView.AddLogByKey("ScreencapErrorTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, elapsedMilliseconds.ToString(),
+                RootView.AddLogByKeys("ScreencapErrorTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, elapsedMilliseconds.ToString(),
                     ScreenshotType());
                 break;
 
             case >= 400:
-                RootView.AddLogByKey("ScreencapWarningTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, elapsedMilliseconds.ToString(),
+                RootView.AddLogByKeys("ScreencapWarningTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, elapsedMilliseconds.ToString(),
                     ScreenshotType());
                 break;
 
             default:
-                RootView.AddLogByKey("ScreencapCost", null, false, elapsedMilliseconds.ToString(),
+                RootView.AddLogByKeys("ScreencapCost", null, false, elapsedMilliseconds.ToString(),
                     ScreenshotType());
                 break;
         }
@@ -1700,17 +1713,17 @@ public class MaaProcessor
         switch (avgElapsed)
         {
             case >= 800:
-                RootView.AddLogByKey("ScreencapErrorTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, avgElapsed.ToString(),
+                RootView.AddLogByKeys("ScreencapErrorTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, avgElapsed.ToString(),
                     ScreenshotType());
                 break;
 
             case >= 400:
-                RootView.AddLogByKey("ScreencapWarningTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, avgElapsed.ToString(),
+                RootView.AddLogByKeys("ScreencapWarningTip", BrushHelper.ConvertToBrush("DarkGoldenrod"), false, avgElapsed.ToString(),
                     ScreenshotType());
                 break;
 
             default:
-                RootView.AddLogByKey("ScreencapCost", null, false, avgElapsed.ToString(),
+                RootView.AddLogByKeys("ScreencapCost", null, false, avgElapsed.ToString(),
                     ScreenshotType());
                 break;
         }
@@ -2267,14 +2280,14 @@ public class MaaProcessor
         var controllerType = Instances.TaskQueueViewModel.CurrentController;
         var isAdb = controllerType == MaaControllerTypes.Adb;
         if (showMessage)
-            RootView.AddLogByKey("ConnectingTo", null, true, isAdb ? "Emulator" : "Window");
+            RootView.AddLogByKeys("ConnectingTo", null, true, isAdb ? "Emulator" : "Window");
         else
             ToastHelper.Info("Tip".ToLocalization(), "ConnectingTo".ToLocalizationFormatted(true, isAdb ? "Emulator" : "Window"));
         if (Instances.TaskQueueViewModel.CurrentDevice == null)
             Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false, true);
-        var connected = await TryConnectAsync(token);
-
-        if (!connected && isAdb)
+        var tuple = await TryConnectAsync(token);
+        var connected = tuple.Item1;
+        if (!connected && isAdb && !tuple.Item2)
         {
             connected = await HandleAdbConnectionAsync(token, showMessage);
         }
@@ -2325,14 +2338,15 @@ public class MaaProcessor
             return false;
         }
         other?.Invoke();
-        return await TryConnectAsync(token);
+        var tuple = await TryConnectAsync(token);
+        return tuple.Item1;
     }
 
-    async private Task<bool> TryConnectAsync(CancellationToken token)
+    async private Task<(bool, bool)> TryConnectAsync(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        var instance = await GetTaskerAsync(token);
-        return instance is { IsInitialized: true };
+        var tuple = await GetTaskerAndBoolAsync(token);
+        return (tuple.Item1 is { IsInitialized: true }, tuple.Item2);
     }
 
     private void HandleConnectionFailureAsync(bool isAdb, CancellationToken token)
@@ -2630,7 +2644,7 @@ public class MaaProcessor
             if (_startTime != null)
             {
                 var elapsedTime = DateTime.Now - (DateTime)_startTime;
-                RootView.AddLogByKey("TaskAllCompletedWithTime", null, true, ((int)elapsedTime.TotalHours).ToString(),
+                RootView.AddLogByKeys("TaskAllCompletedWithTime", null, true, ((int)elapsedTime.TotalHours).ToString(),
                     ((int)elapsedTime.TotalMinutes % 60).ToString(), ((int)elapsedTime.TotalSeconds % 60).ToString());
             }
             else
@@ -2782,7 +2796,7 @@ public class MaaProcessor
 
             if (remainingTime % 10 == 0)
             {
-                RootView.AddLogByKey("WaitSoftwareTime", null, true,
+                RootView.AddLogByKeys("WaitSoftwareTime", null, true,
                     Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb
                         ? "Emulator"
                         : "Window",
@@ -2791,7 +2805,7 @@ public class MaaProcessor
             }
             else if (remainingTime.Equals(waitTimeInSeconds))
             {
-                RootView.AddLogByKey("WaitSoftwareTime", null, true,
+                RootView.AddLogByKeys("WaitSoftwareTime", null, true,
                     Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb
                         ? "Emulator"
                         : "Window",
