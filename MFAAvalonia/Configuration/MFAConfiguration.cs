@@ -52,12 +52,13 @@ public partial class MFAConfiguration(string name, string fileName, Dictionary<s
         JsonHelper.SaveConfig(FileName, Config, new MaaInterfaceSelectAdvancedConverter(false), new MaaInterfaceSelectOptionConverter(false));
     }
 
+    public bool ContainsKey(string key) => Config.ContainsKey(key);
     public T GetValue<T>(string key, T defaultValue, List<T> whitelist)
     {
         var value = GetValue(key, defaultValue);
         return whitelist.Contains(value) ? value : defaultValue;
     }
-
+    
     public T GetValue<T>(string key, T defaultValue)
     {
         if (Config.TryGetValue(key, out var data))

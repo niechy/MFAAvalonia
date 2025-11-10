@@ -1423,7 +1423,7 @@ public class MaaProcessor
             Config.DesktopWindow.ScreenCap = winScreenCapType;
 
             LoggerHelper.Info(
-                $"{"MouseInput".ToLocalization()}{win32MouseInputType},{"KeyboardInput".ToLocalization()}{win32KeyboardInputType},{"AdbCaptureMode".ToLocalization()}{winScreenCapType}");
+                $"{"MouseInput".ToLocalization()}:{win32MouseInputType},{"KeyboardInput".ToLocalization()}:{win32KeyboardInputType},{"AdbCaptureMode".ToLocalization()}{winScreenCapType}");
         }
     }
 
