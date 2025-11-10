@@ -99,7 +99,78 @@ public static class MFAExtensions
             string propName = property.Name;
             JToken? targetProp = targetObj.Property(propName)?.Value;
             JToken sourceProp = property.Value;
+            if (propName == "attach")
+            {
+                // 仅当双方都是对象类型时才进行第一层字段合并
+                if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
+                {
+                    JObject targetAttach = (JObject)targetProp;
+                    JObject sourceAttach = (JObject)sourceProp;
 
+                    // 遍历sourceAttach的所有第一层字段，直接覆盖或添加（不递归）
+                    foreach (var attachProp in sourceAttach.Properties())
+                    {
+                        string attachPropName = attachProp.Name;
+                        JToken sourceAttachValue = attachProp.Value;
+
+                        // 目标存在该字段则直接用源覆盖（不递归），否则添加
+                        targetAttach[attachPropName] = sourceAttachValue.DeepClone();
+                    }
+
+                    targetObj[propName] = targetAttach;
+                }
+                // 目标不存在attach字段时，直接克隆源的attach
+                else if (targetProp == null)
+                {
+                    targetObj[propName] = sourceProp.DeepClone();
+                }
+                // 若类型不匹配（如一方不是对象），则用源覆盖目标
+                else
+                {
+                    targetObj[propName] = sourceProp.DeepClone();
+                }
+                continue;
+            }
+            // if (propName == "attach")
+            // {
+            //     // 仅当双方都是对象类型时才进行字段合并
+            //     if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
+            //     {
+            //         JObject targetAttach = (JObject)targetProp;
+            //         JObject sourceAttach = (JObject)sourceProp;
+            //
+            //         // 遍历sourceAttach的所有字段，逐个合并到targetAttach
+            //         foreach (var attachProp in sourceAttach.Properties())
+            //         {
+            //             string attachPropName = attachProp.Name;
+            //             JToken sourceAttachValue = attachProp.Value;
+            //
+            //             // 目标存在该字段则递归合并，否则直接添加
+            //             if (targetAttach.ContainsKey(attachPropName))
+            //             {
+            //                 targetAttach[attachPropName] = Merge(targetAttach[attachPropName], sourceAttachValue);
+            //             }
+            //             else
+            //             {
+            //                 targetAttach[attachPropName] = sourceAttachValue.DeepClone();
+            //             }
+            //         }
+            //
+            //         targetObj[propName] = targetAttach;
+            //     }
+            //     // 目标不存在attach字段时，直接克隆源的attach
+            //     else if (targetProp == null)
+            //     {
+            //         targetObj[propName] = sourceProp.DeepClone();
+            //     }
+            //     // 若类型不匹配（如一方不是对象），则用源覆盖目标
+            //     else
+            //     {
+            //         targetObj[propName] = sourceProp.DeepClone();
+            //     }
+            //     continue;
+            // }
+            //
             // 处理 recognition 相关合并逻辑
             if (propName == "recognition")
             {
