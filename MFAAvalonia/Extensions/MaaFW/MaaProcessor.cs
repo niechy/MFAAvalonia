@@ -74,7 +74,7 @@ public class MaaProcessor
         };
         var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
         var interfaceVersion = @interface["interface_version"]?.ToString();
-        if (int.TryParse(interfaceVersion,out var result) && result >= 2)
+        if (int.TryParse(interfaceVersion, out var result) && result >= 2)
         {
             IsV2 = true;
         }
@@ -754,7 +754,7 @@ public class MaaProcessor
                         var nodeId = Convert.ToInt64(jObject["node_id"]?.ToString() ?? string.Empty);
                         if (nodeId > 0)
                         {
-                            tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out _);
+                            tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out _, out _);
                             var rect = new MaaRectBuffer();
                             var imageBuffer = new MaaImageBuffer();
                             tasker.GetRecognitionDetail(recognitionId, out string node,
@@ -1436,7 +1436,7 @@ public class MaaProcessor
     {
         return Instances.ConnectSettingsUserControlModel.Win32ControlMouseType;
     }
-    
+
     private static Win32InputMethod ConfigureWin32KeyboardInputTypes()
     {
         return Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType;

@@ -85,7 +85,6 @@ public class JieGardenAction : IMaaCustomAction
                 }
                 return false;
             })).Until(context);
-
             Thread.Sleep(500);
             ((Func<bool>)(() =>
             {

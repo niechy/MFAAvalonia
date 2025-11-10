@@ -564,6 +564,9 @@ public partial class TaskQueueViewModel : ViewModelBase
                 {
                     1 => Win32InputMethod.Seize,
                     2 => Win32InputMethod.SendMessage,
+                    4 => Win32InputMethod.PostMessage,
+                    8 => Win32InputMethod.LegacyEvent,
+                    16 => Win32InputMethod.PostThreadMessage,
                     _ => Instances.ConnectSettingsUserControlModel.Win32ControlMouseType
                 };
             }
@@ -574,6 +577,9 @@ public partial class TaskQueueViewModel : ViewModelBase
                 {
                     1 => Win32InputMethod.Seize,
                     2 => Win32InputMethod.SendMessage,
+                    4 => Win32InputMethod.PostMessage,
+                    8 => Win32InputMethod.LegacyEvent,
+                    16 => Win32InputMethod.PostThreadMessage,
                     _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
                 };
             }
@@ -584,6 +590,9 @@ public partial class TaskQueueViewModel : ViewModelBase
                 {
                     1 => Win32InputMethod.Seize,
                     2 => Win32InputMethod.SendMessage,
+                    4 => Win32InputMethod.PostMessage,
+                    8 => Win32InputMethod.LegacyEvent,
+                    16 => Win32InputMethod.PostThreadMessage,
                     _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
                 };
                 Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = type;
@@ -616,7 +625,10 @@ public partial class TaskQueueViewModel : ViewModelBase
             {
                 1 => Win32ScreencapMethod.GDI,
                 2 => Win32ScreencapMethod.FramePool,
-                4 => Win32ScreencapMethod.DXGIDesktopDup,
+                4 => Win32ScreencapMethod.DXGI_DesktopDup,
+                8 => Win32ScreencapMethod.DXGI_DesktopDup_Window,
+                16 => Win32ScreencapMethod.PrintWindow,
+                32 => Win32ScreencapMethod.ScreenDC,
                 _ => Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType
             };
         }
