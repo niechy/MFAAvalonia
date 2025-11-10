@@ -39,29 +39,27 @@ public partial class MaaInterface
         public List<MaaInterfaceOptionCase>? Cases { get; set; }
         [JsonProperty("default_case")]
         public string? DefaultCase { get; set; }
-        
+
         [JsonProperty("doc")]
         [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
         public List<string>? Document { get; set; }
     }
-    
+
     public class MaaInterfaceSelectAdvanced
     {
         [JsonProperty("name")]
         public string? Name { get; set; }
-        
-        [JsonProperty("data")]
-        public Dictionary<string, string?> Data = new();
-    
-        [JsonIgnore]
-        public string PipelineOverride = "{}";
-        
+
+        [JsonProperty("data")] public Dictionary<string, string?> Data = new();
+
+        [JsonIgnore] public string PipelineOverride = "{}";
+
         public override string? ToString()
         {
             return Name ?? string.Empty;
         }
     }
- 
+
     public class MaaInterfaceSelectOption
     {
         [JsonProperty("name")]
@@ -82,14 +80,15 @@ public partial class MaaInterface
         [JsonProperty("entry")] public string? Entry;
         [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("doc")]
         public List<string>? Document;
-        [JsonProperty("check", 
+        [JsonProperty("check",
             NullValueHandling = NullValueHandling.Include,
-            DefaultValueHandling = DefaultValueHandling.Include)] public bool? Check = false;
+            DefaultValueHandling = DefaultValueHandling.Include)]
+        public bool? Check = false;
         [JsonProperty("repeatable")] public bool? Repeatable;
         [JsonProperty("repeat_count")] public int? RepeatCount;
         [JsonProperty("advanced")] public List<MaaInterfaceSelectAdvanced>? Advanced;
         [JsonProperty("option")] public List<MaaInterfaceSelectOption>? Option;
-        
+
         [JsonProperty("pipeline_override")] public Dictionary<string, JToken>? PipelineOverride;
 
         public override string ToString()
@@ -158,6 +157,10 @@ public partial class MaaInterface
         public string? WindowRegex { get; set; }
         [JsonProperty("input")]
         public long? Input { get; set; }
+        [JsonProperty("mouse")]
+        public long? Mouse { get; set; }
+        [JsonProperty("keyboard ")]
+        public long? Keyboard { get; set; }
         [JsonProperty("screencap")]
         public long? ScreenCap { get; set; }
     }
@@ -185,6 +188,10 @@ public partial class MaaInterface
         public MaaResourceControllerWin32? Win32 { get; set; }
     }
 
+
+    [JsonProperty("interface_version")]
+    public int? InterfaceVersion { get; set; }
+    
     [JsonProperty("mirrorchyan_rid")]
     public string? RID { get; set; }
 
@@ -196,17 +203,17 @@ public partial class MaaInterface
 
     [JsonProperty("version")]
     public string? Version { get; set; }
-    
+
     [JsonProperty("mfa_max_version")]
     public string? MFAMaxVersion { get; set; }
-    
+
     [JsonProperty("mfa_min_version")]
     public string? MFAMinVersion { get; set; }
 
     [JsonProperty("message")]
     public string? Message { get; set; }
 
-    [JsonProperty("url")]   
+    [JsonProperty("url")]
     public string? Url { get; set; }
 
     [JsonProperty("custom_title")]
@@ -230,7 +237,7 @@ public partial class MaaInterface
 
     [JsonProperty("advanced")]
     public Dictionary<string, MaaInterfaceAdvancedOption>? Advanced { get; set; }
-    
+
     [JsonProperty("option")]
     public Dictionary<string, MaaInterfaceOption>? Option { get; set; }
 

@@ -152,13 +152,30 @@
                         IsEnabled="{calcBinding:Binding Idle,
                                                         Source={x:Static helper:Instances.RootViewModel}}"
                         ItemsSource="{Binding Win32ControlInputTypes}"
-                        SelectedValue="{Binding Win32ControlInputType}"
+                        SelectedValue="{Binding Win32ControlMouseType}"
                         Width="215" />
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
                         <TextBlock
                             FontSize="16"
                             FontWeight="SemiBold"
-                            Text="{markup:I18n {x:Static helper:LangKeys.InputModeOption}}"
+                            Text="{markup:I18n {x:Static helper:LangKeys.MouseInput}}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </DockPanel>
+                <DockPanel>
+                    <ComboBox
+                        DockPanel.Dock="Right"
+                        HorizontalAlignment="Center"
+                        IsEnabled="{calcBinding:Binding Idle,
+                                                        Source={x:Static helper:Instances.RootViewModel}}"
+                        ItemsSource="{Binding Win32ControlInputTypes}"
+                        SelectedValue="{Binding Win32ControlKeyboardType}"
+                        Width="215" />
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Text="{markup:I18n {x:Static helper:LangKeys.KeyboardInput}}"
                             VerticalAlignment="Center" />
                     </StackPanel>
                 </DockPanel>

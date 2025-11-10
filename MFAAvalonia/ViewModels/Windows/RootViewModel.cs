@@ -67,7 +67,7 @@ public partial class RootViewModel : ViewModelBase
     }
     public void CheckDebug()
     {
-        if (IsDebugMode && _shouldTip)
+        if (IsDebugMode && _shouldTip && !MaaProcessor.Instance.IsV2)
         {
             DispatcherHelper.PostOnMainThread(() =>
             {

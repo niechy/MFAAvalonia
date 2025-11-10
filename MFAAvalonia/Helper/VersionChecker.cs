@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using Avalonia.Media;
 using MaaFramework.Binding.Interop.Native;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
@@ -7,6 +8,7 @@ using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.ViewModels.UsersControls.Settings;
 using MFAAvalonia.ViewModels.Windows;
+using MFAAvalonia.Views.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Semver;
@@ -439,8 +441,22 @@ public static class VersionChecker
         }
 
         var file = new FileInfo(interfacePath);
+
+
         if (file.Exists)
         {
+            var jsonContent = await File.ReadAllTextAsync(interfacePath);
+
+            var @interface = JObject.Parse(jsonContent);
+            if (@interface != null && @interface["interface_version"] != null && @interface["interface_version"].ToString().Trim().Equals("2"))
+            {
+                Dismiss(sukiToast);
+                ToastHelper.Warn("Warning".ToLocalization(), "UiDoesNotSupportResourceUpdateCancelled".ToLocalization());
+                RootView.AddLog("UiDoesNotSupportResourceUpdateCancelled".ToLocalization(), Brushes.Orange, changeColor: false);
+                Instances.RootViewModel.SetUpdating(false);
+                return;
+            }
+
             var targetPath = Path.Combine(wpfDir, "interface.json");
             file.CopyTo(targetPath, true);
         }

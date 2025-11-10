@@ -1201,4 +1201,16 @@
     <data name="MultiInstanceUnderSamePath" xml:space="preserve">
         <value>同一路径下只能启动一个实例！</value>
     </data>
+    <data name="MouseInput" xml:space="preserve">
+        <value>鼠标输入</value>
+    </data>
+    <data name="KeyboardInput" xml:space="preserve">
+        <value>键盘输入</value>
+    </data>
+    <data name="UiDoesNotSupportResourceUpdateCancelled" xml:space="preserve">
+        <value>当前版本的UI不支持即将更新的资源，更新已取消</value>
+    </data>
+    <data name="UiDoesNotSupportCurrentResource" xml:space="preserve">
+        <value>当前版本的UI不支持当前资源！</value>
+    </data>
 </root>

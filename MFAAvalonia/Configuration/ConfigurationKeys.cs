@@ -48,7 +48,8 @@ public static class ConfigurationKeys
     public const string AdbControlScreenCapType = "AdbControlScreenCapType";
     public const string AdbControlInputType = "AdbControlInputType";
     public const string Win32ControlScreenCapType = "Win32ControlScreenCapType";
-    public const string Win32ControlInputType = "Win32ControlInputType";
+    public const string Win32ControlMouseType = "Win32ControlMouseType";
+    public const string Win32ControlKeyboardType = "Win32ControlKeyboardType";
     public const string AllowAdbRestart = "AllowAdbRestart";
     public const string AllowAdbHardRestart = "AllowAdbHardRestart";
     public const string RetryOnDisconnected = "RetryOnDisconnected";

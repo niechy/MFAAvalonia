@@ -542,11 +542,10 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     private void HandleInputSettings(MaaInterface.MaaResourceController controller, bool isAdb)
     {
-        var input = isAdb ? controller.Adb?.Input : controller.Win32?.Input;
-        if (input == null) return;
-
         if (isAdb)
         {
+            var input = controller.Adb?.Input;
+            if (input == null) return;
             Instances.ConnectSettingsUserControlModel.AdbControlInputType = input switch
             {
                 1 => AdbInputMethods.AdbShell,
@@ -558,12 +557,38 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
         else
         {
-            Instances.ConnectSettingsUserControlModel.Win32ControlInputType = input switch
+            var mouse = controller.Win32?.Mouse;
+            if (mouse != null)
             {
-                1 => Win32InputMethod.Seize,
-                2 => Win32InputMethod.SendMessage,
-                _ => Instances.ConnectSettingsUserControlModel.Win32ControlInputType
-            };
+                Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = mouse switch
+                {
+                    1 => Win32InputMethod.Seize,
+                    2 => Win32InputMethod.SendMessage,
+                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlMouseType
+                };
+            }
+            var keyboard = controller.Win32?.Keyboard;
+            if (keyboard != null)
+            {
+                Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = keyboard switch
+                {
+                    1 => Win32InputMethod.Seize,
+                    2 => Win32InputMethod.SendMessage,
+                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
+                };
+            }
+            var input = controller.Win32?.Input;
+            if (keyboard == null && mouse == null && input != null)
+            {
+                var type = input switch
+                {
+                    1 => Win32InputMethod.Seize,
+                    2 => Win32InputMethod.SendMessage,
+                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
+                };
+                Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = type;
+                Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = type;
+            }
         }
     }
 

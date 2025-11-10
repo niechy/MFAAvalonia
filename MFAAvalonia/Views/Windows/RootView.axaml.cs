@@ -211,81 +211,93 @@ public partial class RootView : SukiWindow
     {
         if (Program.IsNewInstance)
         {
-            DispatcherHelper.RunOnMainThread(
-                (Action)(async () =>
-                {
-                    await Task.Delay(300);
-                    Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
-                    if (!Convert.ToBoolean(GlobalConfiguration.GetValue(ConfigurationKeys.NoAutoStart, bool.FalseString))
-                        && ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("Startup", StringComparison.OrdinalIgnoreCase))
-                    {
-                        MaaProcessor.Instance.TaskQueue.Enqueue(new MFATask
-                        {
-                            Name = "启动前",
-                            Type = MFATask.MFATaskType.MFA,
-                            Action = async () => await MaaProcessor.Instance.WaitSoftware(),
-                        });
-                        MaaProcessor.Instance.Start(!ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("And", StringComparison.OrdinalIgnoreCase), checkUpdate: true);
-                    }
-                    else
-                    {
-                        var isAdb = Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb;
-
-                        AddLogByKey("ConnectingTo", null, true, true, isAdb ? "Emulator" : "Window");
-
-                        Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig();
-                        MaaProcessor.Instance.TaskQueue.Enqueue(new MFATask
-                        {
-                            Name = "连接检测",
-                            Type = MFATask.MFATaskType.MFA,
-                            Action = async () => await MaaProcessor.Instance.TestConnecting(),
-                        });
-                        MaaProcessor.Instance.Start(true, checkUpdate: true);
-                    }
-
-                    GlobalConfiguration.SetValue(ConfigurationKeys.NoAutoStart, bool.FalseString);
-
-                    Instances.RootViewModel.LockController = (MaaProcessor.Interface?.Controller?.Count ?? 0) < 2;
-
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.EnableEdit, ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableEdit, false));
-                    DragItemViewModel tempTask = null;
-                    foreach (var task in Instances.TaskQueueViewModel.TaskItemViewModels)
-                    {
-                        if (task.InterfaceItem?.Advanced is { Count: > 0 } || task.InterfaceItem?.Option is { Count: > 0 } || task.InterfaceItem?.Document != null || task.InterfaceItem?.Repeatable == true)
-                        {
-                            tempTask ??= task;
-                        }
-                        task.EnableSetting = true;
-                    }
-
-                    if (tempTask != null)
-                        tempTask.EnableSetting = true;
-
-
-                    if (!string.IsNullOrWhiteSpace(MaaProcessor.Interface?.Message))
-                    {
-                        ToastHelper.Info(MaaProcessor.Interface.Message);
-                    }
-
-                }));
-
-            TaskManager.RunTaskAsync(async () =>
+            if (!MaaProcessor.Instance.IsV2)
             {
-                await Task.Delay(1000);
-                DispatcherHelper.RunOnMainThread(() =>
+                DispatcherHelper.RunOnMainThread(
+                    (Action)(async () =>
+                    {
+                        await Task.Delay(300);
+                        Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
+                        if (!Convert.ToBoolean(GlobalConfiguration.GetValue(ConfigurationKeys.NoAutoStart, bool.FalseString))
+                            && ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("Startup", StringComparison.OrdinalIgnoreCase))
+                        {
+                            MaaProcessor.Instance.TaskQueue.Enqueue(new MFATask
+                            {
+                                Name = "启动前",
+                                Type = MFATask.MFATaskType.MFA,
+                                Action = async () => await MaaProcessor.Instance.WaitSoftware(),
+                            });
+                            MaaProcessor.Instance.Start(!ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("And", StringComparison.OrdinalIgnoreCase), checkUpdate: true);
+                        }
+                        else
+                        {
+                            var isAdb = Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb;
+
+                            AddLogByKey("ConnectingTo", null, true, true, isAdb ? "Emulator" : "Window");
+
+                            Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig();
+                            MaaProcessor.Instance.TaskQueue.Enqueue(new MFATask
+                            {
+                                Name = "连接检测",
+                                Type = MFATask.MFATaskType.MFA,
+                                Action = async () => await MaaProcessor.Instance.TestConnecting(),
+                            });
+                            MaaProcessor.Instance.Start(true, checkUpdate: true);
+                        }
+
+                        GlobalConfiguration.SetValue(ConfigurationKeys.NoAutoStart, bool.FalseString);
+
+                        Instances.RootViewModel.LockController = (MaaProcessor.Interface?.Controller?.Count ?? 0) < 2;
+
+                        ConfigurationManager.Current.SetValue(ConfigurationKeys.EnableEdit, ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableEdit, false));
+                        DragItemViewModel tempTask = null;
+                        foreach (var task in Instances.TaskQueueViewModel.TaskItemViewModels)
+                        {
+                            if (task.InterfaceItem?.Advanced is { Count: > 0 } || task.InterfaceItem?.Option is { Count: > 0 } || task.InterfaceItem?.Document != null || task.InterfaceItem?.Repeatable == true)
+                            {
+                                tempTask ??= task;
+                            }
+                            task.EnableSetting = true;
+                        }
+
+                        if (tempTask != null)
+                            tempTask.EnableSetting = true;
+
+
+                        if (!string.IsNullOrWhiteSpace(MaaProcessor.Interface?.Message))
+                        {
+                            ToastHelper.Info(MaaProcessor.Interface.Message);
+                        }
+
+                    }));
+
+                TaskManager.RunTaskAsync(async () =>
                 {
-                    DispatcherHelper.RunOnMainThread(VersionChecker.CheckMinVersion);
-                    AnnouncementViewModel.CheckAnnouncement();
-                    if (ConfigurationManager.Current.GetValue(ConfigurationKeys.AutoMinimize, false))
+                    await Task.Delay(1000);
+                    DispatcherHelper.RunOnMainThread(() =>
                     {
-                        WindowState = WindowState.Minimized;
-                    }
-                    if (ConfigurationManager.Current.GetValue(ConfigurationKeys.AutoHide, false))
-                    {
-                        Hide();
-                    }
+                        DispatcherHelper.RunOnMainThread(VersionChecker.CheckMinVersion);
+                        AnnouncementViewModel.CheckAnnouncement();
+                        if (ConfigurationManager.Current.GetValue(ConfigurationKeys.AutoMinimize, false))
+                        {
+                            WindowState = WindowState.Minimized;
+                        }
+                        if (ConfigurationManager.Current.GetValue(ConfigurationKeys.AutoHide, false))
+                        {
+                            Hide();
+                        }
+                    });
+                }, name: "公告和最新版本检测");
+            }
+            else
+            {
+                DispatcherHelper.RunOnMainThread(async () =>
+                {
+                    await Task.Delay(1000);
+                    Instances.DialogManager.CreateDialog().OfType(NotificationType.Error).WithContent("UiDoesNotSupportCurrentResource".ToLocalization())
+                        .WithActionButton("Ok".ToLocalization(), _ => { Instances.ShutdownApplication(); }, true).TryShow();
                 });
-            }, name: "公告和最新版本检测");
+            }
         }
         else
         {

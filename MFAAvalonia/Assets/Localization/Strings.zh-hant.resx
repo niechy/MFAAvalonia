@@ -1190,4 +1190,19 @@
     <data name="MultiInstanceUnderSamePath" xml:space="preserve">
         <value>同一路徑下只能啟動一個實例！</value>
     </data>
+    <data name="KeyboardInput" xml:space="preserve">
+        <value>鍵盤輸入</value>
+    </data>
+    <data name="MouseInput" xml:space="preserve">
+        <value>滑鼠輸入</value>
+    </data>
+    <data name="ExternalNotificationServerChanSendKey" xml:space="preserve">
+        <value>SendKey</value>
+    </data>
+    <data name="UiDoesNotSupportResourceUpdateCancelled" xml:space="preserve">
+        <value>當前版本的 UI 不支援即將更新的資源，更新已取消</value>
+    </data>
+    <data name="UiDoesNotSupportCurrentResource" xml:space="preserve">
+        <value>當前版本的 UI 不支援當前資源！</value>
+    </data>
 </root>

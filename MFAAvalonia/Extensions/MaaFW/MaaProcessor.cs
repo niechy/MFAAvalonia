@@ -64,7 +64,7 @@ public class MaaProcessor
     //
     // public Dictionary<string, MaaNode> NodeDictionary = new();
     public ObservableQueue<MFATask> TaskQueue { get; } = new();
-
+    public bool IsV2 = false;
     public MaaProcessor()
     {
         TaskQueue.CountChanged += (_, args) =>
@@ -72,6 +72,12 @@ public class MaaProcessor
             if (args.NewValue > 0)
                 Instances.RootViewModel.IsRunning = true;
         };
+        var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
+        var interfaceVersion = @interface["interface_version"]?.ToString();
+        if (int.TryParse(interfaceVersion,out var result) && result >= 2)
+        {
+            IsV2 = true;
+        }
     }
 
     public static MaaInterface? Interface
@@ -1051,7 +1057,8 @@ public class MaaProcessor
         {
             LoggerHelper.Info($"HWnd: {Config.DesktopWindow.HWnd}");
             LoggerHelper.Info($"ScreenCap: {Config.DesktopWindow.ScreenCap}");
-            LoggerHelper.Info($"Input: {Config.DesktopWindow.Input}");
+            LoggerHelper.Info($"MouseInput: {Config.DesktopWindow.Mouse}");
+            LoggerHelper.Info($"KeyboardInput: {Config.DesktopWindow.KeyBoard}");
             LoggerHelper.Info($"Link: {Config.DesktopWindow.Link}");
             LoggerHelper.Info($"Check: {Config.DesktopWindow.Check}");
         }
@@ -1065,7 +1072,7 @@ public class MaaProcessor
             )
             : new MaaWin32Controller(
                 Config.DesktopWindow.HWnd,
-                Config.DesktopWindow.ScreenCap, Config.DesktopWindow.Input, Config.DesktopWindow.Input,
+                Config.DesktopWindow.ScreenCap, Config.DesktopWindow.Mouse, Config.DesktopWindow.KeyBoard,
                 Config.DesktopWindow.Link,
                 Config.DesktopWindow.Check);
     }
@@ -1081,8 +1088,8 @@ public class MaaProcessor
         public string Name { get; set; } = string.Empty;
         public nint HWnd { get; set; }
 
-        public Win32InputMethod Input { get; set; } = Win32InputMethod.SendMessage;
-
+        public Win32InputMethod Mouse { get; set; } = Win32InputMethod.SendMessage;
+        public Win32InputMethod KeyBoard { get; set; } = Win32InputMethod.SendMessage;
         public Win32ScreencapMethod ScreenCap { get; set; } = Win32ScreencapMethod.FramePool;
         public LinkOption Link { get; set; } = LinkOption.Start;
         public CheckStatusOption Check { get; set; } = CheckStatusOption.ThrowIfNotSucceeded;
@@ -1407,14 +1414,16 @@ public class MaaProcessor
     {
         if (Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Win32)
         {
-            var win32InputType = ConfigureWin32InputTypes();
+            var win32MouseInputType = ConfigureWin32MouseInputTypes();
+            var win32KeyboardInputType = ConfigureWin32KeyboardInputTypes();
             var winScreenCapType = ConfigureWin32ScreenCapTypes();
 
-            Config.DesktopWindow.Input = win32InputType;
+            Config.DesktopWindow.Mouse = win32MouseInputType;
+            Config.DesktopWindow.KeyBoard = win32KeyboardInputType;
             Config.DesktopWindow.ScreenCap = winScreenCapType;
 
             LoggerHelper.Info(
-                $"{"AdbInputMode".ToLocalization()}{win32InputType},{"AdbCaptureMode".ToLocalization()}{winScreenCapType}");
+                $"{"MouseInput".ToLocalization()}{win32MouseInputType},{"KeyboardInput".ToLocalization()}{win32KeyboardInputType},{"AdbCaptureMode".ToLocalization()}{winScreenCapType}");
         }
     }
 
@@ -1423,9 +1432,14 @@ public class MaaProcessor
         return Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType;
     }
 
-    private static Win32InputMethod ConfigureWin32InputTypes()
+    private static Win32InputMethod ConfigureWin32MouseInputTypes()
     {
-        return Instances.ConnectSettingsUserControlModel.Win32ControlInputType;
+        return Instances.ConnectSettingsUserControlModel.Win32ControlMouseType;
+    }
+    
+    private static Win32InputMethod ConfigureWin32KeyboardInputTypes()
+    {
+        return Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType;
     }
 
     private bool FirstTask = true;
