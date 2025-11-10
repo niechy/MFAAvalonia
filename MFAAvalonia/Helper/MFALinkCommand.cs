@@ -7,6 +7,7 @@ namespace MFAAvalonia.Helper;
 
 public class MFALinkCommand : ICommand
 {
+#pragma warning disable CS0067
     public event EventHandler? CanExecuteChanged;
 
     // 新增：当前Markdown文档的路径（作为解析相对链接的基准）
@@ -39,7 +40,7 @@ public class MFALinkCommand : ICommand
         // 1. 处理http链接
         if (IsUrl(url))
         {
-            return url; 
+            return url;
         }
         // 检查绝对路径对应的文件是否存在
         if (IsAbsolutePath(url))
@@ -121,7 +122,7 @@ public class MFALinkCommand : ICommand
         // 未找到文件
         return null;
     }
-    
+
     // 判断是否为绝对路径或网络链接（无需解析）
     private bool IsAbsolutePath(string url)
     {

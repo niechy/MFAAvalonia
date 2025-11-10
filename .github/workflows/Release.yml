@@ -132,7 +132,7 @@ jobs:
           NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
       - name: Build Solution
-        run: dotnet publish -c Release -r ${{ matrix.platform }}-${{ matrix.arch }} --no-restore --output "bin/AnyCPU/Release/${{ matrix.platform }}-${{ matrix.arch }}/publish"
+        run: dotnet publish -c Release -r ${{ matrix.platform }}-${{ matrix.arch }}
 
       - name: Sign macOS App with Adhoc Certificate
         if: ${{ matrix.is_macos == true }} 

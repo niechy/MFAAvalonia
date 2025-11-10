@@ -168,7 +168,7 @@ public static class SimpleEncryptionHelper
             var newKey = GetDeviceKeys(Generate()); // 基于Generate()的新机器码
             return EncryptProvider.AESDecrypt(encryptedBase64, newKey);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             try
             {
@@ -176,7 +176,7 @@ public static class SimpleEncryptionHelper
                 var legacyKey = GetDeviceKeys(GenerateLegacy());
                 return EncryptProvider.AESDecrypt(encryptedBase64, legacyKey);
             }
-            catch (Exception legacyEx)
+            catch (Exception)
             {
                 return string.Empty;
             }

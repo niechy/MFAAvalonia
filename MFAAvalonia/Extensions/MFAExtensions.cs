@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using AvaloniaExtensions.Axaml.Markup;
@@ -18,7 +19,6 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
-using Pen = System.Drawing.Pen;
 
 namespace MFAAvalonia.Extensions;
 
@@ -482,5 +482,18 @@ public static class MFAExtensions
         bitmapTmp.UnlockBits(bd);
         bitmapTmp.Dispose();
         return bitmap1;
+    }
+
+    public static bool TryGetText(this IDataTransfer dataTransfer, out string? result)
+    {
+        result = null;
+        var textFormat = DataFormat.Text;
+        if (!dataTransfer.Formats.Contains(textFormat))
+            return false;
+
+        var rawData = dataTransfer.TryGetText();
+
+        result = rawData;
+        return true;
     }
 }
