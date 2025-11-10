@@ -54,11 +54,13 @@ public class DragDropExtensions
         {
             if (args.NewValue.Value)
             {
+                DragDrop.SetAllowDrop(textBox,true);
                 textBox.AddHandler(DragDrop.DragOverEvent, File_DragOver);
                 textBox.AddHandler(DragDrop.DropEvent, File_Drop);
             }
             else
             {
+                DragDrop.SetAllowDrop(textBox,false);
                 textBox.RemoveHandler(DragDrop.DragOverEvent, File_DragOver);
                 textBox.RemoveHandler(DragDrop.DropEvent, File_Drop);
             }
@@ -68,18 +70,21 @@ public class DragDropExtensions
     // 拖放事件处理：拖拽经过时
     private static void File_DragOver(object sender, DragEventArgs e)
     {
+        if (sender is not TextBox)
+            return;
+        e.DragEffects = DragDropEffects.Move;
         e.Handled = true;
     }
 
     // 拖放事件处理：文件拖放时
     private static void File_Drop(object sender, DragEventArgs e)
     {
-        if (!e.Data.Contains(DataFormats.Files))
+
+        if (!e.DataTransfer.Contains(DataFormat.File))
         {
             return;
         }
-
-        var storageItems = e.Data.GetFiles()?.ToList();
+        var storageItems = e.DataTransfer.TryGetFiles()?.ToList();
         if (storageItems?.Count > 0 && sender is TextBox textBox)
         {
             var firstFile = storageItems[0].TryGetLocalPath();
@@ -166,7 +171,7 @@ public class DragDropExtensions
 
     public static int GetHoldDurationMilliseconds(ListBox element) =>
         element.GetValue(HoldDurationMillisecondsProperty);
-    
+
     public static void SetHoldDurationMilliseconds(ListBox element, int value) =>
         element.SetValue(HoldDurationMillisecondsProperty, value switch
         {
@@ -175,10 +180,10 @@ public class DragDropExtensions
         });
     private static DateTime? GetPressedTime(ListBox element) =>
         element.GetValue(PressedTimeProperty);
-    
+
     private static void SetPressedTime(ListBox element, DateTime? value) =>
         element.SetValue(PressedTimeProperty, value);
-    
+
     public static readonly AttachedProperty<Point?> PressedPositionProperty =
         AvaloniaProperty.RegisterAttached<ListBox, Point?>("PressedPosition", typeof(DragDropExtensions), null);
 
@@ -327,16 +332,18 @@ public class DragDropExtensions
         if (sourceItem == -1) return;
 
         // 设置选中项并开始拖拽
-        var data = new DataObject();
+        var data = new DataTransfer();
+        var item = new DataTransferItem();
         listBox.SelectedIndex = Math.Clamp(sourceItem, 0, listBox.Items.Count - 1);
-        data.Set(DataFormats.Text, sourceItem.ToString());
+        item.SetText(sourceItem.ToString());
+        data.Add(item);
 
-        DragDrop.DoDragDrop(e, data, DragDropEffects.Move);
+        DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move);
     }
 
     private static void OnDragOver(object? sender, DragEventArgs e)
     {
-        if (sender is not ListBox listBox || listBox.ItemsSource is not IList items || e.Data.Get(DataFormats.Text) is not string sourceIndexStr || !int.TryParse(sourceIndexStr, out int sourceIndex))
+        if (sender is not ListBox listBox || listBox.ItemsSource is not IList items || !e.DataTransfer.TryGetText(out string sourceIndexStr) || !int.TryParse(sourceIndexStr, out int sourceIndex))
             return;
         var position = e.GetPosition(listBox);
         var targetIndex = GetTargetIndex(listBox, position);
@@ -351,7 +358,7 @@ public class DragDropExtensions
 
     private static void OnDrop(object? sender, DragEventArgs e)
     {
-        if (sender is not ListBox listBox || listBox.ItemsSource is not IList items || e.Data.Get(DataFormats.Text) is not string sourceIndexStr || !int.TryParse(sourceIndexStr, out int sourceIndex))
+        if (sender is not ListBox listBox || listBox.ItemsSource is not IList items || !e.DataTransfer.TryGetText(out string sourceIndexStr) ||  !int.TryParse(sourceIndexStr, out int sourceIndex))
             return;
         var position = e.GetPosition(listBox);
         var targetIndex = GetTargetIndex(listBox, position);
