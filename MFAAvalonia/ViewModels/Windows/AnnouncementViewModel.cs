@@ -107,7 +107,7 @@ public partial class AnnouncementViewModel : ViewModelBase
         if (forceShow)
         {
             if (!viewModel.AnnouncementItems.Any()) 
-                ToastHelper.Warn("Warning".ToLocalization(),"AnnouncementEmpty".ToLocalization());
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(),LangKeys.AnnouncementEmpty.ToLocalization());
         }
         else if (viewModel.DoNotRemindThisAnnouncementAgain || !viewModel.AnnouncementItems.Any())
             return;

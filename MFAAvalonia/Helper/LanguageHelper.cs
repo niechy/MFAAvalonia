@@ -2,7 +2,9 @@
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using AvaloniaExtensions.Axaml.Markup;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Lang.Avalonia;
 using MFAAvalonia.Configuration;
+using MFAAvalonia.Localization;
 using MFAAvalonia.ViewModels.Other;
 using Newtonsoft.Json;
 using SukiUI;
@@ -12,6 +14,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Resources;
 using System.Threading;
 
 namespace MFAAvalonia.Helper;
@@ -62,17 +65,24 @@ public static class LanguageHelper
     public static void Initialize()
     {
         LoggerHelper.Info("Initializing LanguageManager...");
+        I18nManager.Instance.Register(
+            plugin: new MFAResxLangPlugin(),  // 格式插件
+            defaultCulture: CultureInfo.InvariantCulture,  // 默认语言
+            error: out var error  // 错误信息（可选）
+        );
         LoadLanguages();
     }
 
     private static void LoadLanguages()
     {
+
         var langPath = Path.Combine(AppContext.BaseDirectory, "lang");
         if (Directory.Exists(langPath))
         {
             var langFiles = Directory.GetFiles(langPath, "*.json");
             foreach (string langFile in langFiles)
             {
+                
                 var langCode = Path.GetFileNameWithoutExtension(langFile).ToLower();
                 if (IsSimplifiedChinese(langCode))
                 {

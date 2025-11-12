@@ -406,4 +406,8 @@ public static class LangKeys
 	public static readonly string MultiInstanceUnderSamePath = "MultiInstanceUnderSamePath";
 	public static readonly string MouseInput = "MouseInput";
 	public static readonly string KeyboardInput = "KeyboardInput";
+	public static readonly string UiDoesNotSupportResourceUpdateCancelled = "UiDoesNotSupportResourceUpdateCancelled";
+	public static readonly string UiDoesNotSupportCurrentResource = "UiDoesNotSupportCurrentResource";
+	public static readonly string UnknownError = "UnknownError";
+	public static readonly string UndefinedError = "UndefinedError";
 }

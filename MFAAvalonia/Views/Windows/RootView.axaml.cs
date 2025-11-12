@@ -24,9 +24,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Management;
-using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -161,12 +158,12 @@ public partial class RootView : SukiWindow
 
         var result = await SukiMessageBox.ShowDialog(new SukiMessageBoxHost
         {
-            Content = "ConfirmExitText".ToLocalization(),
+            Content = LangKeys.ConfirmExitText.ToLocalization(),
             ActionButtonsPreset = SukiMessageBoxButtons.YesNo,
             IconPreset = SukiMessageBoxIcons.Warning,
         }, new SukiMessageBoxOptions()
         {
-            Title = "ConfirmExitTitle".ToLocalization(),
+            Title = LangKeys.ConfirmExitTitle.ToLocalization(),
         });
 
         if (result is SukiMessageBoxResult.Yes)
@@ -295,8 +292,8 @@ public partial class RootView : SukiWindow
                 DispatcherHelper.RunOnMainThread(async () =>
                 {
                     await Task.Delay(1000);
-                    Instances.DialogManager.CreateDialog().OfType(NotificationType.Error).WithContent("UiDoesNotSupportCurrentResource".ToLocalization())
-                        .WithActionButton("Ok".ToLocalization(), _ => { Instances.ShutdownApplication(); }, true).TryShow();
+                    Instances.DialogManager.CreateDialog().OfType(NotificationType.Error).WithContent(LangKeys.UiDoesNotSupportCurrentResource.ToLocalization())
+                        .WithActionButton(LangKeys.Ok.ToLocalization(), _ => { Instances.ShutdownApplication(); }, true).TryShow();
                 });
             }
         }
@@ -305,8 +302,8 @@ public partial class RootView : SukiWindow
             DispatcherHelper.RunOnMainThread(async () =>
             {
                 await Task.Delay(1000);
-                Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent("MultiInstanceUnderSamePath".ToLocalization())
-                    .WithActionButton("Ok".ToLocalization(), dialog => { Instances.ShutdownApplication(); }, true).TryShow();
+                Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent(LangKeys.MultiInstanceUnderSamePath.ToLocalization())
+                    .WithActionButton(LangKeys.Ok.ToLocalization(), dialog => { Instances.ShutdownApplication(); }, true).TryShow();
             });
         }
     }

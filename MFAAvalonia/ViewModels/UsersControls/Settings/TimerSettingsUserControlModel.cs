@@ -38,7 +38,7 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
                 TimerId = timeId;
                 _isOn = isOn;
                 _time = TimeSpan.Parse(time);
-                TimerName = $"{"Timer".ToLocalization()} {TimerId + 1}";
+                TimerName = $"{LangKeys.Timer.ToLocalization()} {TimerId + 1}";
                 if (timerConfig == null || !ConfigurationManager.Configs.Any(c => c.Name.Equals(timerConfig)))
                 {
                     _timerConfig = ConfigurationManager.GetCurrentConfiguration();
@@ -56,7 +56,7 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
 
             private void OnLanguageChanged(object sender, EventArgs e)
             {
-                TimerName = $"{"Timer".ToLocalization()} {TimerId + 1}";
+                TimerName = $"{LangKeys.Timer.ToLocalization()} {TimerId + 1}";
             }
 
             private bool _isOn;

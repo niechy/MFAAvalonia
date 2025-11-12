@@ -2,7 +2,6 @@
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using System;
-using System.Drawing;
 using System.Linq;
 using Brush = Avalonia.Media.Brush;
 using Brushes = Avalonia.Media.Brushes;
@@ -14,7 +13,6 @@ public static class BrushHelper
 {
     // 缓存转换器提升性能
     private static readonly BrushConverter _brushConverter = new();
-    private static readonly ColorConverter _colorConverter = new();
 
     /// <summary>
     /// 将字符串转换为Brush，支持以下格式：

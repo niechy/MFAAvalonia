@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using AvaloniaExtensions.Axaml.Markup;
+using Lang.Avalonia.MarkupExtensions;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Utilities;
 using SukiUI.Controls;
@@ -94,11 +95,11 @@ public partial class ErrorView : SukiWindow
             // 显示提示（使用Avalonia原生ToolTip）
             if (sender is Control control)
             {
-                DispatcherHelper.PostOnMainThread(() => control.Bind(ToolTip.TipProperty, new I18nBinding("CopiedToClipboard")));
+                DispatcherHelper.PostOnMainThread(() => control.Bind(ToolTip.TipProperty, new I18nBinding(LangKeys.CopiedToClipboard)));
                 DispatcherHelper.PostOnMainThread(() => ToolTip.SetIsOpen(control, true));
                 await Task.Delay(1000);
                 DispatcherHelper.PostOnMainThread(() => ToolTip.SetIsOpen(control, false));
-                DispatcherHelper.PostOnMainThread(() => control.Bind(ToolTip.TipProperty, new I18nBinding("CopyToClipboard")));
+                DispatcherHelper.PostOnMainThread(() => control.Bind(ToolTip.TipProperty, new I18nBinding(LangKeys.CopyToClipboard)));
             }
         },name:"复制错误信息到剪贴板");
     }

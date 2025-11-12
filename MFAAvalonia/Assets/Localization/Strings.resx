@@ -1213,4 +1213,10 @@
     <data name="UiDoesNotSupportCurrentResource" xml:space="preserve">
         <value>当前版本的UI不支持当前资源！</value>
     </data>
+    <data name="UnknownError" xml:space="preserve">
+        <value>未知错误</value>
+    </data>
+    <data name="UndefinedError" xml:space="preserve">
+        <value>未定义错误</value>
+    </data>
 </root>

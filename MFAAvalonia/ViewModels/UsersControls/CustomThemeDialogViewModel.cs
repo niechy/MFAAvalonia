@@ -24,7 +24,7 @@ public partial class CustomThemeDialogViewModel(SukiTheme theme, ISukiDialog dia
         if (string.IsNullOrEmpty(DisplayName)) return;
         if (theme.ColorThemes.Any(t => t.DisplayName == DisplayName))
         {
-            ToastHelper.Error("ColorThemeAlreadyExists".ToLocalization());
+            ToastHelper.Error(LangKeys.ColorThemeAlreadyExists.ToLocalization());
             dialog.Dismiss();
             return;
         }

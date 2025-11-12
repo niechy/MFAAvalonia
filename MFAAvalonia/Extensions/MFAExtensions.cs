@@ -2,7 +2,7 @@
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using AvaloniaExtensions.Axaml.Markup;
+using Lang.Avalonia;
 using MaaFramework.Binding.Buffers;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
@@ -11,8 +11,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -269,7 +267,7 @@ public static class MFAExtensions
         if (string.IsNullOrWhiteSpace(key))
             return string.Empty;
 
-        return I18nManager.GetString(key) ?? key;
+        return I18nManager.Instance.GetResource(key) ?? key;
     }
 
     public static string ToLocalizationFormatted(this string? key, bool transformKey = true, params string[] args)
@@ -468,21 +466,21 @@ public static class MFAExtensions
         return renderBitmap;
     }
 
-    public static Bitmap? ToAvaloniaBitmap(this System.Drawing.Bitmap? bitmap)
-    {
-        if (bitmap == null)
-            return null;
-        var bitmapTmp = new System.Drawing.Bitmap(bitmap);
-        var bd = bitmapTmp.LockBits(new Rectangle(0, 0, bitmapTmp.Width, bitmapTmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
-        var bitmap1 = new Bitmap(Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul,
-            bd.Scan0,
-            new Avalonia.PixelSize(bd.Width, bd.Height),
-            new Avalonia.Vector(96, 96),
-            bd.Stride);
-        bitmapTmp.UnlockBits(bd);
-        bitmapTmp.Dispose();
-        return bitmap1;
-    }
+    // public static Bitmap? ToAvaloniaBitmap(this System.Drawing.Bitmap? bitmap)
+    // {
+    //     if (bitmap == null)
+    //         return null;
+    //     var bitmapTmp = new System.Drawing.Bitmap(bitmap);
+    //     var bd = bitmapTmp.LockBits(new Rectangle(0, 0, bitmapTmp.Width, bitmapTmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+    //     var bitmap1 = new Bitmap(Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul,
+    //         bd.Scan0,
+    //         new Avalonia.PixelSize(bd.Width, bd.Height),
+    //         new Avalonia.Vector(96, 96),
+    //         bd.Stride);
+    //     bitmapTmp.UnlockBits(bd);
+    //     bitmapTmp.Dispose();
+    //     return bitmap1;
+    // }
 
     public static bool TryGetText(this IDataTransfer dataTransfer, out string? result)
     {

@@ -32,7 +32,7 @@ public static class GlobalHotkeyService
         catch (Exception e)
         {
             LoggerHelper.Error(e);
-            ToastHelper.Error("GlobalHotkeyServiceError".ToLocalization());
+            ToastHelper.Error(LangKeys.GlobalHotkeyServiceError.ToLocalization());
         }
     }
 

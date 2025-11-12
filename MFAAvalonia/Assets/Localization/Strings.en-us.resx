@@ -1205,4 +1205,10 @@
     <data name="UiDoesNotSupportCurrentResource" xml:space="preserve">
         <value>The current version of the UI does not support the current resource!</value>
     </data>
+    <data name="UnknownError" xml:space="preserve">
+        <value>Unknown error</value>
+    </data>
+    <data name="UndefinedError" xml:space="preserve">
+        <value>Undefined error</value>
+    </data>
 </root>

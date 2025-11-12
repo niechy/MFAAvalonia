@@ -28,9 +28,9 @@ public static class MaaExtensions
     }
 
     public static bool IsHit(
-        this RecognitionDetail detail)
+        this RecognitionDetail? detail)
     {
-        if (detail is null || detail.HitBox.IsDefaultHitBox())
+        if (detail is null || detail.HitBox?.IsDefaultHitBox() == true || !detail.Hit)
             return false;
         return true;
     }

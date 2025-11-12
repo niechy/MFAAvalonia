@@ -57,10 +57,10 @@ public partial class StartSettingsUserControlModel : ViewModelBase
         // 配置文件选择器选项
         var options = new FilePickerOpenOptions
         {
-            Title = "SelectExecutableFile".ToLocalization(),
+            Title = LangKeys.SelectExecutableFile.ToLocalization(),
             FileTypeFilter =
             [
-                new FilePickerFileType("ExeFilter".ToLocalization())
+                new FilePickerFileType(LangKeys.ExeFilter.ToLocalization())
                 {
                     Patterns = ["*"] // 支持所有文件类型
                 }

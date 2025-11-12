@@ -8,7 +8,6 @@ using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.ValueType;
 using System;
-using System.Drawing;
 using System.IO;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
@@ -24,16 +23,16 @@ public partial class ScreenshotViewModel : ViewModelBase
     {
         // if (MaaProcessor.Instance.MaaTasker == null)
         // {
-        //     ToastHelper.Warn("Warning".ToLocalization(), (Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb
-        //         ? "Emulator".ToLocalization()
-        //         : "Window".ToLocalization()) + "Unconnected".ToLocalization() + "!");
+        //     ToastHelper.Warn(LangKeys.Warning.ToLocalization(), (Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb
+        //         ? LangKeys.Emulator.ToLocalization()
+        //         : LangKeys.Window.ToLocalization()) + LangKeys.Unconnected.ToLocalization() + "!");
         //     return;
         // }
         try
         {
             if (MaaProcessor.Instance.MaaTasker is not { IsInitialized: true })
             {
-                ToastHelper.Info("Tip".ToLocalization(), "ConnectingTo".ToLocalizationFormatted(true, Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb ? "Emulator" : "Window"));
+                ToastHelper.Info(LangKeys.Tip.ToLocalization(), LangKeys.ConnectingTo.ToLocalizationFormatted(true, Instances.TaskQueueViewModel.CurrentController == MaaControllerTypes.Adb ? "Emulator" : "Window"));
                 MaaProcessor.Instance.TaskQueue.Enqueue(new MFATask
                 {
                     Name = "截图前启动",
@@ -48,7 +47,7 @@ public partial class ScreenshotViewModel : ViewModelBase
                     {
                         var bitmap = MaaProcessor.Instance.GetBitmapImage(false);
                         if (bitmap == null)
-                            ToastHelper.Warn("ScreenshotFailed".ToLocalization());
+                            ToastHelper.Warn(LangKeys.ScreenshotFailed.ToLocalization());
 
                         DispatcherHelper.PostOnMainThread((() =>
                         {
@@ -65,7 +64,7 @@ public partial class ScreenshotViewModel : ViewModelBase
                 {
                     var bitmap = MaaProcessor.Instance.GetBitmapImage();
                     if (bitmap == null)
-                        ToastHelper.Warn("ScreenshotFailed".ToLocalization());
+                        ToastHelper.Warn(LangKeys.ScreenshotFailed.ToLocalization());
 
                     DispatcherHelper.PostOnMainThread((() =>
                     {
@@ -85,12 +84,12 @@ public partial class ScreenshotViewModel : ViewModelBase
     {
         if (ScreenshotImage == null)
         {
-            ToastHelper.Warn("Warning".ToLocalization(), "ScreenshotEmpty".ToLocalization());
+            ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.ScreenshotEmpty.ToLocalization());
             return;
         }
         var options = new FilePickerSaveOptions
         {
-            Title = "SaveScreenshot".ToLocalization(),
+            Title = LangKeys.SaveScreenshot.ToLocalization(),
             FileTypeChoices =
             [
                 new FilePickerFileType("PNG")

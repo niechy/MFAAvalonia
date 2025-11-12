@@ -46,6 +46,7 @@ using Point = Avalonia.Point;
 using VerticalAlignment = Avalonia.Layout.VerticalAlignment;
 using Avalonia.Threading;
 using Avalonia.Xaml.Interactivity;
+using Lang.Avalonia.MarkupExtensions;
 using MFAAvalonia.ViewModels.Other;
 using Newtonsoft.Json.Linq;
 using SukiUI.Extensions;
