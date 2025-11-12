@@ -15,7 +15,7 @@ namespace MFAAvalonia.ViewModels.UsersControls;
 
 public partial class AdbEditorDialogViewModel : ObservableObject
 {
-    [ObservableProperty] private string _adbName = "Emulator".ToLocalization();
+    [ObservableProperty] private string _adbName = LangKeys.Emulator.ToLocalization();
     [ObservableProperty] private string _adbPath = string.Empty;
     [ObservableProperty] private string _adbSerial = string.Empty;
     [ObservableProperty] private string _adbConfig = "{}";
@@ -41,10 +41,10 @@ public partial class AdbEditorDialogViewModel : ObservableObject
         // 配置文件选择器选项
         var options = new FilePickerOpenOptions
         {
-            Title = "LoadFileTitle".ToLocalization(),
+            Title = LangKeys.LoadFileTitle.ToLocalization(),
             FileTypeFilter =
             [
-                new FilePickerFileType("AllFilter".ToLocalization())
+                new FilePickerFileType(LangKeys.AllFilter.ToLocalization())
                 {
                     Patterns = ["*"] // 支持所有文件类型
                 }

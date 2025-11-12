@@ -89,8 +89,8 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         if (Instances.RootViewModel.IsRunning)
         {
-            ToastHelper.Warn("ConfirmExitTitle".ToLocalization());
-            LoggerHelper.Warning("ConfirmExitTitle".ToLocalization());
+            ToastHelper.Warn(LangKeys.ConfirmExitTitle.ToLocalization());
+            LoggerHelper.Warning(LangKeys.ConfirmExitTitle.ToLocalization());
             return;
         }
         MaaProcessor.Instance.Start();
@@ -118,7 +118,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     [RelayCommand]
     private void AddTask()
     {
-        Instances.DialogManager.CreateDialog().WithTitle("AdbEditor".ToLocalization()).WithViewModel(dialog => new AddTaskDialogViewModel(dialog, MaaProcessor.Instance.TasksSource)).TryShow();
+        Instances.DialogManager.CreateDialog().WithTitle(LangKeys.AdbEditor.ToLocalization()).WithViewModel(dialog => new AddTaskDialogViewModel(dialog, MaaProcessor.Instance.TasksSource)).TryShow();
     }
 
     #endregion
@@ -216,7 +216,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         // DispatcherHelper.RunOnMainThread(() =>
         // {
-        //     var log = new LogItemViewModel(downloading ? "NewVersionFoundDescDownloading".ToLocalization() + "\n" + output : output, Instances.RootView.FindResource("SukiAccentColor") as IBrush,
+        //     var log = new LogItemViewModel(downloading ? LangKeys.NewVersionFoundDescDownloading.ToLocalization() + "\n" + output : output, Instances.RootView.FindResource("SukiAccentColor") as IBrush,
         //         dateFormat: "HH':'mm':'ss")
         //     {
         //         IsDownloading = true,
@@ -340,14 +340,14 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
         if (value is DesktopWindowInfo window)
         {
-            if (!igoreToast) ToastHelper.Info("WindowSelectionMessage".ToLocalizationFormatted(false, ""), window.Name);
+            if (!igoreToast) ToastHelper.Info(LangKeys.WindowSelectionMessage.ToLocalizationFormatted(false, ""), window.Name);
             MaaProcessor.Config.DesktopWindow.Name = window.Name;
             MaaProcessor.Config.DesktopWindow.HWnd = window.Handle;
             MaaProcessor.Instance.SetTasker();
         }
         else if (value is AdbDeviceInfo device)
         {
-            if (!igoreToast) ToastHelper.Info("EmulatorSelectionMessage".ToLocalizationFormatted(false, ""), device.Name);
+            if (!igoreToast) ToastHelper.Info(LangKeys.EmulatorSelectionMessage.ToLocalizationFormatted(false, ""), device.Name);
             MaaProcessor.Config.AdbDevice.Name = device.Name;
             MaaProcessor.Config.AdbDevice.AdbPath = device.AdbPath;
             MaaProcessor.Config.AdbDevice.AdbSerial = device.AdbSerial;
@@ -639,15 +639,15 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (!hasDevices)
         {
             ToastHelper.Info((
-                isAdb ? "NoEmulatorFound" : "NoWindowFound").ToLocalization());
+                isAdb ?  LangKeys.NoEmulatorFound :  LangKeys.NoWindowFound).ToLocalization());
         }
     }
 
     private void HandleDetectionError(Exception ex, bool isAdb)
     {
-        var targetType = isAdb ? "Emulator" : "Window";
+        var targetType = isAdb ?  LangKeys.Emulator :  LangKeys.Window;
         ToastHelper.Warn(string.Format(
-            "TaskStackError".ToLocalization(),
+            LangKeys.TaskStackError.ToLocalization(),
             targetType.ToLocalization(),
             ex.Message));
 

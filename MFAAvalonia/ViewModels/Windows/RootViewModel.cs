@@ -71,7 +71,7 @@ public partial class RootViewModel : ViewModelBase
         {
             DispatcherHelper.PostOnMainThread(() =>
             {
-                Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent("DebugModeWarning".ToLocalization()).WithActionButton("Ok".ToLocalization(), dialog => { }, true).TryShow();
+                Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent(LangKeys.DebugModeWarning.ToLocalization()).WithActionButton(LangKeys.Ok.ToLocalization(), dialog => { }, true).TryShow();
                 _shouldTip = false;
             });
         }

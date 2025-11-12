@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using AvaloniaExtensions.Axaml.Markup;
 using FluentAvalonia.UI.Controls;
+using Lang.Avalonia.MarkupExtensions;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.ViewModels.Windows;
@@ -16,9 +17,7 @@ using SukiUI.Content;
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using Bitmap = Avalonia.Media.Imaging.Bitmap;
-using Color = System.Drawing.Color;
+
 
 namespace MFAAvalonia.Helper;
 

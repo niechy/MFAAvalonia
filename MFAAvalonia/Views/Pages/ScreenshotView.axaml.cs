@@ -6,7 +6,6 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
-using System.Drawing;
 
 
 namespace MFAAvalonia.Views.Pages;

@@ -72,12 +72,12 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
 #pragma warning disable CS4014 // 由于等待不会停止
     [RelayCommand]
     private void ExternalNotificationSendTest()
-        => ExternalNotificationHelper.ExternalNotificationAsync("ExternalNotificationTest".ToLocalization());
+        => ExternalNotificationHelper.ExternalNotificationAsync(LangKeys.ExternalNotificationTest.ToLocalization());
 
     [ObservableProperty] private bool _enabledCustom;
 
-    [ObservableProperty] private string _customSuccessText = "TaskAllCompleted".ToLocalization();
-    [ObservableProperty] private string _customFailureText = "TaskFailed".ToLocalization();
+    [ObservableProperty] private string _customSuccessText = LangKeys.TaskAllCompleted.ToLocalization();
+    [ObservableProperty] private string _customFailureText = LangKeys.TaskFailed.ToLocalization();
 
     #endregion
 

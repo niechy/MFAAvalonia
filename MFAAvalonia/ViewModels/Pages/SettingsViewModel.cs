@@ -56,7 +56,7 @@ public partial class SettingsViewModel : ViewModelBase
 
         if (configExists)
         {
-            ToastHelper.Error("ConfigNameAlreadyExists".ToLocalizationFormatted(false, NewConfigurationName));
+            ToastHelper.Error(LangKeys.ConfigNameAlreadyExists.ToLocalizationFormatted(false, NewConfigurationName));
             return;
         }
         if (File.Exists(configPath))
@@ -65,7 +65,7 @@ public partial class SettingsViewModel : ViewModelBase
             File.WriteAllText(newConfigPath, content);
 
             ConfigurationManager.Add(NewConfigurationName);
-            ToastHelper.Success("ConfigAddedSuccessfully".ToLocalizationFormatted(false, NewConfigurationName));
+            ToastHelper.Success(LangKeys.ConfigAddedSuccessfully.ToLocalizationFormatted(false, NewConfigurationName));
         }
     }
 

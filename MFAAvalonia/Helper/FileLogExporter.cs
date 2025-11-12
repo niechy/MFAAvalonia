@@ -15,15 +15,23 @@ public static class FileLogExporter
 {
     public const int MAX_LINES = 42000;
     // 定义需要处理的图片文件扩展名
-    private static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp" };
+    private static readonly string[] ImageExtensions =
+    {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".bmp",
+        ".gif",
+        ".webp"
+    };
     private static readonly string ExcludedFolder = "vision";
     public async static Task CompressRecentLogs(IStorageProvider storageProvider)
     {
         if (Instances.RootViewModel.IsRunning)
         {
             ToastHelper.Warn(
-                "Warning".ToLocalization(),
-                "StopTaskBeforeExportLog".ToLocalization());
+                LangKeys.Warning.ToLocalization(),
+                LangKeys.StopTaskBeforeExportLog.ToLocalization());
             return;
         }
         MaaProcessor.Instance.SetTasker();
@@ -36,7 +44,7 @@ public static class FileLogExporter
             // 获取用户选择的保存路径
             var saveFile = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "ExportLog".ToLocalization(),
+                Title = LangKeys.ExportLog.ToLocalization(),
                 DefaultExtension = "zip",
                 SuggestedFileName = $"log_{DateTime.Now:yyyyMMdd_HHmmss}"
             });
@@ -144,22 +152,21 @@ public static class FileLogExporter
 
         // 1. 获取日志文件（.log 和 .txt）
         var debugDir = Path.Combine(baseDirectory, "debug");
-        var logFiles = Directory.Exists(debugDir) 
+        var logFiles = Directory.Exists(debugDir)
             ? Directory.GetFiles(debugDir, "*.log", SearchOption.AllDirectories)
                 .Where(file => !file.Contains(ExcludedFolder, StringComparison.OrdinalIgnoreCase)) // 排除vision路径
             : [];
 
         var logsDir = Path.Combine(baseDirectory, "logs");
-        var txtFiles = Directory.Exists(logsDir) 
-            ? Directory.GetFiles(logsDir, "*.txt", SearchOption.AllDirectories) 
+        var txtFiles = Directory.Exists(logsDir)
+            ? Directory.GetFiles(logsDir, "*.txt", SearchOption.AllDirectories)
             : [];
 
         // 2. 获取 debug 目录下的图片文件（指定扩展名）
-        var imageFiles = Directory.Exists(debugDir) 
+        var imageFiles = Directory.Exists(debugDir)
             ? Directory.GetFiles(debugDir, "*.*", SearchOption.AllDirectories)
-                .Where(file => 
-                    ImageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) && 
-                    !file.Contains(ExcludedFolder, StringComparison.OrdinalIgnoreCase)) // 排除vision路径
+                .Where(file =>
+                    ImageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) && !file.Contains(ExcludedFolder, StringComparison.OrdinalIgnoreCase)) // 排除vision路径
             : [];
 
 

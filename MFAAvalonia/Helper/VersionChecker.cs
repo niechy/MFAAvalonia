@@ -136,8 +136,8 @@ public static class VersionChecker
     {
         if (IsNewVersionAvailable(GetMinVersion(), GetLocalVersion()))
         {
-            Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent("UiVersionBelowResourceRequirement".ToLocalizationFormatted(false, GetLocalVersion(), GetMinVersion()))
-                .WithActionButton("Ok".ToLocalization(), dialog => { }, true).TryShow();
+            Instances.DialogManager.CreateDialog().OfType(NotificationType.Warning).WithContent(LangKeys.UiVersionBelowResourceRequirement.ToLocalizationFormatted(false, GetLocalVersion(), GetMinVersion()))
+                .WithActionButton(LangKeys.Ok.ToLocalization(), dialog => { }, true).TryShow();
         }
     }
 
@@ -153,7 +153,7 @@ public static class VersionChecker
             {
                 if (string.IsNullOrWhiteSpace(url))
                 {
-                    ToastHelper.Info("CurrentResourcesNotSupportGitHub".ToLocalization());
+                    ToastHelper.Info(LangKeys.CurrentResourcesNotSupportGitHub.ToLocalization());
                     Instances.RootViewModel.SetUpdating(false);
                     return;
                 }
@@ -183,15 +183,15 @@ public static class VersionChecker
             {
                 DispatcherHelper.RunOnMainThread(() =>
                 {
-                    Instances.ToastManager.CreateToast().WithTitle("UpdateResource".ToLocalization())
-                        .WithContent("ResourceOption".ToLocalization() + "NewVersionAvailableLatestVersion".ToLocalization() + latestVersion).Dismiss().After(TimeSpan.FromSeconds(6))
-                        .WithActionButton("Later".ToLocalization(), _ => { }, true, SukiButtonStyles.Basic)
-                        .WithActionButton("Update".ToLocalization(), _ =>
+                    Instances.ToastManager.CreateToast().WithTitle(LangKeys.UpdateResource.ToLocalization())
+                        .WithContent(LangKeys.ResourceOption.ToLocalization() + LangKeys.NewVersionAvailableLatestVersion.ToLocalization() + latestVersion).Dismiss().After(TimeSpan.FromSeconds(6))
+                        .WithActionButton(LangKeys.Later.ToLocalization(), _ => { }, true, SukiButtonStyles.Basic)
+                        .WithActionButton(LangKeys.Update.ToLocalization(), _ =>
                         {
                             if (!Instances.RootViewModel.IsUpdating)
                                 UpdateResourceAsync();
                             else
-                                ToastHelper.Warn("Warning".ToLocalization(), "CurrentOtherUpdatingTask".ToLocalization());
+                                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.CurrentOtherUpdatingTask.ToLocalization());
                         }, true).Queue();
                 });
                 DispatcherHelper.RunOnMainThread(ChangelogViewModel.CheckReleaseNote);
@@ -199,7 +199,7 @@ public static class VersionChecker
             else
             {
                 DispatcherHelper.RunOnMainThread(ChangelogViewModel.CheckChangelog);
-                ToastHelper.Info("ResourcesAreLatestVersion".ToLocalization());
+                ToastHelper.Info(LangKeys.ResourcesAreLatestVersion.ToLocalization());
             }
             Instances.RootViewModel.SetUpdating(false);
         }
@@ -207,9 +207,9 @@ public static class VersionChecker
         {
             Instances.RootViewModel.SetUpdating(false);
             if (ex.Message.Contains("resource not found"))
-                ToastHelper.Error("CurrentResourcesNotSupportMirror".ToLocalization());
+                ToastHelper.Error(LangKeys.CurrentResourcesNotSupportMirror.ToLocalization());
             else
-                ToastHelper.Error("ErrorWhenCheck".ToLocalizationFormatted(true, "Resource"), ex.Message);
+                ToastHelper.Error(LangKeys.ErrorWhenCheck.ToLocalizationFormatted(true, "Resource"), ex.Message);
             LoggerHelper.Error(ex);
         }
     }
@@ -234,27 +234,27 @@ public static class VersionChecker
             }
             if (mirrocS)
             {
-                ToastHelper.Warn("Warning".ToLocalization(), "SwitchUiUpdateSourceToGithub".ToLocalization());
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.SwitchUiUpdateSourceToGithub.ToLocalization());
             }
             else if (IsNewVersionAvailable(latestVersion, localVersion))
             {
                 DispatcherHelper.RunOnMainThread(() =>
                 {
-                    Instances.ToastManager.CreateToast().WithTitle("SoftwareUpdate".ToLocalization())
-                        .WithContent("MFA" + "NewVersionAvailableLatestVersion".ToLocalization() + latestVersion).Dismiss().After(TimeSpan.FromSeconds(6))
-                        .WithActionButton("Later".ToLocalization(), _ => { }, true, SukiButtonStyles.Basic)
-                        .WithActionButton("Update".ToLocalization(), _ =>
+                    Instances.ToastManager.CreateToast().WithTitle(LangKeys.SoftwareUpdate.ToLocalization())
+                        .WithContent("MFA" + LangKeys.NewVersionAvailableLatestVersion.ToLocalization() + latestVersion).Dismiss().After(TimeSpan.FromSeconds(6))
+                        .WithActionButton(LangKeys.Later.ToLocalization(), _ => { }, true, SukiButtonStyles.Basic)
+                        .WithActionButton(LangKeys.Update.ToLocalization(), _ =>
                         {
                             if (!Instances.RootViewModel.IsUpdating)
                                 UpdateMFAAsync();
                             else
-                                ToastHelper.Warn("Warning".ToLocalization(), "CurrentOtherUpdatingTask".ToLocalization());
+                                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.CurrentOtherUpdatingTask.ToLocalization());
                         }, true).Queue();
                 });
             }
             else
             {
-                ToastHelper.Info("MFAIsLatestVersion".ToLocalization());
+                ToastHelper.Info(LangKeys.MFAIsLatestVersion.ToLocalization());
             }
 
             Instances.RootViewModel.SetUpdating(false);
@@ -262,9 +262,9 @@ public static class VersionChecker
         catch (Exception ex)
         {
             if (ex.Message.Contains("resource not found"))
-                ToastHelper.Error("CurrentResourcesNotSupportMirror".ToLocalization());
+                ToastHelper.Error(LangKeys.CurrentResourcesNotSupportMirror.ToLocalization());
             else
-                ToastHelper.Error("ErrorWhenCheck".ToLocalizationFormatted(false, "MFA"), ex.Message);
+                ToastHelper.Error(LangKeys.ErrorWhenCheck.ToLocalizationFormatted(false, "MFA"), ex.Message);
             Instances.RootViewModel.SetUpdating(false);
             LoggerHelper.Error(ex);
         }
@@ -287,12 +287,12 @@ public static class VersionChecker
             StackPanel stackPanel = new();
             textBlock = new TextBlock
             {
-                Text = "GettingLatestResources".ToLocalization(),
+                Text = LangKeys.GettingLatestResources.ToLocalization(),
             };
             stackPanel.Children.Add(textBlock);
             stackPanel.Children.Add(progress);
             sukiToast = Instances.ToastManager.CreateToast()
-                .WithTitle("UpdateResource".ToLocalization())
+                .WithTitle(LangKeys.UpdateResource.ToLocalization())
                 .WithContent(stackPanel).Queue();
         });
 
@@ -302,7 +302,7 @@ public static class VersionChecker
         if (string.IsNullOrWhiteSpace(localVersion))
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn("FailToGetCurrentVersionInfo".ToLocalization());
+            ToastHelper.Warn(LangKeys.FailToGetCurrentVersionInfo.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             return;
         }
@@ -314,7 +314,7 @@ public static class VersionChecker
             if (string.IsNullOrWhiteSpace(url))
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn("CurrentResourcesNotSupportGitHub".ToLocalization());
+                ToastHelper.Warn(LangKeys.CurrentResourcesNotSupportGitHub.ToLocalization());
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
@@ -333,7 +333,7 @@ public static class VersionChecker
         catch (Exception ex)
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn($"{"FailToGetLatestVersionInfo".ToLocalization()}", ex.Message);
+            ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message);
             Instances.RootViewModel.SetUpdating(false);
             LoggerHelper.Error(ex);
             return;
@@ -344,7 +344,7 @@ public static class VersionChecker
         if (string.IsNullOrWhiteSpace(latestVersion))
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn("FailToGetLatestVersionInfo".ToLocalization());
+            ToastHelper.Warn(LangKeys.FailToGetLatestVersionInfo.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             Instances.TaskQueueViewModel.ClearDownloadProgress();
 
@@ -354,7 +354,7 @@ public static class VersionChecker
         if (!IsNewVersionAvailable(latestVersion, localVersion))
         {
             Dismiss(sukiToast);
-            ToastHelper.Info("ResourcesAreLatestVersion".ToLocalization());
+            ToastHelper.Info(LangKeys.ResourcesAreLatestVersion.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             action?.Invoke();
@@ -366,7 +366,7 @@ public static class VersionChecker
         if (string.IsNullOrWhiteSpace(downloadUrl))
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn("FailToGetDownloadUrl".ToLocalization());
+            ToastHelper.Warn(LangKeys.FailToGetDownloadUrl.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
@@ -381,19 +381,19 @@ public static class VersionChecker
         }
         var tempZipFilePath = Path.Combine(tempPath, $"resource_{latestVersion}{fileExtension}");
 
-        SetText(textBlock, "Downloading".ToLocalization());
+        SetText(textBlock, LangKeys.Downloading.ToLocalization());
         SetProgress(progress, 0);
         (var downloadStatus, tempZipFilePath) = await DownloadWithRetry(downloadUrl, tempZipFilePath, progress, 3);
         LoggerHelper.Info(tempZipFilePath);
         if (!downloadStatus)
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn("Warning".ToLocalization(), "DownloadFailed".ToLocalization());
+            ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.DownloadFailed.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             return;
         }
 
-        SetText(textBlock, "Extracting".ToLocalization());
+        SetText(textBlock, LangKeys.Extracting.ToLocalization());
         SetProgress(progress, 0);
 
         var tempExtractDir = Path.Combine(tempPath, $"resource_{latestVersion}_extracted");
@@ -401,11 +401,11 @@ public static class VersionChecker
         if (!File.Exists(tempZipFilePath))
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn("Warning".ToLocalization(), "DownloadFailed".ToLocalization());
+            ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.DownloadFailed.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             return;
         }
-        SetText(textBlock, "Verifying".ToLocalization());
+        SetText(textBlock, LangKeys.Verifying.ToLocalization());
         var sha256Verified = true;
         if (string.IsNullOrWhiteSpace(sha256))
         {
@@ -419,13 +419,13 @@ public static class VersionChecker
         if (!string.IsNullOrWhiteSpace(sha256) && !sha256Verified)
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn("Warning".ToLocalization(), "HashVerificationFailed".ToLocalization());
+            ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.HashVerificationFailed.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             return;
         }
-        SetText(textBlock, "Extracting".ToLocalization());
+        SetText(textBlock, LangKeys.Extracting.ToLocalization());
         UniversalExtractor.Extract(tempZipFilePath, tempExtractDir);
-        SetText(textBlock, "ApplyingUpdate".ToLocalization());
+        SetText(textBlock, LangKeys.ApplyingUpdate.ToLocalization());
         var originPath = tempExtractDir;
         var interfacePath = Path.Combine(tempExtractDir, "interface.json");
         var resourceDirPath = Path.Combine(tempExtractDir, "resource");
@@ -451,8 +451,8 @@ public static class VersionChecker
             if (@interface != null && @interface["interface_version"] != null && @interface["interface_version"].ToString().Trim().Equals("2"))
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn("Warning".ToLocalization(), "UiDoesNotSupportResourceUpdateCancelled".ToLocalization());
-                RootView.AddLog("UiDoesNotSupportResourceUpdateCancelled".ToLocalization(), Brushes.Orange, changeColor: false);
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization());
+                RootView.AddLog(LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization(), Brushes.Orange, changeColor: false);
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
@@ -622,7 +622,7 @@ public static class VersionChecker
 
         SetProgress(progress, 100);
 
-        SetText(textBlock, "UpdateCompleted".ToLocalization());
+        SetText(textBlock, LangKeys.UpdateCompleted.ToLocalization());
         // dialog?.SetRestartButtonVisibility(true);
 
         Instances.RootViewModel.SetUpdating(false);
@@ -631,12 +631,12 @@ public static class VersionChecker
         {
             if (!noDialog)
             {
-                Instances.DialogManager.CreateDialog().WithContent("GameResourceUpdated".ToLocalization()).WithActionButton("Yes".ToLocalization(), _ =>
+                Instances.DialogManager.CreateDialog().WithContent(LangKeys.GameResourceUpdated.ToLocalization()).WithActionButton(LangKeys.Yes.ToLocalization(), _ =>
                     {
                         Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
                         Instances.ShutdownApplication();
                     }, dismissOnClick: true, "Flat", "Accent")
-                    .WithActionButton("No".ToLocalization(), _ =>
+                    .WithActionButton(LangKeys.No.ToLocalization(), _ =>
                     {
                         Dismiss(sukiToast);
                     }, dismissOnClick: true).TryShow();
@@ -668,7 +668,7 @@ public static class VersionChecker
             };
             textBlock = new TextBlock
             {
-                Text = "GettingLatestSoftware".ToLocalization()
+                Text = LangKeys.GettingLatestSoftware.ToLocalization()
             };
 
             var stackPanel = new StackPanel();
@@ -676,7 +676,7 @@ public static class VersionChecker
             stackPanel.Children.Add(progress);
 
             sukiToast = Instances.ToastManager.CreateToast()
-                .WithTitle("SoftwareUpdate".ToLocalization())
+                .WithTitle(LangKeys.SoftwareUpdate.ToLocalization())
                 .WithContent(stackPanel)
                 .Queue();
         });
@@ -698,7 +698,7 @@ public static class VersionChecker
             catch (Exception ex)
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn($"{"FailToGetLatestVersionInfo".ToLocalization()}", ex.Message);
+                ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message);
                 LoggerHelper.Error(ex);
                 Instances.RootViewModel.SetUpdating(false);
                 return;
@@ -721,14 +721,14 @@ public static class VersionChecker
             if (!IsNewVersionAvailable(latestVersion, GetLocalVersion()))
             {
                 Dismiss(sukiToast);
-                ToastHelper.Info("MFAIsLatestVersion".ToLocalization());
+                ToastHelper.Info(LangKeys.MFAIsLatestVersion.ToLocalization());
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
             else if (mirrocS)
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn("Warning".ToLocalization(), "SwitchUiUpdateSourceToGithub".ToLocalization());
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.SwitchUiUpdateSourceToGithub.ToLocalization());
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
@@ -739,14 +739,14 @@ public static class VersionChecker
             Directory.CreateDirectory(tempPath);
 
             // 下载更新包
-            SetText(textBlock, "Downloading".ToLocalization());
+            SetText(textBlock, LangKeys.Downloading.ToLocalization());
             SetProgress(progress, 0);
             var tempZip = Path.Combine(tempPath, $"mfa_{latestVersion}.zip");
             (var downloadStatus, tempZip) = await DownloadWithRetry(downloadUrl, tempZip, progress, 3);
             if (!downloadStatus)
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn("Warning".ToLocalization(), "DownloadFailed".ToLocalization());
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.DownloadFailed.ToLocalization());
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
@@ -756,7 +756,7 @@ public static class VersionChecker
             var extractDir = Path.Combine(tempPath, $"mfa_{latestVersion}_extracted");
             if (Directory.Exists(extractDir))
                 Directory.Delete(extractDir, true);
-            SetText(textBlock, "Verifying".ToLocalization());
+            SetText(textBlock, LangKeys.Verifying.ToLocalization());
             var sha256Verified = true;
             if (string.IsNullOrWhiteSpace(sha256))
             {
@@ -770,14 +770,14 @@ public static class VersionChecker
             if (!string.IsNullOrWhiteSpace(sha256) && !sha256Verified)
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn("Warning".ToLocalization(), "HashVerificationFailed".ToLocalization());
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.HashVerificationFailed.ToLocalization());
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
-            SetText(textBlock, "Extracting".ToLocalization());
+            SetText(textBlock, LangKeys.Extracting.ToLocalization());
             UniversalExtractor.Extract(tempZip, extractDir);
 
-            SetText(textBlock, "ApplyingUpdate".ToLocalization());
+            SetText(textBlock, LangKeys.ApplyingUpdate.ToLocalization());
             // 执行安全更新
             SetProgress(progress, 40);
             var utf8Bytes = Encoding.UTF8.GetBytes(AppContext.BaseDirectory);
@@ -896,12 +896,12 @@ public static class VersionChecker
             {
                 DispatcherHelper.PostOnMainThread(() =>
                 {
-                    Instances.DialogManager.CreateDialog().WithContent("GameResourceUpdated".ToLocalization()).WithActionButton("Yes".ToLocalization(), _ =>
+                    Instances.DialogManager.CreateDialog().WithContent(LangKeys.GameResourceUpdated.ToLocalization()).WithActionButton(LangKeys.Yes.ToLocalization(), _ =>
                         {
                             Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
                             Instances.ShutdownApplication();
                         }, dismissOnClick: true, "Flat", "Accent")
-                        .WithActionButton("No".ToLocalization(), _ =>
+                        .WithActionButton(LangKeys.No.ToLocalization(), _ =>
                         {
                             Dismiss(sukiToast);
                         }, dismissOnClick: true).TryShow();
@@ -1143,13 +1143,13 @@ public static class VersionChecker
             };
             textBlock = new TextBlock
             {
-                Text = "GettingLatestMaaFW".ToLocalization()
+                Text = LangKeys.GettingLatestMaaFW.ToLocalization()
             };
             var stackPanel = new StackPanel();
             stackPanel.Children.Add(textBlock);
             stackPanel.Children.Add(progress);
             sukiToast = Instances.ToastManager.CreateToast()
-                .WithTitle("UpdateMaaFW".ToLocalization())
+                .WithTitle(LangKeys.UpdateMaaFW.ToLocalization())
                 .WithContent(stackPanel).Queue();
         });
 
@@ -1167,7 +1167,7 @@ public static class VersionChecker
             catch (Exception ex)
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn($"{"FailToGetLatestVersionInfo".ToLocalization()}", ex.Message);
+                ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message);
                 LoggerHelper.Error(ex);
                 Instances.RootViewModel.SetUpdating(false);
                 return;
@@ -1177,7 +1177,7 @@ public static class VersionChecker
             if (!IsNewVersionAvailable(latestVersion, currentVersion))
             {
                 Dismiss(sukiToast);
-                ToastHelper.Info("MaaFwIsLatestVersion".ToLocalization());
+                ToastHelper.Info(LangKeys.MaaFwIsLatestVersion.ToLocalization());
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
@@ -1186,17 +1186,17 @@ public static class VersionChecker
             var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_maafw");
             Directory.CreateDirectory(tempPath);
             var tempZip = Path.Combine(tempPath, $"maafw_{latestVersion}.zip");
-            SetText(textBlock, "Downloading".ToLocalization());
+            SetText(textBlock, LangKeys.Downloading.ToLocalization());
             (var downloadStatus, tempZip) = await DownloadWithRetry(downloadUrl, tempZip, progress, 3);
             if (!downloadStatus)
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn("Warning".ToLocalization(), "DownloadFailed".ToLocalization());
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.DownloadFailed.ToLocalization());
                 Instances.RootViewModel.SetUpdating(false);
                 return;
             }
 
-            SetText(textBlock, "ApplyingUpdate".ToLocalization());
+            SetText(textBlock, LangKeys.ApplyingUpdate.ToLocalization());
             // 文件替换（复用ReplaceFilesWithRetry）
             SetProgress(progress, 0);
             var extractDir = Path.Combine(tempPath, $"maafw_{latestVersion}_extracted");
@@ -1610,11 +1610,11 @@ public static class VersionChecker
         var versionType = isUI ? Instances.VersionUpdateSettingsUserControlModel.UIUpdateChannelIndex.ToVersionType() : Instances.VersionUpdateSettingsUserControlModel.ResourceUpdateChannelIndex.ToVersionType();
         if (string.IsNullOrWhiteSpace(resId))
         {
-            throw new Exception("CurrentResourcesNotSupportMirror".ToLocalization());
+            throw new Exception(LangKeys.CurrentResourcesNotSupportMirror.ToLocalization());
         }
         if (string.IsNullOrWhiteSpace(cdk) && !onlyCheck)
         {
-            throw new Exception("MirrorCdkEmpty".ToLocalization());
+            throw new Exception(LangKeys.MirrorCdkEmpty.ToLocalization());
         }
         var cdkD = onlyCheck ? string.Empty : $"cdk={cdk}&";
         var multiplatform = MaaProcessor.Interface?.Multiplatform == true;
@@ -1693,7 +1693,7 @@ public static class VersionChecker
 
     private static Exception HandleHttpError(HttpStatusCode statusCode, JObject responseData)
     {
-        var errorMsg = responseData["msg"]?.ToString() ?? "UnknownError".ToLocalization();
+        var errorMsg = responseData["msg"]?.ToString() ?? LangKeys.UnknownError.ToLocalization();
 
         switch (statusCode)
         {
@@ -1713,7 +1713,7 @@ public static class VersionChecker
 
     private static void HandleBusinessError(int code, JObject responseData)
     {
-        var errorMsg = responseData["msg"]?.ToString() ?? "UndefinedError".ToLocalization();
+        var errorMsg = responseData["msg"]?.ToString() ?? LangKeys.UndefinedError.ToLocalization();
 
         switch (code)
         {
