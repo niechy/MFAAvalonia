@@ -740,13 +740,13 @@ public class MaaProcessor
             Instances.TaskQueueViewModel.SetConnected(true);
             //  tasker.Utility.SetOption_Recording(ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false));
             tasker.Global.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
-            tasker.Global.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
+c            // tasker.Global.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
+
             tasker.Callback += (o, args) =>
             {
                 var jObject = JObject.Parse(args.Details);
 
                 var name = jObject["name"]?.ToString() ?? string.Empty;
-
                 if ((args.Message.StartsWith(MaaMsg.Node.Action.Succeeded) || args.Message.StartsWith(MaaMsg.Node.Action.Failed)) && o is MaaTasker tasker)
                 {
                     if (jObject["node_id"] != null)
@@ -754,7 +754,7 @@ public class MaaProcessor
                         var nodeId = Convert.ToInt64(jObject["node_id"]?.ToString() ?? string.Empty);
                         if (nodeId > 0)
                         {
-                            tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out _, out _);
+                            tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out var actionId, out _);
                             var rect = new MaaRectBuffer();
                             var imageBuffer = new MaaImageBuffer();
                             tasker.GetRecognitionDetail(recognitionId, out string node,
@@ -765,6 +765,12 @@ public class MaaProcessor
                                 imageBuffer, new MaaImageListBuffer());
                             var bitmap = imageBuffer.ToBitmap();
                             if (hit && bitmap != null)
+                            {
+                                bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                            }
+
+                            tasker.GetActionDetail(actionId, out _, out _, rect, out var isSucceeded, out _);
+                            if (isSucceeded && bitmap != null)
                             {
                                 bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
                             }
@@ -786,9 +792,9 @@ public class MaaProcessor
 
                 }
 
-                if (args.Message.StartsWith(MaaMsg.Node.Action.Prefix) && jObject.ContainsKey("focus"))
+                if ((args.Message.StartsWith(MaaMsg.Node.Action.Prefix) || args.Message.StartsWith(MaaMsg.Node.Recognition.Prefix)) && jObject.ContainsKey("focus"))
                 {
-                    DisplayFocus(jObject, args.Message);
+                    DisplayFocus(jObject, args.Message, args.Details);
                 }
             };
 
@@ -839,17 +845,80 @@ public class MaaProcessor
 
     }
 
-    private void DisplayFocus(JObject taskModel, string message)
+    private void DisplayFocus(JObject taskModel, string message, string detail)
     {
         if (taskModel["focus"] == null)
             return;
-        var jToken = JToken.FromObject(taskModel["focus"]);
-        var focus = new Focus();
-        if (jToken.Type == JTokenType.String)
-            focus.Start = [jToken.Value<string>()];
 
-        if (jToken.Type == JTokenType.Object)
-            focus = jToken.ToObject<Focus>();
+        var focusToken = taskModel["focus"];
+        var focus = new Focus();
+        JObject newProtocolFocus = null;
+
+        // 解析focus内容，同时提取新旧协议数据
+        if (focusToken.Type == JTokenType.String)
+        {
+            // 旧协议：字符串形式（等价于start）
+            focus.Start = new List<string>
+            {
+                focusToken.Value<string>()
+            };
+        }
+        else if (focusToken.Type == JTokenType.Object)
+        {
+            var focusObj = focusToken as JObject;
+            // 提取旧协议字段（start/succeeded/failed/toast等）
+            focus = focusObj.ToObject<Focus>();
+            // 提取新协议字段（消息类型为键的条目）
+            newProtocolFocus = new JObject(
+                focusObj.Properties()
+                    .Where(prop => prop.Name.StartsWith("Node.Action.") || prop.Name.StartsWith("Node.Recognition."))
+                    .Select(prop => new JProperty(prop.Name, prop.Value))
+            );
+        }
+
+        // 处理详情数据（用于新协议占位符替换）
+        JObject detailsObj = null;
+        if (!string.IsNullOrEmpty(detail))
+        {
+            try
+            {
+                detailsObj = JObject.Parse(detail);
+            }
+            catch
+            {
+                // 忽略详情解析错误
+            }
+        }
+
+        // 1. 处理新协议（如果有）
+        if (newProtocolFocus is { HasValues: true } && newProtocolFocus.TryGetValue(message, out var templateToken))
+        {
+            // 处理字符串数组类型
+            if (templateToken.Type == JTokenType.Array)
+            {
+                foreach (var item in templateToken.Children())
+                {
+                    if (item.Type == JTokenType.String)
+                    {
+                        var template = item.Value<string>();
+                        var displayText = ReplacePlaceholders(template, detailsObj);
+                        var (text, color) = ParseColorText(displayText);
+                        RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
+                    }
+                }
+            }
+            // 处理单个字符串类型
+            else if (templateToken.Type == JTokenType.String)
+            {
+                var template = templateToken.Value<string>();
+                var displayText = ReplacePlaceholders(template, detailsObj);
+                var (text, color) = ParseColorText(displayText);
+                RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
+            }
+        }
+
+
+        // 2. 处理旧协议（如果有）
         switch (message)
         {
             case MaaMsg.Node.Action.Succeeded:
@@ -877,7 +946,7 @@ public class MaaProcessor
                 {
                     Status = MFATask.MFATaskStatus.FAILED;
                 }
-                if (focus.Toast is { Count: > 0 })
+                if (focus.Toast != null && focus.Toast.Count > 0)
                 {
                     var (text, color) = ParseColorText(focus.Toast[0]);
                     ToastNotification.Show(HandleStringsWithVariables(text));
@@ -894,6 +963,19 @@ public class MaaProcessor
         }
     }
 
+// 辅助方法：替换模板中的占位符
+    private string ReplacePlaceholders(string template, JObject? details)
+    {
+        if (details == null)
+            return template;
+
+        string result = template;
+        foreach (var prop in details.Properties())
+        {
+            result = result.Replace($"{{{prop.Name}}}", prop.Value?.ToString() ?? string.Empty);
+        }
+        return result;
+    }
 // private void DisplayFocus(MaaNode taskModel, string message)
     // {
     //     switch (message)
