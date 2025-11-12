@@ -16,7 +16,7 @@ public static class FileLogExporter
     public const int MAX_LINES = 42000;
     // 定义需要处理的图片文件扩展名
     private static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp" };
-
+    private static readonly string ExcludedFolder = "vision";
     public async static Task CompressRecentLogs(IStorageProvider storageProvider)
     {
         if (Instances.RootViewModel.IsRunning)
@@ -145,19 +145,23 @@ public static class FileLogExporter
         // 1. 获取日志文件（.log 和 .txt）
         var debugDir = Path.Combine(baseDirectory, "debug");
         var logFiles = Directory.Exists(debugDir) 
-            ? Directory.GetFiles(debugDir, "*.log", SearchOption.AllDirectories) 
-            : Array.Empty<string>();
+            ? Directory.GetFiles(debugDir, "*.log", SearchOption.AllDirectories)
+                .Where(file => !file.Contains(ExcludedFolder, StringComparison.OrdinalIgnoreCase)) // 排除vision路径
+            : [];
 
         var logsDir = Path.Combine(baseDirectory, "logs");
         var txtFiles = Directory.Exists(logsDir) 
             ? Directory.GetFiles(logsDir, "*.txt", SearchOption.AllDirectories) 
-            : Array.Empty<string>();
+            : [];
 
         // 2. 获取 debug 目录下的图片文件（指定扩展名）
         var imageFiles = Directory.Exists(debugDir) 
             ? Directory.GetFiles(debugDir, "*.*", SearchOption.AllDirectories)
-                .Where(file => ImageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
-            : Array.Empty<string>();
+                .Where(file => 
+                    ImageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) && 
+                    !file.Contains(ExcludedFolder, StringComparison.OrdinalIgnoreCase)) // 排除vision路径
+            : [];
+
 
         // 合并所有文件并处理
         var allFiles = logFiles.Concat(txtFiles).Concat(imageFiles).Distinct().ToArray();
