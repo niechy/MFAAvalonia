@@ -63,7 +63,11 @@ sealed class Program
         {
             Directory.SetCurrentDirectory(AppContext.BaseDirectory);
             var parsedArgs = ParseArguments(args);
-            string mutexName = "MFA_" + Directory.GetCurrentDirectory().Replace("\\", "_").Replace(":", string.Empty);
+            // Fix: Replace both Windows (\) and Unix (/) path separators for cross-platform compatibility
+            var mutexName = "MFA_" + Directory.GetCurrentDirectory()
+                .Replace("\\", "_")
+                .Replace("/", "_")
+                .Replace(":", string.Empty);
             _mutex = new Mutex(true, mutexName, out IsNewInstance);
             LoggerHelper.Info("Args: " + JsonConvert.SerializeObject(parsedArgs, Formatting.Indented));
             LoggerHelper.Info("MFA version: " + RootViewModel.Version);
