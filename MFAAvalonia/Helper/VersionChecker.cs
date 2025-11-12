@@ -274,6 +274,7 @@ public static class VersionChecker
     {
         shouldShowToast = false;
         Instances.RootViewModel.SetUpdating(true);
+        MaaProcessor.Instance.SetTasker();
         ProgressBar? progress = null;
         TextBlock? textBlock = null;
         ISukiToast? sukiToast = null;
