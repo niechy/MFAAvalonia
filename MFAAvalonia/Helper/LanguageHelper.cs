@@ -3,7 +3,6 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using AvaloniaExtensions.Axaml.Markup;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Lang.Avalonia;
-using Lang.Avalonia.Resx;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Localization;
 using MFAAvalonia.ViewModels.Other;
