@@ -153,12 +153,13 @@ public static class DirectoryMerger
                         && !Path.GetFileName(tempPath).Contains("MFAAvalonia")
                         && !Path.GetFileName(tempPath).Contains(Process.GetCurrentProcess().MainModule?.ModuleName ?? "MFAAvalonia.exe"))
                     || Path.GetFileName(tempPath).Contains("interface.json", StringComparison.OrdinalIgnoreCase)
-                    || Path.GetExtension(tempPath).Equals(".dll", StringComparison.OrdinalIgnoreCase) && OperatingSystem.IsWindows()
-                    || !Path.GetFileName(tempPath).Contains("minicap.so", StringComparison.OrdinalIgnoreCase)
-                    && Path.GetExtension(tempPath).Equals(".so", StringComparison.OrdinalIgnoreCase)
-                    && OperatingSystem.IsLinux()
-                    || Path.GetExtension(tempPath).Equals(".dylib", StringComparison.OrdinalIgnoreCase)
-                    && (OperatingSystem.IsMacOS() || OperatingSystem.IsIOS()))
+                    // || Path.GetExtension(tempPath).Equals(".dll", StringComparison.OrdinalIgnoreCase) && OperatingSystem.IsWindows()
+                    // || !Path.GetFileName(tempPath).Contains("minicap.so", StringComparison.OrdinalIgnoreCase)
+                    // && Path.GetExtension(tempPath).Equals(".so", StringComparison.OrdinalIgnoreCase)
+                    // && OperatingSystem.IsLinux()
+                    // || Path.GetExtension(tempPath).Equals(".dylib", StringComparison.OrdinalIgnoreCase)
+                    // && (OperatingSystem.IsMacOS() || OperatingSystem.IsIOS())
+                    )
                 {
                     LoggerHelper.Info($"跳过文件: {tempPath}");
                     // 跳过的文件计入已处理大小
