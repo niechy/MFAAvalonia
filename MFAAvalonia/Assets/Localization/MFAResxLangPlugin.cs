@@ -101,7 +101,7 @@ public class MFAResxLangPlugin : ILangPlugin
             return value;
 
         // 2. 尝试从默认文化获取
-        if (TryGetResource(key, _defaultCulture.Name, out value))
+        if (TryGetResource(key, _defaultCulture?.Name ?? string.Empty, out value))
             return value;
 
         // 3. 尝试从不变文化（默认资源）获取
