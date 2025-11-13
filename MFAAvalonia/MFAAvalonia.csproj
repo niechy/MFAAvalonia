@@ -84,7 +84,7 @@
         <PackageReference Include="Maa.AgentBinary" Version="1.2.0" />
         <PackageReference Include="Maa.Framework.Binding.Extensions" Version="5.0.0-preview.2" />
         <PackageReference Include="Maa.Framework.Binding.Native" Version="5.0.0-preview.2" />
-        <PackageReference Include="Maa.Framework.Runtimes" Version="5.0.1" />
+        <PackageReference Include="Maa.Framework.Runtimes" Version="5.0.2" />
         <PackageReference Include="MailKit" Version="4.14.1" />
         <PackageReference Include="Markdown.Avalonia" Version="11.0.3-a1" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
