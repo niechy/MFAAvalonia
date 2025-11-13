@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 using Brushes = Avalonia.Media.Brushes;
 using MaaAgentClient = MaaFramework.Binding.MaaAgentClient;
+using MaaContext = MaaFramework.Binding.MaaContext;
 using MaaController = MaaFramework.Binding.MaaController;
 using MaaGlobal = MaaFramework.Binding.MaaGlobal;
 using MaaResource = MaaFramework.Binding.MaaResource;
@@ -744,17 +745,17 @@ public class MaaProcessor
                 var jObject = JObject.Parse(args.Details);
 
                 var name = jObject["name"]?.ToString() ?? string.Empty;
-                if ((args.Message.StartsWith(MaaMsg.Node.Action.Succeeded) || args.Message.StartsWith(MaaMsg.Node.Action.Failed)) && o is MaaTasker tasker)
+                if (args.Message.StartsWith(MaaMsg.Node.Recognition.Succeeded) || args.Message.StartsWith(MaaMsg.Node.Action.Succeeded))
                 {
-                    if (jObject["node_id"] != null)
+                    if (jObject["reco_id"] != null)
                     {
-                        var nodeId = Convert.ToInt64(jObject["node_id"]?.ToString() ?? string.Empty);
-                        if (nodeId > 0)
+                        var recoId = Convert.ToInt64(jObject["reco_id"]?.ToString() ?? string.Empty);
+                        if (recoId > 0)
                         {
-                            tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out var actionId, out _);
+                            //     tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out var actionId, out _);
                             var rect = new MaaRectBuffer();
                             var imageBuffer = new MaaImageBuffer();
-                            tasker.GetRecognitionDetail(recognitionId, out string node,
+                            tasker.GetRecognitionDetail(recoId, out string node,
                                 out var algorithm,
                                 out var hit,
                                 rect,
@@ -765,13 +766,31 @@ public class MaaProcessor
                             {
                                 bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
                             }
-
+                    
+                            DispatcherHelper.PostOnMainThread(() =>
+                            {
+                                Instances.ScreenshotViewModel.ScreenshotImage = bitmap;
+                                Instances.ScreenshotViewModel.TaskName = name;
+                            });
+                        }
+                    
+                    }
+                    if (jObject["action_id"] != null)
+                    {
+                        var actionId = Convert.ToInt64(jObject["action_id"]?.ToString() ?? string.Empty);
+                        if (actionId > 0)
+                        {
+                            //     tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out var actionId, out _);
+                            var rect = new MaaRectBuffer();
+                            var imageBuffer = new MaaImageBuffer();
+                            tasker.GetCachedImage(imageBuffer);
+                            var bitmap = imageBuffer.ToBitmap();
                             tasker.GetActionDetail(actionId, out _, out _, rect, out var isSucceeded, out _);
                             if (isSucceeded && bitmap != null)
                             {
                                 bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
                             }
-
+                            
                             DispatcherHelper.PostOnMainThread(() =>
                             {
                                 Instances.ScreenshotViewModel.ScreenshotImage = bitmap;
