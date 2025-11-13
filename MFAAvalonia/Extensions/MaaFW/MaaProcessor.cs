@@ -70,6 +70,7 @@ public class MaaProcessor
             if (args.NewValue > 0)
                 Instances.RootViewModel.IsRunning = true;
         };
+        ReadInterface();
         var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
         var interfaceVersion = @interface["interface_version"]?.ToString();
         if (int.TryParse(interfaceVersion, out var result) && result >= 2)

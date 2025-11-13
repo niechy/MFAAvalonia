@@ -19,7 +19,7 @@ public class MFAResxLangPlugin : ILangPlugin
     // 资源管理器字典（资源基础名称 -> 资源管理器）
     private Dictionary<string, ResourceManager>? _resourceManagers;
     // 默认文化
-    private CultureInfo _defaultCulture;
+    private CultureInfo? _defaultCulture;
     // 配置：资源所在的命名空间前缀（适配Assets.Localization路径）
     public string ResourceNamespacePrefix { get; set; } = "MFAAvalonia.Assets.Localization";
 
@@ -32,7 +32,7 @@ public class MFAResxLangPlugin : ILangPlugin
     // 当前文化
     public CultureInfo Culture
     {
-        get => _culture;
+        get => _culture ?? CultureInfo.InvariantCulture;
         set
         {
             _culture = value;
@@ -40,7 +40,7 @@ public class MFAResxLangPlugin : ILangPlugin
         }
     }
 
-    private CultureInfo _culture;
+    private CultureInfo? _culture;
 
     /// <summary>
     /// 加载资源（指定默认文化）
@@ -58,7 +58,7 @@ public class MFAResxLangPlugin : ILangPlugin
     /// <summary>
     /// 追加加载资源程序集
     /// </summary>
-    public void AddResource(params Assembly[] assemblies)
+    public void AddResource(params Assembly[]? assemblies)
     {
         if (assemblies == null || assemblies.Length == 0) return;
 
@@ -115,9 +115,9 @@ public class MFAResxLangPlugin : ILangPlugin
     /// <summary>
     /// 同步指定文化的资源到字典
     /// </summary>
-    private void Sync(CultureInfo cultureInfo)
+    private void Sync(CultureInfo? cultureInfo)
     {
-        if (_resourceManagers == null || _resourceManagers.Count == 0)
+        if (cultureInfo == null || _resourceManagers == null || _resourceManagers.Count == 0)
             return;
 
         var cultureName = cultureInfo.Name;
@@ -145,7 +145,7 @@ public class MFAResxLangPlugin : ILangPlugin
                 var invariantResources = manager.GetResourceSet(CultureInfo.InvariantCulture, true, true);
 
                 // 合并资源（当前文化优先，默认资源补充）
-                var allResources = new Dictionary<object, object>();
+                var allResources = new Dictionary<object, object?>();
                 if (invariantResources != null)
                 {
                     foreach (DictionaryEntry entry in invariantResources)
