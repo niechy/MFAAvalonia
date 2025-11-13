@@ -26,6 +26,7 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.3.8" />
         <PackageReference Include="Avalonia.Skia" Version="11.3.8" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.5" />
         <PackageReference Include="CalcBindingAva" Version="2.5.3" />
