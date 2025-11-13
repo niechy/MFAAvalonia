@@ -70,7 +70,7 @@ public class MaaProcessor
             if (args.NewValue > 0)
                 Instances.RootViewModel.IsRunning = true;
         };
-        ReadInterface();
+        CheckInterface(out _,out _,out _);
         var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
         var interfaceVersion = @interface["interface_version"]?.ToString();
         if (int.TryParse(interfaceVersion, out var result) && result >= 2)
@@ -767,14 +767,14 @@ public class MaaProcessor
                             {
                                 bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
                             }
-                    
+
                             DispatcherHelper.PostOnMainThread(() =>
                             {
                                 Instances.ScreenshotViewModel.ScreenshotImage = bitmap;
                                 Instances.ScreenshotViewModel.TaskName = name;
                             });
                         }
-                    
+
                     }
                     if (jObject["action_id"] != null)
                     {
@@ -791,7 +791,7 @@ public class MaaProcessor
                             {
                                 bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
                             }
-                            
+
                             DispatcherHelper.PostOnMainThread(() =>
                             {
                                 Instances.ScreenshotViewModel.ScreenshotImage = bitmap;
@@ -1205,7 +1205,7 @@ public class MaaProcessor
         public AdbDeviceInfo? Info { get; set; } = null;
     }
 
-    public static (string Name, string Version, string CustomTitle) ReadInterface()
+    public static bool CheckInterface(out string Name, out string Version, out string CustomTitle)
     {
         if (!File.Exists($"{AppContext.BaseDirectory}/interface.json"))
         {
@@ -1260,35 +1260,49 @@ public class MaaProcessor
                 ;
             JsonHelper.SaveJson(Path.Combine(AppContext.BaseDirectory, "interface.json"),
                 Interface, new MaaInterfaceSelectAdvancedConverter(true), new MaaInterfaceSelectOptionConverter(true));
+            Name = Interface?.Name ?? string.Empty;
+            Version = Interface?.Version ?? string.Empty;
+            CustomTitle = Interface?.CustomTitle ?? string.Empty;
+            return true;
+        }
+        Name = string.Empty;
+        Version = string.Empty;
+        CustomTitle = string.Empty;
+        return false;
+    }
 
-        }
-        else
+    public static (string Name, string Version, string CustomTitle) ReadInterface()
+    {
+        if (CheckInterface(out string name, out string version, out string customTitle))
         {
-            var defaultValue = new MaaInterface();
-            Interface =
-                JsonHelper.LoadJson(Path.Combine(AppContext.BaseDirectory, "interface.json"), defaultValue
-                    , errorHandle: () =>
-                    {
-                        var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
-                        if (@interface != null)
-                        {
-                            try
-                            {
-                                defaultValue.MFAMinVersion = @interface["mfa_min_version"]?.ToString();
-                                defaultValue.MFAMaxVersion = @interface["mfa_max_version"]?.ToString();
-                                defaultValue.CustomTitle = @interface["custom_title"]?.ToString();
-                                defaultValue.Name = @interface["name"]?.ToString();
-                                defaultValue.Url = @interface["url"]?.ToString();
-                            }
-                            catch (Exception e)
-                            {
-                                LoggerHelper.Warning(e);
-                            }
-                            RootView.AddLog(LangKeys.FileLoadFailed.ToLocalizationFormatted(false, "interface.json"));
-                        }
-                    }, new MaaInterfaceSelectAdvancedConverter(false),
-                    new MaaInterfaceSelectOptionConverter(false));
+            return (name, version, customTitle);
         }
+
+        var defaultValue = new MaaInterface();
+        Interface =
+            JsonHelper.LoadJson(Path.Combine(AppContext.BaseDirectory, "interface.json"), defaultValue
+                , errorHandle: () =>
+                {
+                    var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
+                    if (@interface != null)
+                    {
+                        try
+                        {
+                            defaultValue.MFAMinVersion = @interface["mfa_min_version"]?.ToString();
+                            defaultValue.MFAMaxVersion = @interface["mfa_max_version"]?.ToString();
+                            defaultValue.CustomTitle = @interface["custom_title"]?.ToString();
+                            defaultValue.Name = @interface["name"]?.ToString();
+                            defaultValue.Url = @interface["url"]?.ToString();
+                        }
+                        catch (Exception e)
+                        {
+                            LoggerHelper.Warning(e);
+                        }
+                        RootView.AddLog(LangKeys.FileLoadFailed.ToLocalizationFormatted(false, "interface.json"));
+                    }
+                }, new MaaInterfaceSelectAdvancedConverter(false),
+                new MaaInterfaceSelectOptionConverter(false));
+
 
         return (Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.CustomTitle ?? string.Empty);
 
