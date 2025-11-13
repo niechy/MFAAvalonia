@@ -70,7 +70,7 @@ public class MaaProcessor
             if (args.NewValue > 0)
                 Instances.RootViewModel.IsRunning = true;
         };
-        CheckInterface(out _,out _,out _);
+        CheckInterface(out _, out _, out _);
         var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
         var interfaceVersion = @interface["interface_version"]?.ToString();
         if (int.TryParse(interfaceVersion, out var result) && result >= 2)
@@ -1387,7 +1387,20 @@ public class MaaProcessor
                     }
                 }
             }
-            var resourceP = string.IsNullOrWhiteSpace(Instances.TaskQueueViewModel.CurrentResource) ? ResourceBase : Instances.TaskQueueViewModel.CurrentResource;
+            var resourceP = string.IsNullOrWhiteSpace(Instances.TaskQueueViewModel.CurrentResource)
+                ? ResourceBase
+                : (Instances.TaskQueueViewModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource)?.Path?[0]) ?? ResourceBase;
+            var resourcePs = string.IsNullOrWhiteSpace(Instances.TaskQueueViewModel.CurrentResource)
+                ? [ResourceBase]
+                : (Instances.TaskQueueViewModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource)?.Path);
+            if (resourcePs is {Count:>0})
+            {
+                foreach (var rp in resourcePs)
+                {
+                    if (!Directory.Exists(rp))
+                        Directory.CreateDirectory(rp);
+                }
+            }
             if (fileCount == 0)
             {
                 if (!string.IsNullOrWhiteSpace($"{resourceP}/pipeline") && !Directory.Exists($"{resourceP}/pipeline"))
