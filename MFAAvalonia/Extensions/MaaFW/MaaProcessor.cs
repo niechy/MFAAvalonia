@@ -1258,6 +1258,8 @@ public class MaaProcessor
                     }
                 }
                 ;
+            if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "/resource/base")))
+                Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "/resource/base"));
             JsonHelper.SaveJson(Path.Combine(AppContext.BaseDirectory, "interface.json"),
                 Interface, new MaaInterfaceSelectAdvancedConverter(true), new MaaInterfaceSelectOptionConverter(true));
             Name = Interface?.Name ?? string.Empty;
