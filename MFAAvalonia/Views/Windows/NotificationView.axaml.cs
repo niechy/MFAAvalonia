@@ -92,10 +92,8 @@ public partial class NotificationView : SukiWindow
             );
         };
 
-        Loaded += (sender, args) =>
-        {
-            StartSlideInAnimation();
-        };
+        Loaded += (sender, args) => StartSlideInAnimation();
+
 
         ActionButton.Click += (s, e) =>
         {
@@ -103,7 +101,7 @@ public partial class NotificationView : SukiWindow
             StopAutoCloseTimer(); // 手动操作后取消自动关闭
             CloseWithAnimation();
         };
-        
+
     }
 
 
@@ -171,7 +169,7 @@ public partial class NotificationView : SukiWindow
     }
 
     // 滑入动画（从右侧滑入）
-    async private Task StartSlideInAnimation()
+    private void StartSlideInAnimation()
     {
         var screen = Screens.Primary;
         var x = screen.Bounds.Width;
