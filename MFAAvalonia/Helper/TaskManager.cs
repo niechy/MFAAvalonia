@@ -18,9 +18,11 @@ public static class TaskManager
         Action action,
         string name = nameof(Action),
         string prompt = ">>> ",
-        bool catchException = true)
+        bool catchException = true,
+        bool noMessage = false)
     {
-        LoggerHelper.Info($"{prompt}任务 {name} 开始.");
+        if (!noMessage)
+            LoggerHelper.Info($"{prompt}任务 {name} 开始.");
 
         if (catchException)
         {
@@ -34,8 +36,8 @@ public static class TaskManager
             }
         }
         else action();
-
-        LoggerHelper.Info($"{prompt}任务 {name} 完成.");
+        if (!noMessage)
+            LoggerHelper.Info($"{prompt}任务 {name} 完成.");
     }
 
     public static void RunTask(

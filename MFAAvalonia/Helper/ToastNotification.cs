@@ -1,18 +1,13 @@
 ﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Notifications;
-using Avalonia.Controls.Platform;
-using Avalonia.Threading;
-// using DesktopNotifications.Apple;
-// using DesktopNotifications.FreeDesktop;
-// using DesktopNotifications.Windows;
-using MFAAvalonia.Helper;
+using Avalonia.Platform;
 using MFAAvalonia.Views.Windows;
+using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Threading.Tasks;
 
-// using INotificationManager = DesktopNotifications.INotificationManager;
-// using Notification = DesktopNotifications.Notification;
 
 namespace MFAAvalonia.Helper;
 
@@ -31,7 +26,7 @@ public class ToastNotification
     private ToastNotification() { }
 
 
-    public static void Show(string title, string content = "", int duration = 4000,bool sound = true)
+    public static void Show(string title, string content = "", int duration = 4000, bool sound = true)
     {
         Instance.AddToast(new NotificationView
         {
@@ -39,7 +34,7 @@ public class ToastNotification
             MessageText = content,
             Duration = duration
         });
-        PlayNotificationSound();
+        PlayNotificationSound(sound);
     }
 
     /// <summary>
@@ -116,10 +111,35 @@ public class ToastNotification
             }
         });
     }
-    
-    public static void PlayNotificationSound()
+
+    public static void PlayNotificationSound(bool enable = true)
     {
+        if (!enable) return;
+        TaskManager.RunTask(async () =>
+        {
+            var uriString = "avares://MFAAvalonia/Assets/Sound/SystemNotification.wav";
+            var uri = new Uri(uriString);
 
+            if (!AssetLoader.Exists(uri))
+            {
+                LoggerHelper.Error($"未找到嵌入资源：{uriString}");
+            }
+            var stream = AssetLoader.Open(uri);
+
+            stream.Seek(0, SeekOrigin.Begin);
+            
+            // 使用NAudio播放Stream中的WAV
+            using var reader = new WaveFileReader(stream); // 读取WAV流
+            using var output = new WaveOutEvent(); // 跨平台输出设备
+
+            output.Init(reader); // 初始化输出
+            output.Play(); // 开始播放
+
+            // 等待播放完成（避免线程结束导致播放中断）
+            while (output.PlaybackState == PlaybackState.Playing)
+            {
+                await Task.Delay(100);
+            }
+        }, "播放音频");
     }
-
 }

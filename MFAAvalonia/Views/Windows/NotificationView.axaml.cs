@@ -165,7 +165,7 @@ public partial class NotificationView : SukiWindow
                     action?.Invoke();
                 });
             }
-        });
+        },noMessage: true);
     }
 
     // 滑入动画（从右侧滑入）
