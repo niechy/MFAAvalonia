@@ -1211,4 +1211,7 @@
     <data name="UndefinedError" xml:space="preserve">
         <value>Undefined error</value>
     </data>
+    <data name="Notification" xml:space="preserve">
+        <value>Notification</value>
+    </data>
 </root>

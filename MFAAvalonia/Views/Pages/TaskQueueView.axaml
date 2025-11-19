@@ -48,7 +48,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- 左侧列 -->
-        <Grid Grid.Column="0">
+        <Grid Grid.Column="0" x:Name="cs">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" MaxHeight="150" />
                 <RowDefinition Height="*" />

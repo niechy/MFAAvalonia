@@ -1219,4 +1219,7 @@
     <data name="UndefinedError" xml:space="preserve">
         <value>未定义错误</value>
     </data>
+    <data name="Notification" xml:space="preserve">
+        <value>通知</value>
+    </data>
 </root>

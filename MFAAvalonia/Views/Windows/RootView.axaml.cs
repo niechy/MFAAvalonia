@@ -214,6 +214,7 @@ public partial class RootView : SukiWindow
                     (Action)(async () =>
                     {
                         await Task.Delay(300);
+
                        if (!ConfigurationManager.Current.ContainsKey(ConfigurationKeys.CurrentController))
                            Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
                         if (!Convert.ToBoolean(GlobalConfiguration.GetValue(ConfigurationKeys.NoAutoStart, bool.FalseString))
@@ -285,6 +286,7 @@ public partial class RootView : SukiWindow
                             Hide();
                         }
                     });
+   
                 }, name: "公告和最新版本检测");
             }
             else

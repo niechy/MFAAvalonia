@@ -79,10 +79,14 @@ public partial class TaskQueueViewModel : ViewModelBase
     [RelayCommand]
     private void Toggle()
     {
-        if (Instances.RootViewModel.IsRunning)
-            StopTask();
-        else
-            StartTask();
+        DispatcherHelper.PostOnMainThread(() =>
+        {
+            ToastNotification.Show("默认通知", "3秒后自动消失");
+        });
+        // if (Instances.RootViewModel.IsRunning)
+        //     StopTask();
+        // else
+        //     StartTask();
     }
 
     public void StartTask()
