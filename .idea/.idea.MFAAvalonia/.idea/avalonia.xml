@@ -38,8 +38,10 @@
         <entry key="MFAAvalonia/Views/Windows/AnnouncementView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/Windows/ChangelogView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/Windows/ErrorView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="MFAAvalonia/Views/Windows/NotificationView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/Windows/RootView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/Windows/ScreenshotView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="MFAAvalonia/Views/Windows/ToastNotificationView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/ColorTheme/Dark.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/ColorTheme/Light.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/BusyArea.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
@@ -52,6 +54,7 @@
         <entry key="SukiUI/Controls/InfoBar.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/PasswordBox.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/PropertyGrid/PropertyGridTemplateSelector.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="SukiUI/Controls/PropertyGrid/PropertyGridWindow.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/Settings/SettingsLayout.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiDialog.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiMainHost.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />

@@ -65,6 +65,7 @@ public partial class RootViewModel : ViewModelBase
             Instances.TaskQueueViewModel.ShouldShow = (int)(MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
         }
     }
+    
     public void CheckDebug()
     {
         if (IsDebugMode && _shouldTip && !MaaProcessor.Instance.IsV2)
