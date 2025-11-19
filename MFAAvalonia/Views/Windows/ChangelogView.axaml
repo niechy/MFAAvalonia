@@ -15,12 +15,10 @@
     xmlns:converters="clr-namespace:MFAAvalonia.Helper.Converters"
     xmlns:type="clr-namespace:MFAAvalonia.Helper.ValueType"
     xmlns:calcBinding="clr-namespace:CalcBinding;assembly=CalcBindingAva"
+    xmlns:extensions="clr-namespace:MFAAvalonia.Extensions"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
     x:Class="MFAAvalonia.Views.Windows.ChangelogView">
-    <suki:SukiWindow.Resources>
-        <helper:MFALinkCommand x:Key="myLinkCommand" />
-    </suki:SukiWindow.Resources>
     <suki:SukiWindow.Title>
         <MultiBinding Converter="{converters:AnnouncementTitleConverter}" Mode="OneWay">
             <Binding Path='Type' />
@@ -57,8 +55,7 @@
                 Margin="10,0,10,0"
                 Markdown="{Binding AnnouncementInfo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
                 <full:MarkdownScrollViewer.Engine>
-                    <mdxaml:Markdown
-                        HyperlinkCommand="{StaticResource myLinkCommand}" />
+                    <extensions:MarkdownExtension />
                 </full:MarkdownScrollViewer.Engine>
                 <full:MarkdownScrollViewer.Plugins>
                     <StaticResource ResourceKey="MdXamlPlugin" />

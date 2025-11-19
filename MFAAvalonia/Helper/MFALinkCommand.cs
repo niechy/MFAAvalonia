@@ -21,7 +21,6 @@ public class MFALinkCommand : ICommand
         var urlTxt = parameter as string;
         if (string.IsNullOrWhiteSpace(urlTxt))
             return;
-
         try
         {
             // 处理链接（区分相对路径和绝对路径）

@@ -34,7 +34,6 @@
                       Header="{markup:I18n {x:Static helper:LangKeys.Execute}}" />
             <MenuItem Click="Delete" Header="{markup:I18n {x:Static helper:LangKeys.Delete}}" />
         </ContextMenu>
-        <helper:MFALinkCommand x:Key="myLinkCommand" />
     </UserControl.Resources>
     <Grid ClipToBounds="False" Margin="0,0,0,0" x:Name="MainGrid">
         <Grid.ColumnDefinitions>
@@ -354,8 +353,7 @@
                             Focusable="True" x:Name="Introduction"
                             Margin="10,0,10,0">
                             <mdxaml:MarkdownScrollViewer.Engine>
-                                <avalonia:Markdown
-                                    HyperlinkCommand="{StaticResource myLinkCommand}" />
+                                <ex:MarkdownExtension />
                             </mdxaml:MarkdownScrollViewer.Engine>
                             <mdxaml:MarkdownScrollViewer.Styles>
                                 <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />

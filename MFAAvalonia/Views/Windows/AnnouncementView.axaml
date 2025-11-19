@@ -15,6 +15,7 @@
     xmlns:type="clr-namespace:MFAAvalonia.Helper.ValueType"
     xmlns:calcBinding="clr-namespace:CalcBinding;assembly=CalcBindingAva"
     xmlns:mdxaml="https://github.com/whistyun/Markdown.Avalonia.Tight"
+    xmlns:extensions="clr-namespace:MFAAvalonia.Extensions"
     WindowStartupLocation="CenterScreen"
     Title="{markup:I18n {x:Static helper:LangKeys.Announcement}}"
     mc:Ignorable="d"
@@ -22,7 +23,6 @@
     d:DesignHeight="450"
     x:Class="MFAAvalonia.Views.Windows.AnnouncementView">
     <suki:SukiWindow.Resources>
-        <helper:MFALinkCommand x:Key="myLinkCommand" />
     </suki:SukiWindow.Resources>
     <suki:SukiWindow.LogoContent>
         <Image
@@ -72,8 +72,7 @@
                         Margin="10,0,10,0"
                         Markdown="{Binding SelectedAnnouncement.Content, Mode=OneWay}">
                         <full:MarkdownScrollViewer.Engine>
-                            <mdxaml:Markdown
-                                HyperlinkCommand="{StaticResource myLinkCommand}" />
+                            <extensions:MarkdownExtension />
                         </full:MarkdownScrollViewer.Engine>
                         <full:MarkdownScrollViewer.Plugins>
                             <StaticResource ResourceKey="MdXamlPlugin" />

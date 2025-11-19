@@ -6,6 +6,7 @@ using MFAAvalonia.Extensions;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.Views.Windows;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -44,6 +45,56 @@ public partial class AnnouncementViewModel : ViewModelBase
     {
         LoadAnnouncements();
     }
+    /// <summary>
+    /// 从文本内容中提取第一行和剩余内容（兼容多种换行符）
+    /// </summary>
+    /// <param name="content">完整文本内容</param>
+    /// <param name="firstLine">输出第一行内容</param>
+    /// <param name="remainingContent">输出第一行之后的内容（包含换行符本身）</param>
+    public static void SplitFirstLine(string content, out string firstLine, out string remainingContent)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            firstLine = "";
+            remainingContent = "";
+            return;
+        }
+
+        // 可能的换行符（按优先级排序，优先匹配最长的 \r\n）
+        var newLineCandidates = new[]
+        {
+            "\r\n",
+            "\n",
+            "\r"
+        };
+        int firstNewLineIndex = int.MaxValue;
+        string matchedNewLine = null;
+
+        // 找到第一个出现的换行符
+        foreach (var nl in newLineCandidates)
+        {
+            int index = content.IndexOf(nl);
+            if (index != -1 && index < firstNewLineIndex)
+            {
+                firstNewLineIndex = index;
+                matchedNewLine = nl;
+            }
+        }
+
+        // 如果没有找到换行符，整个内容就是第一行
+        if (matchedNewLine == null)
+        {
+            firstLine = content;
+            remainingContent = "";
+        }
+        else
+        {
+            // 第一行：从开头到换行符之前
+            firstLine = content.Substring(0, firstNewLineIndex);
+            // 剩余内容：从换行符之后到结尾（包含换行符本身后面的内容）
+            remainingContent = content.Substring(firstNewLineIndex + matchedNewLine.Length);
+        }
+    }
 
     private void LoadAnnouncements()
     {
@@ -60,23 +111,23 @@ public partial class AnnouncementViewModel : ViewModelBase
 
             // 获取所有md文件，按最后修改时间排序（最新的在前）
             var mdFiles = Directory.GetFiles(announcementDir, "*.md")
-                .OrderBy(f => Path.GetFileName(f)[0])  // 按文件名的首字母升序排列
+                .OrderBy(f => Path.GetFileName(f)[0]) // 按文件名的首字母升序排列
                 .ToList();
-
+            LoggerHelper.Info(JsonConvert.SerializeObject(mdFiles));
             foreach (var mdFile in mdFiles)
             {
                 try
                 {
                     var content = File.ReadAllText(mdFile);
-                    var lines = content.Split([Environment.NewLine], 2, StringSplitOptions.None);
-
-                    if (lines.Length >= 2 && !string.IsNullOrWhiteSpace(lines[0]))
+                    SplitFirstLine(content, out string firstLine, out string remainingContent);
+                    if (!string.IsNullOrWhiteSpace(firstLine))
                     {
                         // 第一行为标题，其余为内容
+                        var title = firstLine.TrimStart('#', ' ').Trim();
                         var item = new AnnouncementItem
                         {
-                            Title = lines[0].Trim(),
-                            Content = lines[1],
+                            Title = title,
+                            Content = remainingContent,
                             FilePath = mdFile,
                             LastModified = File.GetLastWriteTime(mdFile)
                         };
@@ -94,6 +145,7 @@ public partial class AnnouncementViewModel : ViewModelBase
             {
                 SelectedAnnouncement = AnnouncementItems[0];
             }
+            LoggerHelper.Info("!公告数量：" + AnnouncementItems.Count);
         }
         catch (Exception ex)
         {
@@ -106,8 +158,8 @@ public partial class AnnouncementViewModel : ViewModelBase
         var viewModel = new AnnouncementViewModel();
         if (forceShow)
         {
-            if (!viewModel.AnnouncementItems.Any()) 
-                ToastHelper.Warn(LangKeys.Warning.ToLocalization(),LangKeys.AnnouncementEmpty.ToLocalization());
+            if (!viewModel.AnnouncementItems.Any())
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.AnnouncementEmpty.ToLocalization());
         }
         else if (viewModel.DoNotRemindThisAnnouncementAgain || !viewModel.AnnouncementItems.Any())
             return;
