@@ -180,6 +180,40 @@
         <LastGenOutput>Strings.Designer.cs</LastGenOutput>
       </EmbeddedResource>
     </ItemGroup>
+    <!-- 根据发布的目标系统，仅复制对应脚本到publish目录 -->
+    <ItemGroup>
+        <!-- Windows 脚本：匹配 win-x64 或 win-arm64 -->
+        <Content Include="DependencySetup_依赖库安装_win.bat"
+                 Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))"
+                 CopyToPublishDirectory="PreserveNewest">
+            <Link>DependencySetup_依赖库安装_win.bat</Link>
+        </Content>
+
+        <!-- Linux 脚本：匹配 linux-x64 或 linux-arm64 -->
+        <Content Include="DependencySetup_依赖库安装_linux.sh"
+                 Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))"
+                 CopyToPublishDirectory="PreserveNewest">
+            <Link>DependencySetup_依赖库安装_linux.sh</Link>
+        </Content>
+
+        <!-- macOS 脚本：匹配 osx-x64 或 osx-arm64 -->
+        <Content Include="DependencySetup_依赖库安装_mac.sh"
+                 Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))"
+                 CopyToPublishDirectory="PreserveNewest">
+            <Link>DependencySetup_依赖库安装_mac.sh</Link>
+        </Content>
+    </ItemGroup>
+
+    <!-- 为Linux/macOS脚本添加可执行权限（仅对应系统发布时生效） -->
+    <Target Name="SetScriptExecutionPermission" AfterTargets="Publish">
+        <!-- Linux 脚本授权 -->
+        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))"
+              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_linux.sh'" />
+
+        <!-- macOS 脚本授权 -->
+        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))"
+              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_mac.sh'" />
+    </Target>
 	<Target Name="CopyUpdaterAfterPublish" AfterTargets="Publish">
 	  <PropertyGroup>
 		<!-- 标准化路径分隔符 -->

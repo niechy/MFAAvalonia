@@ -113,7 +113,6 @@ public partial class AnnouncementViewModel : ViewModelBase
             var mdFiles = Directory.GetFiles(announcementDir, "*.md")
                 .OrderBy(f => Path.GetFileName(f)[0]) // 按文件名的首字母升序排列
                 .ToList();
-            LoggerHelper.Info(JsonConvert.SerializeObject(mdFiles));
             foreach (var mdFile in mdFiles)
             {
                 try
@@ -145,7 +144,7 @@ public partial class AnnouncementViewModel : ViewModelBase
             {
                 SelectedAnnouncement = AnnouncementItems[0];
             }
-            LoggerHelper.Info("!公告数量：" + AnnouncementItems.Count);
+            LoggerHelper.Info("公告数量：" + AnnouncementItems.Count);
         }
         catch (Exception ex)
         {
