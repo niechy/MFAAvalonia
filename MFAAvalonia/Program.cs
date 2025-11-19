@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace MFAAvalonia;
@@ -96,7 +97,7 @@ sealed class Program
                         resultDirectories.Add(fileDirectory);
                     }
                 }
-                LoggerHelper.Info("找到MaaFramework本地库目录: " + JsonConvert.SerializeObject(resultDirectories, Formatting.Indented));
+                LoggerHelper.Info("MaaFramework runtimes: " + JsonConvert.SerializeObject(resultDirectories, Formatting.Indented));
                 NativeBindingContext.AppendNativeLibrarySearchPaths(resultDirectories);
             }
 
@@ -111,6 +112,7 @@ sealed class Program
             _mutex = new Mutex(true, mutexName, out IsNewInstance);
             LoggerHelper.Info("Args: " + JsonConvert.SerializeObject(parsedArgs, Formatting.Indented));
             LoggerHelper.Info("MFA version: " + RootViewModel.Version);
+            LoggerHelper.Info(".NET version: " + RuntimeInformation.FrameworkDescription);
             Args = parsedArgs;
 
             BuildAvaloniaApp()

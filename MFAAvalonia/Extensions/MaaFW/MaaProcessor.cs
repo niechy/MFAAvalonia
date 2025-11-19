@@ -1770,10 +1770,10 @@ public class MaaProcessor
             Instances.TaskQueueViewModel.TaskItemViewModels = new ObservableCollection<DragItemViewModel>(drags.Any() ? drags : newItems);
         }
     }
-
-    public static void AppendVersionLog(string? resourceVersion)
+    private string? tempResourceVersion;
+    public void AppendVersionLog(string? resourceVersion)
     {
-        if (resourceVersion is null)
+        if (resourceVersion is null || tempResourceVersion == resourceVersion)
         {
             return;
         }
@@ -1799,6 +1799,19 @@ public class MaaProcessor
         // {
         //     Console.WriteLine("尝试写入失败！");
         // }
+        try
+        {
+            tempResourceVersion = NativeBindingContext.LibraryVersion;
+        }
+        catch (Exception e)
+        {
+            tempResourceVersion = "Unknown";
+            LoggerHelper.Error("Failed to get MaaFramework version", e);
+        }
+
+        // Log all version information
+        LoggerHelper.Info($"Resource version: {resourceVersion}");
+        LoggerHelper.Info($"MaaFramework version: {tempResourceVersion}");
     }
 
     #endregion

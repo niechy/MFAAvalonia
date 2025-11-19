@@ -51,14 +51,14 @@ public partial class RootView : SukiWindow
                         // 直接设置窗口初始大小
                         Width = width;
                         Height = height;
-                        LoggerHelper.Info($"窗口初始大小设置为: 宽度={width}, 高度={height}");
+                        LoggerHelper.Info($"Initial window size set to: width={width}, height={height}");
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            LoggerHelper.Error($"加载初始窗口大小失败: {ex.Message}");
+            LoggerHelper.Error($"Failed to load initial window size: {ex.Message}");
         }
 
         // 初始化组件
@@ -79,7 +79,7 @@ public partial class RootView : SukiWindow
         // 修改Loaded事件处理
         Loaded += (_, _) =>
         {
-            LoggerHelper.Info("窗口Loaded事件触发");
+            LoggerHelper.Info("UI initialization started");
 
             // 确保在UI线程上执行
             Dispatcher.UIThread.Post(() =>

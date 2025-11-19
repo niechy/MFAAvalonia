@@ -48,11 +48,11 @@ public partial class TaskQueueViewModel : ViewModelBase
 
             SuppressPropertyChangedCallbacks = false;
 
-            LoggerHelper.Info("构造函数中列宽设置成功");
+            LoggerHelper.Info("Column width set successfully in the constructor");
         }
         catch (Exception ex)
         {
-            LoggerHelper.Error($"构造函数中设置列宽失败: {ex.Message}");
+            LoggerHelper.Error($"Failed to set column width in the constructor: {ex.Message}");
             SetDefaultColumnWidths();
         }
     }
