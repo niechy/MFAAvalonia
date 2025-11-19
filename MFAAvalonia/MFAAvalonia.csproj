@@ -101,9 +101,6 @@
 		<PackageReference Include="SkiaSharp" Version="3.119.1" />
         <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.0" />
         <PackageReference Include="System.Management" Version="10.0.0" />
-        <PackageReference Include="System.Net.Http" Version="4.3.4" />
-        <PackageReference Include="System.Private.Uri" Version="4.3.2" />
-        <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
 
 		<ProjectReference Include="../LazyStaticGenerator/LazyStaticGenerator.csproj" OutputItemType="Analyzer" ExcludeAssets="runtime;build;native;contentfiles" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\MFAUpdater\MFAUpdater.csproj" />
@@ -208,15 +205,15 @@
     </ItemGroup>
 
     <!-- 为Linux/macOS脚本添加可执行权限（仅对应系统发布时生效） -->
-    <Target Name="SetScriptExecutionPermission" AfterTargets="Publish">
-        <!-- Linux 脚本授权 -->
-        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))"
-              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_linux.sh'" />
+<!--    <Target Name="SetScriptExecutionPermission" AfterTargets="Publish">-->
+<!--        &lt;!&ndash; Linux 脚本授权 &ndash;&gt;-->
+<!--        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))"-->
+<!--              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_linux.sh'" />-->
 
-        <!-- macOS 脚本授权 -->
-        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))"
-              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_mac.sh'" />
-    </Target>
+<!--        &lt;!&ndash; macOS 脚本授权 &ndash;&gt;-->
+<!--        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))"-->
+<!--              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_mac.sh'" />-->
+<!--    </Target>-->
 	<Target Name="CopyUpdaterAfterPublish" AfterTargets="Publish">
 	  <PropertyGroup>
 		<!-- 标准化路径分隔符 -->
