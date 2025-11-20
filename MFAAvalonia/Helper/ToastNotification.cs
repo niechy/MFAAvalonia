@@ -5,6 +5,7 @@ using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 
@@ -65,7 +66,7 @@ public class ToastNotification
             UpdateAllToastPositions();
         }
     }
-
+    private readonly Lock _positionLock = new();
     /// <summary>
     /// 重新计算并更新所有Toast的位置（核心逻辑）
     /// </summary>
@@ -73,43 +74,46 @@ public class ToastNotification
     {
         DispatcherHelper.PostOnMainThread(() =>
         {
-            var screen = Instances.RootView.Screens.Primary;
-            if (screen == null) return;
-
-            // 从屏幕工作区底部开始计算（排除任务栏等区域）
-            double currentY = screen.WorkingArea.Bottom - MarginBottom;
-
-            // 倒序遍历：最新的Toast在最下方，旧的依次往上排
-            for (int i = _toastQueue.Count - 1; i >= 0; i--)
+            lock (_positionLock)
             {
-                var toast = _toastQueue[i];
-                if (toast.IsClosed) continue;
+                var screen = Instances.RootView.Screens.Primary;
+                if (screen == null) return;
 
-                // 关键：使用缓存的实际高度，避免Bounds未更新导致的0值
-                double toastHeight = toast.ActualToastHeight;
+                // 从屏幕工作区底部开始计算（排除任务栏等区域）
+                double currentY = screen.WorkingArea.Bottom - MarginBottom;
 
-                // 先减去当前Toast的高度（定位到顶部）
-                currentY -= toastHeight;
-
-                // 计算目标位置（靠右对齐，垂直位置为currentY）
-                var targetPosition = new PixelPoint(
-                    (int)(screen.WorkingArea.Right - toast.Bounds.Width - MarginBottom), // 靠右无重叠
-                    (int)currentY
-                );
-
-                // 移动到目标位置（新Toast可能需要跳过首次计算，避免抖动）
-                if (toast != newToast)
+                // 倒序遍历：最新的Toast在最下方，旧的依次往上排
+                for (int i = _toastQueue.Count - 1; i >= 0; i--)
                 {
-                    toast.MoveTo(targetPosition, TimeSpan.FromMilliseconds(300));
-                }
-                else
-                {
-                    // 新Toast直接定位，避免动画冲突
-                    toast.Position = targetPosition;
-                }
+                    var toast = _toastQueue[i];
+                    if (toast.IsClosed || toast.IsClosing) continue;
 
-                // 预留Toast之间的间距
-                currentY -= ToastSpacing;
+                    // 关键：使用缓存的实际高度，避免Bounds未更新导致的0值
+                    double toastHeight = toast.ActualToastHeight;
+
+                    // 先减去当前Toast的高度（定位到顶部）
+                    currentY -= toastHeight;
+
+                    // 计算目标位置（靠右对齐，垂直位置为currentY）
+                    var targetPosition = new PixelPoint(
+                        (int)(screen.WorkingArea.Right - toast.Bounds.Width - MarginBottom), // 靠右无重叠
+                        (int)currentY
+                    );
+
+                    // 移动到目标位置（新Toast可能需要跳过首次计算，避免抖动）
+                    if (toast != newToast)
+                    {
+                        toast.MoveTo(targetPosition, TimeSpan.FromMilliseconds(300));
+                    }
+                    else
+                    {
+                        // 新Toast直接定位，避免动画冲突
+                        toast.Position = targetPosition;
+                    }
+
+                    // 预留Toast之间的间距
+                    currentY -= ToastSpacing;
+                }
             }
         });
     }

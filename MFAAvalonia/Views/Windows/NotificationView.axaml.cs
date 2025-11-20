@@ -75,15 +75,20 @@ public partial class NotificationView : SukiWindow
     private Timer? _autoCloseTimer;
     private readonly TimeSpan _timeout;
     private bool _isClosed = false;
+
+    private volatile bool _isClosing = false;
+
     public bool IsClosed => _isClosed;
+    public bool IsClosing => _isClosing;
     public NotificationView()
     {
         DataContext = this;
         InitializeComponent();
         _timeout = TimeSpan.FromMilliseconds(Duration);
-        Opened += (sender, args) =>
+        Opened += (_, _) =>
         {
             var screen = Screens.Primary;
+            if (screen == null) return;
             var x = screen.WorkingArea.Width - (int)Bounds.Width - ToastNotification.MarginRight;
             var y = screen.Bounds.Height;
             Position = new PixelPoint(
@@ -92,10 +97,10 @@ public partial class NotificationView : SukiWindow
             );
         };
 
-        Loaded += (sender, args) => StartSlideInAnimation();
+        Loaded += (_, _) => StartSlideInAnimation();
 
 
-        ActionButton.Click += (s, e) =>
+        ActionButton.Click += (_, _) =>
         {
             OnActionButtonClicked?.Invoke();
             StopAutoCloseTimer(); // 手动操作后取消自动关闭
@@ -121,54 +126,111 @@ public partial class NotificationView : SukiWindow
 
 
     // 带动画移动到目标位置（供管理器调用）
-    public void MoveTo(PixelPoint targetPosition, TimeSpan duration, Action? action = null)
+    public void MoveTo(PixelPoint targetPosition, TimeSpan duration, Action? endAction = null, Action? action = null, bool force = false)
     {
-        if (_isClosed) return;
+        // 关闭/正在关闭直接返回
+        if (_isClosed || _isClosing) return;
 
-        // 记录起始位置（必须在UI线程获取，确保准确）
-        var startPos = Position;
-        if (startPos == targetPosition) return;
-
-        var totalMs = duration.TotalMilliseconds;
-        if (totalMs <= 0)
-        {
-            DispatcherHelper.PostOnMainThread(() => Position = targetPosition); // UI线程更新
-            return;
-        }
-
-        var startTime = DateTime.Now;
-
-        // 用Task.Run避免阻塞UI，但更新位置必须回UI线程
         TaskManager.RunTask(async () =>
         {
-            while (DateTime.Now.Subtract(startTime).TotalMilliseconds < totalMs && !_isClosed)
+            // 中途关闭则终止
+            if (!force && (_isClosed || _isClosing || targetPosition == Position)) return;
+
+            // 前置操作（主线程执行）
+            action?.Invoke();
+
+            // 主线程获取起始位置+判断移动轴（保留方向区分，多方向移动平滑）
+            var (startPos, isXChanged, isYChanged) = (Position, Position.X != targetPosition.X,
+                Position.Y != targetPosition.Y);
+
+            // 无任何轴需要移动，直接回调
+            if (!isXChanged && !isYChanged)
             {
-                var progress = Math.Min(DateTime.Now.Subtract(startTime).TotalMilliseconds / totalMs, 1.0);
-                var currentX = (int)(startPos.X + (targetPosition.X - startPos.X) * progress);
-                var currentY = (int)(startPos.Y + (targetPosition.Y - startPos.Y) * progress);
-
-                // 关键：在UI线程更新Position，确保实时生效
-                DispatcherHelper.PostOnMainThread(() =>
-                {
-                    if (!_isClosed) Position = new PixelPoint(currentX, currentY);
-                });
-
-                await Task.Delay(5); // 5ms间隔（200fps），更平滑且性能可接受
+                await DispatcherHelper.RunOnMainThreadAsync(() => endAction?.Invoke());
+                return;
             }
 
-            // 最终位置校准（UI线程）
+            // 瞬时移动（时长<=0）
+            if (duration.TotalMilliseconds <= 0)
+            {
+                await DispatcherHelper.RunOnMainThreadAsync(() =>
+                {
+                    if (!_isClosed)
+                    {
+                        Position = targetPosition;
+                        endAction?.Invoke();
+                    }
+                });
+                return;
+            }
+
+            var startTime = DateTime.Now;
+            var totalMs = duration.TotalMilliseconds;
+
+            // 循环外先记录移动方向（基于初始位置，避免动态Position干扰）
+            var isXIncreasing = targetPosition.X > startPos.X; // X轴：目标 > 起始 → 向右移
+            var isYIncreasing = targetPosition.Y > startPos.Y; // Y轴：目标 > 起始 → 向下移
+
+            while (!_isClosed)
+            {
+                // 计算动画进度（0~1）
+                var progress = Math.Min((DateTime.Now - startTime).TotalMilliseconds / totalMs, 1.0);
+
+                // 只更新未到达目标的轴
+                int currentX = Position.X;
+                int currentY = Position.Y;
+
+                if (isXChanged)
+                {
+                    currentX = (int)(currentX + (targetPosition.X - currentX) * progress);
+                    // 根据移动方向判断：是否到达或超出目标X
+                    bool xReached = isXIncreasing ? currentX >= targetPosition.X : currentX <= targetPosition.X;
+                    if (xReached)
+                    {
+                        isXChanged = false; // 后续不再更新X轴
+                    }
+                }
+
+                if (isYChanged)
+                {
+                    currentY = (int)(currentY + (targetPosition.Y - currentY) * progress);
+                    // 根据移动方向判断：是否到达或超出目标Y
+                    bool yReached = isYIncreasing ? currentY >= targetPosition.Y : currentY <= targetPosition.Y;
+                    if (yReached)
+                    {
+                        isYChanged = false; // 后续不再更新Y轴
+                    }
+                }
+
+                // 主线程更新位置（仅更新变化后的位置）
+                await DispatcherHelper.RunOnMainThreadAsync(() =>
+                {
+                    if (!_isClosed)
+                        Position = new PixelPoint(currentX, currentY);
+                });
+
+                // 所有轴都到达目标，或动画进度完成 → 退出循环
+                if ((!isXChanged && !isYChanged) || progress >= 1.0)
+                    break;
+
+                await Task.Delay(5); // 200fps平滑动画
+            }
+
+            // 最终
             if (!_isClosed)
             {
-                DispatcherHelper.PostOnMainThread(() =>
+                await DispatcherHelper.RunOnMainThreadAsync(() =>
                 {
-                    Position = targetPosition;
-                    action?.Invoke();
+                    // Position = targetPosition;
+                    endAction?.Invoke();
                 });
             }
+
+
         }, noMessage: true);
     }
 
-    // 滑入动画（从右侧滑入）
+// 滑入动画（从右侧滑入）
     private void StartSlideInAnimation()
     {
         var screen = Screens.Primary;
@@ -177,17 +239,18 @@ public partial class NotificationView : SukiWindow
 
         MoveTo(new PixelPoint(
             (int)(x - Bounds.Width - ToastNotification.MarginRight),
-            (int)(y - Bounds.Height - ToastNotification.MarginBottom) // 距离顶部50px
+            (int)(y - Bounds.Height - ToastNotification.MarginBottom)
         ), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
         ActualToastHeight = Bounds.Height;
     }
+
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
     {
         StopAutoCloseTimer();
         CloseWithAnimation();
     }
 
-    // 滑出动画（向右侧滑出）
+// 滑出动画（向右侧滑出）
     private void CloseWithAnimation()
     {
         var screen = Screens.Primary;
@@ -196,10 +259,10 @@ public partial class NotificationView : SukiWindow
         // 目标位置（屏幕右侧外部）
         var targetX = screen.WorkingArea.Right;
         var targetPosition = new PixelPoint(targetX, Position.Y);
-        MoveTo(targetPosition, TimeSpan.FromMilliseconds(150), Close);
+        MoveTo(targetPosition, TimeSpan.FromMilliseconds(150), Close, () => _isClosing = true, true);
     }
 
-    // 自动关闭定时器（保持不变）
+// 自动关闭定时器（保持不变）
     private void StartAutoCloseTimer()
     {
         _autoCloseTimer = new Timer(_ =>

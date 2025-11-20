@@ -864,119 +864,129 @@ public class MaaProcessor
 
     private void DisplayFocus(JObject taskModel, string message, string detail)
     {
-        if (taskModel["focus"] == null)
-            return;
-
-        var focusToken = taskModel["focus"];
-        var focus = new Focus();
-        JObject newProtocolFocus = null;
-
-        // 解析focus内容，同时提取新旧协议数据
-        if (focusToken.Type == JTokenType.String)
+        try
         {
-            // 旧协议：字符串形式（等价于start）
-            focus.Start = new List<string>
-            {
-                focusToken.Value<string>()
-            };
-        }
-        else if (focusToken.Type == JTokenType.Object)
-        {
-            var focusObj = focusToken as JObject;
-            // 提取旧协议字段（start/succeeded/failed/toast等）
-            focus = focusObj.ToObject<Focus>();
-            // 提取新协议字段（消息类型为键的条目）
-            newProtocolFocus = new JObject(
-                focusObj.Properties()
-                    .Where(prop => prop.Name.StartsWith("Node.Action.") || prop.Name.StartsWith("Node.Recognition."))
-                    .Select(prop => new JProperty(prop.Name, prop.Value))
-            );
-        }
 
-        // 处理详情数据（用于新协议占位符替换）
-        JObject detailsObj = null;
-        if (!string.IsNullOrEmpty(detail))
-        {
-            try
-            {
-                detailsObj = JObject.Parse(detail);
-            }
-            catch
-            {
-                // 忽略详情解析错误
-            }
-        }
+            if (taskModel["focus"] == null)
+                return;
 
-        // 1. 处理新协议（如果有）
-        if (newProtocolFocus is { HasValues: true } && newProtocolFocus.TryGetValue(message, out var templateToken))
-        {
-            // 处理字符串数组类型
-            if (templateToken.Type == JTokenType.Array)
+            var focusToken = taskModel["focus"];
+            var focus = new Focus();
+            JObject newProtocolFocus = null;
+
+            // 解析focus内容，同时提取新旧协议数据
+            if (focusToken.Type == JTokenType.String)
             {
-                foreach (var item in templateToken.Children())
+                // 旧协议：字符串形式（等价于start）
+                focus.Start = new List<string>
                 {
-                    if (item.Type == JTokenType.String)
-                    {
-                        var template = item.Value<string>();
-                        var displayText = ReplacePlaceholders(template, detailsObj);
-                        var (text, color) = ParseColorText(displayText);
-                        RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
-                    }
+                    focusToken.Value<string>()
+                };
+            }
+            else if (focusToken.Type == JTokenType.Object)
+            {
+                var focusObj = focusToken as JObject;
+                // 提取旧协议字段（start/succeeded/failed/toast等）
+                focus = focusObj.ToObject<Focus>();
+                // 提取新协议字段（消息类型为键的条目）
+                newProtocolFocus = new JObject(
+                    focusObj.Properties()
+                        .Where(prop => prop.Name.StartsWith("Node.Action.") || prop.Name.StartsWith("Node.Recognition."))
+                        .Select(prop => new JProperty(prop.Name, prop.Value))
+                );
+            }
+
+            // 处理详情数据（用于新协议占位符替换）
+            JObject detailsObj = null;
+            if (!string.IsNullOrEmpty(detail))
+            {
+                try
+                {
+                    detailsObj = JObject.Parse(detail);
+                }
+                catch
+                {
+                    // 忽略详情解析错误
                 }
             }
-            // 处理单个字符串类型
-            else if (templateToken.Type == JTokenType.String)
+
+            // 1. 处理新协议（如果有）
+            if (newProtocolFocus is { HasValues: true } && newProtocolFocus.TryGetValue(message, out var templateToken))
             {
-                var template = templateToken.Value<string>();
-                var displayText = ReplacePlaceholders(template, detailsObj);
-                var (text, color) = ParseColorText(displayText);
-                RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
+                // 处理字符串数组类型
+                if (templateToken.Type == JTokenType.Array)
+                {
+                    foreach (var item in templateToken.Children())
+                    {
+                        if (item.Type == JTokenType.String)
+                        {
+                            var template = item.Value<string>();
+                            var displayText = ReplacePlaceholders(template, detailsObj);
+                            var (text, color) = ParseColorText(displayText);
+                            RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
+                        }
+                    }
+                }
+                // 处理单个字符串类型
+                else if (templateToken.Type == JTokenType.String)
+                {
+                    var template = templateToken.Value<string>();
+                    var displayText = ReplacePlaceholders(template, detailsObj);
+                    var (text, color) = ParseColorText(displayText);
+                    RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
+                }
+            }
+
+
+            // 2. 处理旧协议（如果有）
+            switch (message)
+            {
+                case MaaMsg.Node.Action.Succeeded:
+                    if (focus.Succeeded != null)
+                    {
+                        foreach (var line in focus.Succeeded)
+                        {
+                            var (text, color) = ParseColorText(line);
+                            RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
+                        }
+                    }
+                    break;
+                case MaaMsg.Node.Action.Failed:
+                    if (focus.Failed != null)
+                    {
+                        foreach (var line in focus.Failed)
+                        {
+                            var (text, color) = ParseColorText(line);
+                            RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
+                        }
+                    }
+                    break;
+                case MaaMsg.Node.Action.Starting:
+                    if (focus.Aborted == true)
+                    {
+                        Status = MFATask.MFATaskStatus.FAILED;
+                    }
+                    if (focus.Toast is { Count: > 0 })
+                    {
+                        var (title, _) = ParseColorText(focus.Toast[0]);
+                        var (content, _) = focus.Toast.Count >= 2 ? ParseColorText(focus.Toast[1]) : ("", "");
+                        ToastNotification.Show(HandleStringsWithVariables(title), HandleStringsWithVariables(content));
+
+                    }
+                    if (focus.Start != null)
+                    {
+                        foreach (var line in focus.Start)
+                        {
+                            var (text, color) = ParseColorText(line);
+                            RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
+                        }
+                    }
+                    break;
             }
         }
-
-
-        // 2. 处理旧协议（如果有）
-        switch (message)
+        catch (Exception e)
         {
-            case MaaMsg.Node.Action.Succeeded:
-                if (focus.Succeeded != null)
-                {
-                    foreach (var line in focus.Succeeded)
-                    {
-                        var (text, color) = ParseColorText(line);
-                        RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
-                    }
-                }
-                break;
-            case MaaMsg.Node.Action.Failed:
-                if (focus.Failed != null)
-                {
-                    foreach (var line in focus.Failed)
-                    {
-                        var (text, color) = ParseColorText(line);
-                        RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
-                    }
-                }
-                break;
-            case MaaMsg.Node.Action.Starting:
-                if (focus.Aborted == true)
-                {
-                    Status = MFATask.MFATaskStatus.FAILED;
-                }
-                if (focus.Toast != null && focus.Toast.Count > 0)
-                {
-                    var (text, color) = ParseColorText(focus.Toast[0]);
-                    ToastNotification.Show(HandleStringsWithVariables(text));
-                }
-                if (focus.Start != null)
-                {
-                    foreach (var line in focus.Start)
-                    {
-                        var (text, color) = ParseColorText(line);
-                        RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
-                    }
-                }
-                break;
+            LoggerHelper.Error(e);
         }
     }
 
@@ -1572,8 +1582,8 @@ public class MaaProcessor
 
     private bool FirstTask = true;
 
-    const string NEW_SEPARATOR = "<|||>";
-    const string OLD_SEPARATOR = ":";
+    public const string NEW_SEPARATOR = "<|||>";
+    public const string OLD_SEPARATOR = ":";
 
     private void LoadTasks(List<MaaInterface.MaaInterfaceTask> tasks, IList<DragItemViewModel>? oldDrags = null)
     {
@@ -2773,7 +2783,17 @@ public class MaaProcessor
             if (!onlyStart)
             {
                 Instances.TaskQueueViewModel.TaskItemViewModels.Where(t => t.IsCheckedWithNull == null).ToList().ForEach(d => d.IsCheckedWithNull = false);
-                ToastNotification.Show(LangKeys.TaskCompleted.ToLocalization());
+
+                if (_startTime != null)
+                {
+                    var elapsedTime = DateTime.Now - (DateTime)_startTime;
+                    ToastNotification.Show(LangKeys.TaskCompleted.ToLocalization(), LangKeys.TaskAllCompletedWithTime.ToLocalizationFormatted(false, ((int)elapsedTime.TotalHours).ToString(),
+                        ((int)elapsedTime.TotalMinutes % 60).ToString(), ((int)elapsedTime.TotalSeconds % 60).ToString()));
+                }
+                else
+                {
+                    ToastNotification.Show(LangKeys.TaskCompleted.ToLocalization());
+                }
             }
 
             if (_startTime != null)
