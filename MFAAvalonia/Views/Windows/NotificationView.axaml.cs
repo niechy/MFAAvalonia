@@ -84,7 +84,7 @@ public partial class NotificationView : SukiWindow
         Opened += (sender, args) =>
         {
             var screen = Screens.Primary;
-            var x = screen.Bounds.Width - (int)Bounds.Width;
+            var x = screen.WorkingArea.Width - (int)Bounds.Width - ToastNotification.MarginRight;
             var y = screen.Bounds.Height;
             Position = new PixelPoint(
                 x,
@@ -165,19 +165,19 @@ public partial class NotificationView : SukiWindow
                     action?.Invoke();
                 });
             }
-        },noMessage: true);
+        }, noMessage: true);
     }
 
     // 滑入动画（从右侧滑入）
     private void StartSlideInAnimation()
     {
         var screen = Screens.Primary;
-        var x = screen.Bounds.Width;
-        var y = screen.Bounds.Height;
+        var x = screen.WorkingArea.Width;
+        var y = screen.WorkingArea.Height;
 
         MoveTo(new PixelPoint(
-            (int)(x - Bounds.Width),
-            (int)(y - Bounds.Height - 50) // 距离顶部50px
+            (int)(x - Bounds.Width - ToastNotification.MarginRight),
+            (int)(y - Bounds.Height - ToastNotification.MarginBottom) // 距离顶部50px
         ), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
         ActualToastHeight = Bounds.Height;
     }
@@ -194,7 +194,7 @@ public partial class NotificationView : SukiWindow
         if (screen == null) return;
 
         // 目标位置（屏幕右侧外部）
-        var targetX = screen.Bounds.Width;
+        var targetX = screen.WorkingArea.Right;
         var targetPosition = new PixelPoint(targetX, Position.Y);
         MoveTo(targetPosition, TimeSpan.FromMilliseconds(150), Close);
     }

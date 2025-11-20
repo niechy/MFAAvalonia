@@ -19,9 +19,9 @@ public class ToastNotification
     private readonly List<NotificationView> _toastQueue = [];
 
     // 配置参数（可根据需求调整）
-    private const int MarginBottom = 50; // 最底部Toast距离屏幕底部的间距
-    private const int ToastSpacing = 16; // 两个Toast之间的间距
-
+    public const int MarginBottom = 2; // 最底部Toast距离屏幕底部的间距
+    public const int ToastSpacing = 16; // 两个Toast之间的间距
+    public const int MarginRight = 2; // 最底部Toast距离屏幕底部的间距
     private ToastNotification() { }
 
 
@@ -77,7 +77,7 @@ public class ToastNotification
             if (screen == null) return;
 
             // 从屏幕工作区底部开始计算（排除任务栏等区域）
-            double currentY = screen.Bounds.Bottom - MarginBottom;
+            double currentY = screen.WorkingArea.Bottom - MarginBottom;
 
             // 倒序遍历：最新的Toast在最下方，旧的依次往上排
             for (int i = _toastQueue.Count - 1; i >= 0; i--)
@@ -93,7 +93,7 @@ public class ToastNotification
 
                 // 计算目标位置（靠右对齐，垂直位置为currentY）
                 var targetPosition = new PixelPoint(
-                    (int)(screen.Bounds.Right - toast.Bounds.Width), // 靠右无重叠
+                    (int)(screen.WorkingArea.Right - toast.Bounds.Width - MarginBottom), // 靠右无重叠
                     (int)currentY
                 );
 
