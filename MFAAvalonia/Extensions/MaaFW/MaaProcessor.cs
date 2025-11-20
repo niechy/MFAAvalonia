@@ -1393,7 +1393,7 @@ public class MaaProcessor
             var resourcePs = string.IsNullOrWhiteSpace(Instances.TaskQueueViewModel.CurrentResource)
                 ? [ResourceBase]
                 : (Instances.TaskQueueViewModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource)?.Path);
-            if (resourcePs is {Count:>0})
+            if (resourcePs is { Count: > 0 })
             {
                 foreach (var rp in resourcePs)
                 {
@@ -1770,48 +1770,28 @@ public class MaaProcessor
             Instances.TaskQueueViewModel.TaskItemViewModels = new ObservableCollection<DragItemViewModel>(drags.Any() ? drags : newItems);
         }
     }
-    private string? tempResourceVersion;
+    private string? _tempResourceVersion;
     public void AppendVersionLog(string? resourceVersion)
     {
-        if (resourceVersion is null || tempResourceVersion == resourceVersion)
+        if (resourceVersion is null || _tempResourceVersion == resourceVersion)
         {
             return;
         }
-        // string debugFolderPath = Path.Combine(AppContext.BaseDirectory, "debug");
-        // if (!Directory.Exists(debugFolderPath))
-        // {
-        //     Directory.CreateDirectory(debugFolderPath);
-        // }
-        //
-        // string logFilePath = Path.Combine(debugFolderPath, "maa.log");
-        // string timeStamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        // string formattedLogMessage =
-        //     $"[{timeStamp}][INF][Px14600][Tx16498][MaaProcessor.cs][L56][MFA::AppendVersionLog] ";
-        // var logMessage = $"MFAAvalonia Version: [mfa.version={Instances.VersionUpdateSettingsUserControlModel.MfaVersion}] "
-        //     + $"Interface Version: [data.version=v{resourceVersion.Replace("v", "")}] ";
-        // LoggerHelper.Info(logMessage);
-        //
-        // try
-        // {
-        //     File.AppendAllText(logFilePath, formattedLogMessage + logMessage);
-        // }
-        // catch (Exception)
-        // {
-        //     Console.WriteLine("尝试写入失败！");
-        // }
+        _tempResourceVersion = resourceVersion;
+        var frameworkVersion = "";
         try
         {
-            tempResourceVersion = NativeBindingContext.LibraryVersion;
+            frameworkVersion = NativeBindingContext.LibraryVersion;
         }
         catch (Exception e)
         {
-            tempResourceVersion = "Unknown";
+            frameworkVersion = "Unknown";
             LoggerHelper.Error("Failed to get MaaFramework version", e);
         }
 
         // Log all version information
-        LoggerHelper.Info($"Resource version: {resourceVersion}");
-        LoggerHelper.Info($"MaaFramework version: {tempResourceVersion}");
+        LoggerHelper.Info($"Resource version: {_tempResourceVersion}");
+        LoggerHelper.Info($"MaaFramework version: {frameworkVersion}");
     }
 
     #endregion
