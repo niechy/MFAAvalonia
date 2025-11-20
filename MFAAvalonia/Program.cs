@@ -92,7 +92,7 @@ sealed class Program
                     var fileDirectory = Path.GetDirectoryName(filePath);
 
                     // 避免重复添加相同目录（可选，根据需求决定是否保留）
-                    if (!resultDirectories.Contains(fileDirectory))
+                    if (!resultDirectories.Contains(fileDirectory) && fileDirectory?.Contains(VersionChecker.GetNormalizedArchitecture()) == true)
                     {
                         resultDirectories.Add(fileDirectory);
                     }
