@@ -164,7 +164,7 @@ public partial class App : Application
             if (e.ExceptionObject is Exception ex2)
             {
                 ErrorView.ShowException(ex2);
-                sbEx.Append(ex2.Message);
+                sbEx.Append(ex2);
             }
             else
             {

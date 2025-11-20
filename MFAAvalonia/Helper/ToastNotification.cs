@@ -5,7 +5,6 @@ using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Threading.Tasks;
 
 
@@ -28,11 +27,14 @@ public class ToastNotification
 
     public static void Show(string title, string content = "", int duration = 4000, bool sound = true)
     {
-        Instance.AddToast(new NotificationView
+        DispatcherHelper.PostOnMainThread(() =>
         {
-            TitleText = title,
-            MessageText = content,
-            Duration = duration
+            Instance.AddToast(new NotificationView
+            {
+                TitleText = title,
+                MessageText = content,
+                Duration = duration
+            });
         });
         PlayNotificationSound(sound);
     }
@@ -127,9 +129,9 @@ public class ToastNotification
             var stream = AssetLoader.Open(uri);
 
             stream.Seek(0, SeekOrigin.Begin);
-            
+
             // 使用NAudio播放Stream中的WAV
-            using var reader = new WaveFileReader(stream); // 读取WAV流
+            await using var reader = new WaveFileReader(stream); // 读取WAV流
             using var output = new WaveOutEvent(); // 跨平台输出设备
 
             output.Init(reader); // 初始化输出

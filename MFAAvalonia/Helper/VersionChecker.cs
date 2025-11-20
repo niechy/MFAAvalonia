@@ -1398,7 +1398,7 @@ public static class VersionChecker
         return platform != "windows" && platform != "unknown";
     }
 
-    private static string GetNormalizedArchitecture()
+    public static string GetNormalizedArchitecture()
     {
         return RuntimeInformation.ProcessArchitecture switch
         {
@@ -1409,6 +1409,7 @@ public static class VersionChecker
             _ => "unknown"
         };
     }
+    
     private static readonly Dictionary<string, List<string>> ArchitectureAliases = new()
     {
         {
