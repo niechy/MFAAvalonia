@@ -46,7 +46,7 @@ public static class GlobalHotkeyService
         if (gesture == null || command == null)
             return true;
         var (keyCode, modifiers) = ConvertGesture(gesture);
-        LoggerHelper.Info($"register Hotkey,modifiers: {modifiers},keyCode: {keyCode}");
+        LoggerHelper.Info($"Register Hotkey[{modifiers}+{keyCode}]");
         return _commands.TryAdd((keyCode, modifiers), command);
     }
 
@@ -154,8 +154,8 @@ public static class GlobalHotkeyService
         // 1. 定义：归一化后的修饰键掩码（合并左/右键）
         const EventMask ControlMask = EventMask.LeftCtrl | EventMask.RightCtrl; // Ctrl 统一掩码
         const EventMask ShiftMask = EventMask.LeftShift | EventMask.RightShift; // Shift 统一掩码
-        const EventMask AltMask = EventMask.LeftAlt | EventMask.RightAlt;       // Alt 统一掩码（可选，保持完整）
-        const EventMask MetaMask = EventMask.LeftMeta | EventMask.RightMeta;     // Win 键统一掩码（可选）
+        const EventMask AltMask = EventMask.LeftAlt | EventMask.RightAlt; // Alt 统一掩码（可选，保持完整）
+        const EventMask MetaMask = EventMask.LeftMeta | EventMask.RightMeta; // Win 键统一掩码（可选）
 
         // 2. 获取原始修饰键和键码
         var rawModifiers = e.RawEvent.Mask;
@@ -165,13 +165,13 @@ public static class GlobalHotkeyService
         var normalizedModifiers = EventMask.None;
         if ((rawModifiers & ControlMask) != 0) // 包含左Ctrl或右Ctrl → 视为 Control
             normalizedModifiers |= ControlMask;
-        if ((rawModifiers & ShiftMask) != 0)   // 包含左Shift或右Shift → 视为 Shift
+        if ((rawModifiers & ShiftMask) != 0) // 包含左Shift或右Shift → 视为 Shift
             normalizedModifiers |= ShiftMask;
-        if ((rawModifiers & AltMask) != 0)     // 包含左Alt或右Alt → 视为 Alt
+        if ((rawModifiers & AltMask) != 0) // 包含左Alt或右Alt → 视为 Alt
             normalizedModifiers |= AltMask;
-        if ((rawModifiers & MetaMask) != 0)    // 包含左Win或右Win → 视为 Meta
+        if ((rawModifiers & MetaMask) != 0) // 包含左Win或右Win → 视为 Meta
             normalizedModifiers |= MetaMask;
-        
+
         // 5. 用归一化后的修饰键匹配（注册时需用相同的统一掩码）
         if (_commands.TryGetValue((keyCode, normalizedModifiers), out var command) && command.CanExecute(null))
         {
