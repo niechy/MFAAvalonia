@@ -4,8 +4,8 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using MFAAvalonia.Helper;
 using SukiUI.Controls;
+using SukiUI.Extensions;
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -85,28 +85,39 @@ public partial class NotificationView : SukiWindow
         DataContext = this;
         InitializeComponent();
         _timeout = TimeSpan.FromMilliseconds(Duration);
+
         Opened += (_, _) =>
         {
-            var screen = Screens.Primary;
+            var screen = this.GetHostScreen();
             if (screen == null) return;
-            var x = screen.WorkingArea.Width - (int)Bounds.Width - ToastNotification.MarginRight;
-            var y = screen.Bounds.Height;
-            Position = new PixelPoint(
-                x,
-                y
-            );
+
+            // 更准确的初始位置计算
+            var x = screen.WorkingArea.Right - (int)this.Width - ToastNotification.MarginRight;
+            var y = screen.Bounds.Bottom;
+
+            Position = new PixelPoint(x, y);
         };
 
-        Loaded += (_, _) => StartSlideInAnimation();
+        // 使用Render优先级确保布局完成
+        Loaded += (_, _) => DispatcherHelper.RunOnMainThreadAsync(
+            StartSlideInAnimation, DispatcherPriority.Render);
 
+        // 添加尺寸变化监听
+        LayoutUpdated += (s, e) =>
+        {
+            // 布局更新时重新记录实际高度
+            if (Bounds.Height > 0)
+            {
+                ActualToastHeight = Bounds.Height;
+            }
+        };
 
         ActionButton.Click += (_, _) =>
         {
             OnActionButtonClicked?.Invoke();
-            StopAutoCloseTimer(); // 手动操作后取消自动关闭
+            StopAutoCloseTimer();
             CloseWithAnimation();
         };
-
     }
 
 
@@ -217,14 +228,12 @@ public partial class NotificationView : SukiWindow
             }
 
             // 最终
-            if (!_isClosed)
+
+            await DispatcherHelper.RunOnMainThreadAsync(() =>
             {
-                await DispatcherHelper.RunOnMainThreadAsync(() =>
-                {
-                    // Position = targetPosition;
-                    endAction?.Invoke();
-                });
-            }
+                // Position = targetPosition;
+                endAction?.Invoke();
+            });
 
 
         }, noMessage: true);
@@ -233,15 +242,30 @@ public partial class NotificationView : SukiWindow
 // 滑入动画（从右侧滑入）
     private void StartSlideInAnimation()
     {
-        var screen = Screens.Primary;
-        var x = screen.WorkingArea.Width;
-        var y = screen.WorkingArea.Height;
+        TaskManager.RunTask(async () =>
+        {
+            // 等待布局完成
+            await Task.Delay(50);
 
-        MoveTo(new PixelPoint(
-            (int)(x - Bounds.Width - ToastNotification.MarginRight),
-            (int)(y - Bounds.Height - ToastNotification.MarginBottom)
-        ), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
-        ActualToastHeight = Bounds.Height;
+            // 在UI线程上获取准确的尺寸
+            await DispatcherHelper.RunOnMainThreadAsync(() =>
+            {
+                var screen = this.GetHostScreen();
+                if (screen == null) return;
+
+                // 确保窗口已经完成布局
+                Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Arrange(new Rect(this.DesiredSize));
+
+                // 现在获取的高度是准确的
+                ActualToastHeight = Bounds.Height;
+
+                var targetX = (int)(screen.WorkingArea.Right - Bounds.Width - ToastNotification.MarginRight);
+                var targetY = (int)(screen.WorkingArea.Bottom - Bounds.Height - ToastNotification.MarginBottom);
+
+                MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
+            });
+        });
     }
 
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
@@ -253,7 +277,7 @@ public partial class NotificationView : SukiWindow
 // 滑出动画（向右侧滑出）
     private void CloseWithAnimation()
     {
-        var screen = Screens.Primary;
+        var screen = this.GetHostScreen();
         if (screen == null) return;
 
         // 目标位置（屏幕右侧外部）

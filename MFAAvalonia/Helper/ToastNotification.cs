@@ -2,6 +2,7 @@
 using Avalonia.Platform;
 using MFAAvalonia.Views.Windows;
 using NAudio.Wave;
+using SukiUI.Extensions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -76,10 +77,14 @@ public class ToastNotification
         {
             lock (_positionLock)
             {
-                var screen = Instances.RootView.Screens.Primary;
+                // 使用第一个Toast的屏幕作为参考，确保一致性
+                var referenceToast = _toastQueue.Count > 0 ? _toastQueue[0] : newToast;
+                if (referenceToast == null) return;
+            
+                var screen = referenceToast.GetHostScreen();
                 if (screen == null) return;
 
-                // 从屏幕工作区底部开始计算（排除任务栏等区域）
+                // 从屏幕工作区底部开始计算
                 double currentY = screen.WorkingArea.Bottom - MarginBottom;
 
                 // 倒序遍历：最新的Toast在最下方，旧的依次往上排
@@ -88,30 +93,39 @@ public class ToastNotification
                     var toast = _toastQueue[i];
                     if (toast.IsClosed || toast.IsClosing) continue;
 
-                    // 关键：使用缓存的实际高度，避免Bounds未更新导致的0值
-                    double toastHeight = toast.ActualToastHeight;
+                    // 确保使用正确的屏幕坐标
+                    var toastScreen = toast.GetHostScreen() ?? screen;
+                
+                    // 使用实际高度或Bounds高度
+                    double toastHeight = toast.ActualToastHeight > 0 ? 
+                        toast.ActualToastHeight : toast.Bounds.Height;
 
-                    // 先减去当前Toast的高度（定位到顶部）
+                    if (toastHeight <= 0) 
+                    {
+                        // 如果高度仍无效，使用默认值
+                        toastHeight = 100; // 默认高度
+                    }
+
+                    // 先减去当前Toast的高度
                     currentY -= toastHeight;
 
-                    // 计算目标位置（靠右对齐，垂直位置为currentY）
+                    // 计算目标位置（确保在同一屏幕上计算）
                     var targetPosition = new PixelPoint(
-                        (int)(screen.WorkingArea.Right - toast.Bounds.Width - MarginBottom), // 靠右无重叠
+                        (int)(toastScreen.WorkingArea.Right - toast.Bounds.Width - MarginRight),
                         (int)currentY
                     );
 
-                    // 移动到目标位置（新Toast可能需要跳过首次计算，避免抖动）
-                    if (toast != newToast)
+                    // 新Toast直接定位，其他使用动画
+                    if (toast == newToast)
                     {
-                        toast.MoveTo(targetPosition, TimeSpan.FromMilliseconds(300));
+                        toast.Position = targetPosition;
                     }
                     else
                     {
-                        // 新Toast直接定位，避免动画冲突
-                        toast.Position = targetPosition;
+                        toast.MoveTo(targetPosition, TimeSpan.FromMilliseconds(300));
                     }
 
-                    // 预留Toast之间的间距
+                    // 预留间距
                     currentY -= ToastSpacing;
                 }
             }

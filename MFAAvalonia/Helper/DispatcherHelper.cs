@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Threading;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MFAAvalonia.Helper;
@@ -29,8 +30,10 @@ public static class DispatcherHelper
         return Dispatcher.UIThread.Invoke(func);
 
     }
-    public static Task RunOnMainThreadAsync(Action action)
+    public static Task RunOnMainThreadAsync(Action action, DispatcherPriority? priority = null, CancellationToken? cancellationToken = null)
     {
+        cancellationToken ??= CancellationToken.None;
+        priority ??= new DispatcherPriority();
         if (Dispatcher.UIThread.CheckAccess())
         {
             action();
@@ -38,9 +41,9 @@ public static class DispatcherHelper
         }
 
         // 不在UI线程：异步投放到UI线程，返回可等待的Task
-        return Dispatcher.UIThread.InvokeAsync(action).GetTask();
+        return Dispatcher.UIThread.InvokeAsync(action, priority.Value, cancellationToken.Value).GetTask();
     }
-    
+
     public static Task<T> RunOnMainThreadAsync<T>(Func<T> func)
     {
         if (Dispatcher.UIThread.CheckAccess())
