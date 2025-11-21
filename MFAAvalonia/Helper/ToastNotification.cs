@@ -187,8 +187,6 @@ public class ToastNotification
             {
                 // 步骤3：初始化 MiniAudio 引擎（原生逻辑：自动初始化后端）
                 engine = new MiniAudioEngine();
-                LoggerHelper.Info($"MiniAudio 引擎初始化成功，活跃后端：{engine.ActiveBackend}");
-
                 // 步骤4：解析音频格式（优先自动解析，失败则用预设）
                 stream.Seek(0, SeekOrigin.Begin);
                 AudioFormat audioFormat = AudioFormat.Dvd; // 默认兜底
