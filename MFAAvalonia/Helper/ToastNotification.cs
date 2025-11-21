@@ -85,7 +85,7 @@ public class ToastNotification
                 if (screen == null) return;
 
                 // 从屏幕工作区底部开始计算
-                double currentY = screen.WorkingArea.Bottom - MarginBottom;
+                double currentY = screen.WorkingArea.Bottom - MarginBottom * screen.Scaling;
 
                 // 倒序遍历：最新的Toast在最下方，旧的依次往上排
                 for (int i = _toastQueue.Count - 1; i >= 0; i--)
@@ -95,10 +95,10 @@ public class ToastNotification
 
                     // 确保使用正确的屏幕坐标
                     var toastScreen = toast.GetHostScreen() ?? screen;
-                
+                    double toastScaling = toastScreen.Scaling; 
                     // 使用实际高度或Bounds高度
                     double toastHeight = toast.ActualToastHeight > 0 ? 
-                        toast.ActualToastHeight : toast.Bounds.Height;
+                        toast.ActualToastHeight : toast.Bounds.Height * toastScaling;
 
                     if (toastHeight <= 0) 
                     {
@@ -111,7 +111,7 @@ public class ToastNotification
 
                     // 计算目标位置（确保在同一屏幕上计算）
                     var targetPosition = new PixelPoint(
-                        (int)(toastScreen.WorkingArea.Right - toast.Bounds.Width - MarginRight),
+                        (int)(toastScreen.WorkingArea.Right - toast.Bounds.Width * toastScaling - MarginRight * toastScaling),
                         (int)currentY
                     );
 

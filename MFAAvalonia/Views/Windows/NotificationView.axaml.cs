@@ -6,6 +6,7 @@ using MFAAvalonia.Helper;
 using SukiUI.Controls;
 using SukiUI.Extensions;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -90,9 +91,13 @@ public partial class NotificationView : SukiWindow
         {
             var screen = this.GetHostScreen();
             if (screen == null) return;
+            double scaling = screen.Scaling;
 
+            // 将设备无关尺寸转换为物理像素
+            double physicalWidth = this.Bounds.Width * scaling;
+            double physicalHeight = this.Bounds.Height * scaling;
             // 更准确的初始位置计算
-            var x = screen.WorkingArea.Right - (int)this.Width - ToastNotification.MarginRight;
+            var x = screen.WorkingArea.Right - (int)physicalWidth - ToastNotification.MarginRight;
             var y = screen.Bounds.Bottom;
 
             Position = new PixelPoint(x, y);
@@ -108,7 +113,10 @@ public partial class NotificationView : SukiWindow
             // 布局更新时重新记录实际高度
             if (Bounds.Height > 0)
             {
-                ActualToastHeight = Bounds.Height;
+                var screen = this.GetHostScreen();
+                if (screen == null) return;
+                double scaling = screen.Scaling;
+                ActualToastHeight = Bounds.Height * scaling;
             }
         };
 
@@ -134,18 +142,17 @@ public partial class NotificationView : SukiWindow
         HasActionButton = true;
         OnActionButtonClicked += onClick;
     }
-
-
     // 带动画移动到目标位置（供管理器调用）
     public void MoveTo(PixelPoint targetPosition, TimeSpan duration, Action? endAction = null, Action? action = null, bool force = false)
     {
+        var callback = endAction;
         // 关闭/正在关闭直接返回
         if (_isClosed || _isClosing) return;
 
         TaskManager.RunTask(async () =>
         {
             // 中途关闭则终止
-            if (!force && (_isClosed || _isClosing || targetPosition == Position)) return;
+            if (!force && (_isClosed || _isClosing)) return;
 
             // 前置操作（主线程执行）
             action?.Invoke();
@@ -153,7 +160,6 @@ public partial class NotificationView : SukiWindow
             // 主线程获取起始位置+判断移动轴（保留方向区分，多方向移动平滑）
             var (startPos, isXChanged, isYChanged) = (Position, Position.X != targetPosition.X,
                 Position.Y != targetPosition.Y);
-
             // 无任何轴需要移动，直接回调
             if (!isXChanged && !isYChanged)
             {
@@ -222,22 +228,17 @@ public partial class NotificationView : SukiWindow
 
                 // 所有轴都到达目标，或动画进度完成 → 退出循环
                 if ((!isXChanged && !isYChanged) || progress >= 1.0)
-                    break;
+                {
+                    callback?.Invoke();
 
+                    break;
+                }
                 await Task.Delay(5); // 200fps平滑动画
             }
-
             // 最终
-
-            await DispatcherHelper.RunOnMainThreadAsync(() =>
-            {
-                // Position = targetPosition;
-                endAction?.Invoke();
-            });
-
-
         }, noMessage: true);
     }
+
 
 // 滑入动画（从右侧滑入）
     private void StartSlideInAnimation()
@@ -258,12 +259,21 @@ public partial class NotificationView : SukiWindow
                 Arrange(new Rect(this.DesiredSize));
 
                 // 现在获取的高度是准确的
-                ActualToastHeight = Bounds.Height;
 
-                var targetX = (int)(screen.WorkingArea.Right - Bounds.Width - ToastNotification.MarginRight);
-                var targetY = (int)(screen.WorkingArea.Bottom - Bounds.Height - ToastNotification.MarginBottom);
+                double scaling = screen.Scaling;
 
-                MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
+                // 将设备无关尺寸转换为物理像素
+                double physicalWidth = this.Bounds.Width * scaling;
+                double physicalHeight = this.Bounds.Height * scaling;
+                ActualToastHeight = physicalHeight;
+                var targetX = (int)(screen.WorkingArea.Right - physicalWidth - ToastNotification.MarginRight * scaling);
+                var targetY = (int)(screen.WorkingArea.Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
+                LoggerHelper.Info("开局");
+                MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), endAction: () =>
+                {
+                    LoggerHelper.Info("测试");
+                    StartAutoCloseTimer();
+                });
             });
         });
     }
@@ -300,7 +310,6 @@ public partial class NotificationView : SukiWindow
         _autoCloseTimer?.Dispose();
         _autoCloseTimer = null;
     }
-
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         _isClosed = true;
