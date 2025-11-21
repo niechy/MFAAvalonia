@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -12,13 +13,14 @@ namespace MFAAvalonia.Helper;
 
 public static class EmulatorHelper
 {
-#if WINDOWS
     [DllImport("User32.dll", EntryPoint = "FindWindow")]
+    [SupportedOSPlatform("windows")]
     private extern static IntPtr FindWindow(string lpClassName, string lpWindowName);
 
     [DllImport("User32.dll", CharSet = CharSet.Auto)]
+    [SupportedOSPlatform("windows")]
     private extern static int GetWindowThreadProcessId(IntPtr hwnd, out int id);
-#endif
+
     public static bool KillEmulatorModeSwitcher()
     {
         try
@@ -35,9 +37,9 @@ public static class EmulatorHelper
                 emulatorMode = "XYAZ";
             else if (windowName.Contains("BlueStacks"))
                 emulatorMode = "BlueStacks";
-            
+
             LoggerHelper.Info("Emulator mode detected: " + emulatorMode);
-            
+
             return emulatorMode switch
             {
                 "Nox" => KillEmulatorNox(),
@@ -461,7 +463,7 @@ public static class EmulatorHelper
     {
         var pid = 0;
         var windowName = new[]
-        { 
+        {
             "MuMu安卓设备",
             "明日方舟",
             "明日方舟 - MuMu模拟器",
@@ -470,23 +472,26 @@ public static class EmulatorHelper
         };
         foreach (string processName in windowName)
         {
-#if WINDOWS
-            var hwnd = FindWindow(null, processName);
-            if (hwnd == IntPtr.Zero)
+            if (OperatingSystem.IsWindows())
             {
-                continue;
-            }
+                var hwnd = FindWindow(null, processName);
+                if (hwnd == IntPtr.Zero)
+                {
+                    continue;
+                }
 
-            GetWindowThreadProcessId(hwnd, out pid);
-#else
-                    Process[] processes = Process.GetProcessesByName(processName);
-                    if (processes.Length == 0)
-                    {
-                        continue;
-                    }
-            
-                    pid = processes[0].Id;
-#endif
+                GetWindowThreadProcessId(hwnd, out pid);
+            }
+            else
+            {
+                Process[] processes = Process.GetProcessesByName(processName);
+                if (processes.Length == 0)
+                {
+                    continue;
+                }
+
+                pid = processes[0].Id;
+            }
             break;
         }
 
@@ -539,13 +544,16 @@ public static class EmulatorHelper
         var port = address.StartsWith("127") ? address.Substring(10) : "5555";
         LoggerHelper.Info($"address: {address}, port: {port}");
         string portCmd = string.Empty;
-#if WINDOWS
-        // Windows平台实现（保留原逻辑）
-        portCmd = "netstat -ano | findstr \"" + port + "\"";
-#else
-    // Linux/macOS平台实现
-     portCmd = $"lsof -i :{port} | grep LISTEN | awk '{{print $2}}' | head -n 1";
-#endif
+        if (OperatingSystem.IsWindows())
+        {
+            // Windows平台实现（保留原逻辑）
+            portCmd = "netstat -ano | findstr \"" + port + "\"";
+        }
+        else
+        {
+            // Linux/macOS平台实现
+            portCmd = $"lsof -i :{port} | grep LISTEN | awk '{{print $2}}' | head -n 1";
+        }
 
         var checkCmd = new Process
         {
@@ -565,11 +573,10 @@ public static class EmulatorHelper
         {
             checkCmd.Start();
 
-#if !WINDOWS
-        // 非Windows平台需要写入命令
-        checkCmd.StandardInput.WriteLine(portCmd);
-#endif
+            if (!OperatingSystem.IsWindows()) { checkCmd.StandardInput.WriteLine(portCmd); }
+
             checkCmd.StandardInput.WriteLine("exit");
+
 
             var output = checkCmd.StandardOutput.ReadToEnd();
             pid = ParsePidFromOutput(output, port);
@@ -592,13 +599,15 @@ public static class EmulatorHelper
 
         try
         {
-#if WINDOWS
-            // Windows进程终止
-            Process.GetProcessById(pid).Kill();
-#else
-        // Unix系统信号终止
-        Process.Start("kill", $"-9 {pid}").WaitForExit();
-#endif
+            if (OperatingSystem.IsWindows())
+            {
+                // Windows进程终止
+                Process.GetProcessById(pid).Kill();
+            } else {
+                // Unix系统信号终止
+                Process.Start("kill", $"-9 {pid}")?.WaitForExit();
+            }
+
             return true;
         }
         catch
@@ -610,41 +619,41 @@ public static class EmulatorHelper
 // 跨平台辅助方法
     private static string GetPlatformShell()
     {
-#if WINDOWS
-        return "cmd.exe";
-#else
-    return "/bin/bash";
-#endif
+        if (OperatingSystem.IsWindows())
+            return "cmd.exe";
+        return "/bin/bash";
     }
 
     private static string GetPlatformArguments()
     {
-#if WINDOWS
-        return "/c";
-#else
-    return "-c";
-#endif
+        if (OperatingSystem.IsWindows())
+            return "/c";
+        return "-c";
     }
 
     private static int ParsePidFromOutput(string output, string port)
     {
-#if WINDOWS
-        // Windows输出解析逻辑
-        var reg = new Regex("\\s+", RegexOptions.Compiled);
-        foreach (var line in output.Split('\n'))
-        {
-            var trimmed = line.Trim();
-            if (!trimmed.StartsWith("TCP")) continue;
 
-            var arr = reg.Replace(trimmed, ",").Split(',');
-            if (arr.Length > 4 && arr[1].Contains($":{port}"))
-                return int.Parse(arr[4]);
+        if (OperatingSystem.IsWindows())
+        {
+            // Windows输出解析逻辑
+            var reg = new Regex("\\s+", RegexOptions.Compiled);
+            foreach (var line in output.Split('\n'))
+            {
+                var trimmed = line.Trim();
+                if (!trimmed.StartsWith("TCP")) continue;
+
+                var arr = reg.Replace(trimmed, ",").Split(',');
+                if (arr.Length > 4 && arr[1].Contains($":{port}"))
+                    return int.Parse(arr[4]);
+            }
         }
-#else
-    // Linux/macOS输出解析
-    if(int.TryParse(output.Trim(), out var result))
-        return result;
-#endif
+        else
+        {
+            // Linux/macOS输出解析
+            if (int.TryParse(output.Trim(), out var result))
+                return result;
+        }
         return 0;
     }
 }
