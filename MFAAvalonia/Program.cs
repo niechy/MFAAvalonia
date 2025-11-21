@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading;
+// using System.Threading;
 
 namespace MFAAvalonia;
 
@@ -42,20 +42,20 @@ sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     public static Dictionary<string, string> Args { get; private set; } = new();
-    private static Mutex? _mutex;
+   // private static Mutex? _mutex;
     public static bool IsNewInstance = true;
     public static void ReleaseMutex()
     {
-        try
-        {
-            _mutex?.ReleaseMutex();
-            _mutex?.Close();
-            _mutex = null;
-        }
-        catch (Exception e)
-        {
-            LoggerHelper.Error(e);
-        }
+        // try
+        // {
+        //     _mutex?.ReleaseMutex();
+        //     _mutex?.Close();
+        //     _mutex = null;
+        // }
+        // catch (Exception e)
+        // {
+        //     LoggerHelper.Error(e);
+        // }
     }
 
     [STAThread]
@@ -104,12 +104,13 @@ sealed class Program
 
             var parsedArgs = ParseArguments(args);
             // Fix: Replace both Windows (\) and Unix (/) path separators for cross-platform compatibility
-            var mutexName = "MFA_"
-                + Directory.GetCurrentDirectory()
-                    .Replace("\\", "_")
-                    .Replace("/", "_")
-                    .Replace(":", string.Empty);
-            _mutex = new Mutex(true, mutexName, out IsNewInstance);
+            // var mutexName = "MFA_"
+            //     + Directory.GetCurrentDirectory()
+            //         .Replace("\\", "_")
+            //         .Replace("/", "_")
+            //         .Replace(":", string.Empty);
+            // _mutex = new Mutex(true, mutexName, out IsNewInstance);
+            
             LoggerHelper.Info("Args: " + JsonConvert.SerializeObject(parsedArgs, Formatting.Indented));
             LoggerHelper.Info("MFA version: " + RootViewModel.Version);
             LoggerHelper.Info(".NET version: " + RuntimeInformation.FrameworkDescription);
