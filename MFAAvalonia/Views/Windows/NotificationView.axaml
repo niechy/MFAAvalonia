@@ -7,13 +7,14 @@
                  xmlns:converters="clr-namespace:MFAAvalonia.Helper.Converters"
                  xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
                  xmlns:helper="clr-namespace:MFAAvalonia.Helper"
-                 xmlns:markupExtensions="https://codewf.com"
+                 xmlns:markupExtensions="https://codewf.com" SystemDecorations="None"
                  x:DataType="settings:NotificationView"
                  mc:Ignorable="d" d:DesignWidth="350" d:DesignHeight="150" WindowStartupLocation="Manual"
                  x:Class="MFAAvalonia.Views.Windows.NotificationView" Width="400" TitleBarAutoHideDelay="0"
                  TitleBarAnimationEnabled="False" TitleBarVisibilityOnFullScreen="Hidden"
                  MinHeight="40" CanFullScreen="False" CanMinimize="False" CanPin="False" CanMaximize="False"
-                 SizeToContent="Height" CanResize="False" CanMove="False" IsTitleBarVisible="False"
+                 SizeToContent="Height" CanResize="False" CanMove="False" IsTitleBarVisible="False"  ShowActivated="False"
+                 Focusable="False"
                  Topmost="True">
     <suki:SukiWindow.Resources>
         <converters:BoolToGridLengthConverter x:Key="Converter" />

@@ -6,7 +6,8 @@ using MFAAvalonia.Helper;
 using SukiUI.Controls;
 using SukiUI.Extensions;
 using System;
-using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -95,17 +96,13 @@ public partial class NotificationView : SukiWindow
 
             // 将设备无关尺寸转换为物理像素
             double physicalWidth = this.Bounds.Width * scaling;
-            double physicalHeight = this.Bounds.Height * scaling;
+
             // 更准确的初始位置计算
             var x = screen.WorkingArea.Right - (int)physicalWidth - ToastNotification.MarginRight;
             var y = screen.Bounds.Bottom;
 
             Position = new PixelPoint(x, y);
         };
-
-        // 使用Render优先级确保布局完成
-        Loaded += (_, _) => DispatcherHelper.RunOnMainThreadAsync(
-            StartSlideInAnimation, DispatcherPriority.Render);
 
         // 添加尺寸变化监听
         LayoutUpdated += (s, e) =>
@@ -314,5 +311,166 @@ public partial class NotificationView : SukiWindow
     {
         _isClosed = true;
         base.OnClosing(e);
+    }
+
+    // Windows API (已存在)
+    [DllImport("user32.dll", SetLastError = true)]
+    [SupportedOSPlatform("windows")]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    [SupportedOSPlatform("windows")]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    private const int GWL_EX_STYLE = -20;
+    private const int WS_EX_APPWINDOW = 0x00040000, WS_EX_TOOLWINDOW = 0x00000080;
+
+    // Linux X11 API
+    [DllImport("libX11.so.6")]
+    [SupportedOSPlatform("linux")]
+    private static extern IntPtr XOpenDisplay(IntPtr display);
+
+    [DllImport("libX11.so.6")]
+    [SupportedOSPlatform("linux")]
+    private static extern int XCloseDisplay(IntPtr display);
+
+    [DllImport("libX11.so.6")]
+    [SupportedOSPlatform("linux")]
+    private static extern int XSetTransientForHint(IntPtr display, IntPtr window, IntPtr parent);
+
+    [DllImport("libX11.so.6")]
+    [SupportedOSPlatform("linux")]
+    private static extern IntPtr XInternAtom(IntPtr display, string atom_name, [MarshalAs(UnmanagedType.Bool)] bool only_if_exists);
+
+    [DllImport("libX11.so.6")]
+    [SupportedOSPlatform("linux")]
+    private static extern int XChangeProperty(IntPtr display,
+        IntPtr window,
+        IntPtr property,
+        IntPtr type,
+        int format,
+        int mode,
+        IntPtr data,
+        int nelements);
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+
+        // 跨平台窗口隐藏设置
+        SetWindowHideFromTaskSwitcher();
+
+        DispatcherHelper.RunOnMainThreadAsync(
+            StartSlideInAnimation, DispatcherPriority.Render);
+    }
+
+    /// <summary>
+    /// 设置窗口不在任务切换器（Alt+Tab/Task View）中显示
+    /// </summary>
+    private void SetWindowHideFromTaskSwitcher()
+    {
+        var topLevel = GetTopLevel(this);
+        if (topLevel?.TryGetPlatformHandle()?.Handle is not IntPtr handle || handle == IntPtr.Zero)
+        {
+            LoggerHelper.Warning("无法获取窗口平台句柄");
+            return;
+        }
+
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                SetWindowsWindowStyle(handle);
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                SetLinuxWindowProperties(handle);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"设置窗口隐藏属性失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Windows平台：通过设置窗口样式隐藏
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    private void SetWindowsWindowStyle(IntPtr handle)
+    {
+        int currentStyle = GetWindowLong(handle, GWL_EX_STYLE);
+        int newStyle = (currentStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW;
+        SetWindowLong(handle, GWL_EX_STYLE, newStyle);
+    }
+
+    /// <summary>
+    /// Linux平台：通过X11设置窗口属性
+    /// </summary>
+    [SupportedOSPlatform("linux")]
+    private void SetLinuxWindowProperties(IntPtr handle)
+    {
+        try
+        {
+            IntPtr display = XOpenDisplay(IntPtr.Zero);
+            if (display == IntPtr.Zero)
+            {
+                LoggerHelper.Warning("无法打开X11显示连接");
+                return;
+            }
+
+            try
+            {
+                // 设置为临时窗口（不会出现在任务栏）
+                IntPtr rootWindow = GetRootWindow(display);
+                XSetTransientForHint(display, handle, rootWindow);
+
+                // 设置窗口类型为工具提示或通知类型
+                SetWindowType(display, handle, "_NET_WM_WINDOW_TYPE_NOTIFICATION");
+
+                LoggerHelper.Info("Linux窗口属性设置成功");
+            }
+            finally
+            {
+                XCloseDisplay(display);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Warning($"Linux窗口属性设置失败: {ex.Message}");
+        }
+    }
+
+    // Linux辅助方法
+    [SupportedOSPlatform("linux")]
+    private IntPtr GetRootWindow(IntPtr display)
+    {
+        // 获取默认根窗口
+        [DllImport("libX11.so.6")]
+        extern static IntPtr XDefaultRootWindow(IntPtr display);
+
+        return XDefaultRootWindow(display);
+    }
+
+    [SupportedOSPlatform("linux")]
+    private void SetWindowType(IntPtr display, IntPtr window, string windowType)
+    {
+        try
+        {
+            IntPtr typeAtom = XInternAtom(display, windowType, false);
+            IntPtr typeProperty = XInternAtom(display, "_NET_WM_WINDOW_TYPE", false);
+            IntPtr atomType = XInternAtom(display, "ATOM", false);
+
+            if (typeAtom != IntPtr.Zero && typeProperty != IntPtr.Zero)
+            {
+                XChangeProperty(display, window, typeProperty, atomType, 32, 0,
+                    typeAtom
+                    , 1);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Warning($"设置窗口类型失败: {ex.Message}");
+        }
     }
 }
