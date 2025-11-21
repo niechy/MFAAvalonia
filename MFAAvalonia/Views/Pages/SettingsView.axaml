@@ -20,6 +20,9 @@
     <Design.DataContext>
         <pages:SettingsViewModel />
     </Design.DataContext>
+    <Design.PreviewWith>
+        <ComboBox></ComboBox>
+    </Design.PreviewWith>
     <Grid>
         <TextBlock
             FontSize="30"

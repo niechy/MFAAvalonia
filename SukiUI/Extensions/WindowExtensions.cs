@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using System;
+using System.Linq;
 
 namespace SukiUI.Extensions;
 
@@ -19,9 +20,24 @@ public static class WindowExtensions
         {
             if (window.Screens.ScreenCount == 0) return null;
 
-            return window.Screens.ScreenFromWindow(window) ?? window.Screens.Primary ?? window.Screens.All[0];
+            return window.Screens.ScreenFromWindow(window) ?? window.Screens.Primary ?? window.GetPrimaryScreen();
         }
 
+        /// <summary>
+        /// 获取主屏幕
+        /// </summary>
+        public Screen? GetPrimaryScreen()
+        {
+            foreach (var screen in window.Screens.All)
+            {
+                if (screen.IsPrimary)
+                {
+                    return screen;
+                }
+            }
+            return window.Screens.All.FirstOrDefault();
+        }
+        
         /// <summary>
         /// Centers the window on the screen that contains the largest area of the window.
         /// </summary>

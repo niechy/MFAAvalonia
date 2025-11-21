@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls.ApplicationLifetimes;
+﻿using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
 using MFAAvalonia.Utilities.Attributes;
@@ -14,6 +15,7 @@ using SukiUI.Dialogs;
 using SukiUI.Toasts;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -32,24 +34,125 @@ public static partial class Instances
     /// <summary>
     /// 解析服务（自动缓存 + 循环依赖检测）
     /// </summary>
-    private static T Resolve<T>()
+    private static T Resolve<T>() where T : class
     {
         var serviceType = typeof(T);
+
         var lazy = ServiceCache.GetOrAdd(serviceType, _ =>
             new Lazy<object>(
                 () =>
                 {
-                    try { return App.Services.GetRequiredService<T>(); }
-                    // try { return new T(); }
+                    if (Design.IsDesignMode)
+                    {
+                        try
+                        {
+                            // 设计时核心逻辑：接口自动匹配实现类，普通类直接创建
+                            object designInstance;
+                            if (serviceType.IsInterface)
+                            {
+                                // 1. 接口类型：去掉"I"前缀，查找对应的实现类
+                                designInstance = CreateInstanceFromInterface<T>(serviceType);
+                            }
+                            else
+                            {
+                                // 2. 普通类（非接口）：直接创建实例
+                                designInstance = Activator.CreateInstance<T>()!;
+                            }
+
+                            LoggerHelper.Info($"设计时模式：成功创建 {serviceType.Name} 实例（实际类型：{designInstance.GetType().Name}）并缓存");
+                            return designInstance;
+                        }
+                        catch (MissingMethodException ex)
+                        {
+                            throw new InvalidOperationException(
+                                $"设计时模式下，{serviceType.Name}（或其实现类）缺少无参构造函数！请添加默认构造函数。", ex);
+                        }
+                        catch (TypeLoadException ex)
+                        {
+                            throw new InvalidOperationException(
+                                $"设计时模式下，未找到 {serviceType.Name} 对应的实现类！请检查：1. 实现类命名是否为「去掉I前缀」（如 ISukiToastManager → SukiToastManager）；2. 实现类与接口在同一命名空间；3. 实现类已编译到项目中。", ex);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException(
+                                $"设计时模式下创建 {serviceType.Name} 实例失败：{ex.Message}", ex);
+                        }
+                    }
+
+                    // 运行时：走原有DI容器解析逻辑（不受影响）
+                    try
+                    {
+                        if (App.Services == null)
+                            throw new NullReferenceException("App.Services 未初始化（运行时必须先配置依赖注入）");
+
+                        var runtimeInstance = App.Services.GetRequiredService<T>();
+                        LoggerHelper.Info($"运行时模式：从服务容器解析 {serviceType.Name} 并缓存");
+                        return runtimeInstance;
+                    }
                     catch (InvalidOperationException ex)
                     {
                         throw new InvalidOperationException(
-                            $"Failed to resolve service {typeof(T).Name}. Possible causes: 1. Service not registered; 2. Circular dependency detected; 3. Thread contention during initialization.", ex);
+                            $"运行时解析 {serviceType.Name} 失败。可能原因：1. 服务未注册；2. 循环依赖；3. 初始化时线程竞争。", ex);
+                    }
+                    catch (NullReferenceException ex)
+                    {
+                        throw new InvalidOperationException(
+                            $"运行时解析 {serviceType.Name} 失败：App.Services 为 null，请检查依赖注入初始化逻辑。", ex);
                     }
                 },
                 LazyThreadSafetyMode.ExecutionAndPublication
             ));
+
         return (T)lazy.Value;
+    }
+
+    /// <summary>
+    /// 从接口类型创建实现类实例（设计时专用）
+    /// 规则：去掉接口的"I"前缀，查找同一命名空间下的实现类
+    /// </summary>
+    private static T CreateInstanceFromInterface<T>(Type interfaceType) where T : class
+    {
+        // 校验接口命名（必须以"I"开头，且长度>1）
+        if (!interfaceType.Name.StartsWith("I", StringComparison.Ordinal) || interfaceType.Name.Length <= 1)
+        {
+            throw new InvalidOperationException($"接口 {interfaceType.Name} 命名不规范，无法自动匹配实现类（需以'I'开头，如 ISukiToastManager）");
+        }
+
+        // 生成实现类名：去掉"I"前缀（如 ISukiToastManager → SukiToastManager）
+        string implementationClassName = interfaceType.Name.Substring(1);
+
+        // 查找实现类：在接口所在的程序集中，查找同名（去掉I）的非接口类
+        Type? implementationType = interfaceType.Assembly.GetTypes()
+            .FirstOrDefault(t =>
+                t.Name == implementationClassName
+                && // 类名匹配
+                !t.IsInterface
+                && // 不是接口
+                !t.IsAbstract
+                && // 不是抽象类
+                interfaceType.IsAssignableFrom(t)); // 实现了当前接口
+
+        if (implementationType == null)
+        {
+            // 尝试容错：忽略大小写匹配（比如 ISukiToastManager → sukiToastManager，可选）
+            implementationType = interfaceType.Assembly.GetTypes()
+                .FirstOrDefault(t =>
+                    string.Equals(t.Name, implementationClassName, StringComparison.OrdinalIgnoreCase) && !t.IsInterface && !t.IsAbstract && interfaceType.IsAssignableFrom(t));
+        }
+
+        if (implementationType == null)
+        {
+            throw new TypeLoadException($"未找到 {interfaceType.Name} 的实现类（期望类名：{implementationClassName}）");
+        }
+
+        // 创建实现类实例（要求实现类有无参构造函数）
+        var instance = Activator.CreateInstance(implementationType);
+        if (instance == null)
+        {
+            throw new InvalidOperationException($"实现类 {implementationType.Name} 无法创建实例（可能是抽象类或无无参构造函数）");
+        }
+
+        return (T)instance;
     }
 
     #endregion
@@ -66,7 +169,7 @@ public static partial class Instances
     /// <summary>
     /// 重启当前应用程序
     /// </summary>
-    public static void RestartApplication(bool noAutoStart = false,bool forgeStop = false)
+    public static void RestartApplication(bool noAutoStart = false, bool forgeStop = false)
     {
         Program.ReleaseMutex();
         if (noAutoStart)
@@ -217,7 +320,7 @@ public static partial class Instances
     private static ResourcesViewModel _resourcesViewModel;
     private static ScreenshotView _screenshotView;
     private static ScreenshotViewModel _screenshotViewModel;
-    
+
     private static ConnectSettingsUserControl _connectSettingsUserControl;
     private static ConnectSettingsUserControlModel _connectSettingsUserControlModel;
     private static GuiSettingsUserControl _guiSettingsUser;

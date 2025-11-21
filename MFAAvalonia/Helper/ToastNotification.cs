@@ -24,9 +24,26 @@ public class ToastNotification
     public const int MarginBottom = 2; // 最底部Toast距离屏幕底部的间距
     public const int ToastSpacing = 16; // 两个Toast之间的间距
     public const int MarginRight = 2; // 最底部Toast距离屏幕底部的间距
-    private ToastNotification() { }
 
-
+    private ToastNotification()
+    {
+        try
+        {
+            // 订阅原生事件：任何屏幕变化（任务栏隐藏/显示、分辨率/缩放变化）都会触发
+            Instances.RootView.Screens.Changed += (s, e) =>
+            { LoggerHelper.Info("已触发 Avalonia 原生 Screen.Changed 事件");
+                DispatcherHelper.PostOnMainThread(() =>
+                {
+                    UpdateAllToastPositions();
+                });
+            };
+            LoggerHelper.Info("已订阅 Avalonia 原生 Screen.Changed 事件");
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Warning($"订阅 Screen.Changed 事件失败，降级为仅使用轮询: {ex.Message}");
+        }
+    }
     public static void Show(string title, string content = "", int duration = 4000, bool sound = true)
     {
         DispatcherHelper.PostOnMainThread(() =>
@@ -80,7 +97,7 @@ public class ToastNotification
                 // 使用第一个Toast的屏幕作为参考，确保一致性
                 var referenceToast = _toastQueue.Count > 0 ? _toastQueue[0] : newToast;
                 if (referenceToast == null) return;
-            
+
                 var screen = referenceToast.GetHostScreen();
                 if (screen == null) return;
 
@@ -95,12 +112,11 @@ public class ToastNotification
 
                     // 确保使用正确的屏幕坐标
                     var toastScreen = toast.GetHostScreen() ?? screen;
-                    double toastScaling = toastScreen.Scaling; 
+                    double toastScaling = toastScreen.Scaling;
                     // 使用实际高度或Bounds高度
-                    double toastHeight = toast.ActualToastHeight > 0 ? 
-                        toast.ActualToastHeight : toast.Bounds.Height * toastScaling;
+                    double toastHeight = toast.ActualToastHeight > 0 ? toast.ActualToastHeight : toast.Bounds.Height * toastScaling;
 
-                    if (toastHeight <= 0) 
+                    if (toastHeight <= 0)
                     {
                         // 如果高度仍无效，使用默认值
                         toastHeight = 100; // 默认高度
