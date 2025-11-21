@@ -265,12 +265,7 @@ public partial class NotificationView : SukiWindow
                 ActualToastHeight = physicalHeight;
                 var targetX = (int)(screen.WorkingArea.Right - physicalWidth - ToastNotification.MarginRight * scaling);
                 var targetY = (int)(screen.WorkingArea.Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
-                LoggerHelper.Info("开局");
-                MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), endAction: () =>
-                {
-                    LoggerHelper.Info("测试");
-                    StartAutoCloseTimer();
-                });
+                MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
             });
         });
     }
