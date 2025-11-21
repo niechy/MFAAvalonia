@@ -267,7 +267,7 @@ public partial class NotificationView : SukiWindow
                 var targetY = (int)(screen.WorkingArea.Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
                 MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
             });
-        });
+        },noMessage:true);
     }
 
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
