@@ -1217,59 +1217,60 @@ public class MaaProcessor
 
     public static bool CheckInterface(out string Name, out string Version, out string CustomTitle)
     {
-        if (!File.Exists($"{AppContext.BaseDirectory}/interface.json"))
+  
+        if (!File.Exists(Path.Combine(AppContext.BaseDirectory,"interface.json")))
         {
             LoggerHelper.Info("未找到interface文件，生成interface.json...");
             Interface = new MaaInterface
-                {
-                    Version = "1.0",
-                    Name = "Debug",
-                    Task = [],
-                    Resource =
-                    [
-                        new MaaInterface.MaaInterfaceResource()
-                        {
-                            Name = "默认",
-                            Path =
-                            [
-                                "{PROJECT_DIR}/resource/base",
-                            ],
-                        },
-                    ],
-                    Controller =
-                    [
-                        new MaaInterface.MaaResourceController()
-                        {
-                            Name = "adb 默认方式",
-                            Type = "adb"
-                        },
-                    ],
-                    Option = new Dictionary<string, MaaInterface.MaaInterfaceOption>
+            {
+                Version = "1.0",
+                Name = "Debug",
+                Task = [],
+                Resource =
+                [
+                    new MaaInterface.MaaInterfaceResource()
                     {
+                        Name = "默认",
+                        Path =
+                        [
+                            "{PROJECT_DIR}/resource/base",
+                        ],
+                    },
+                ],
+                Controller =
+                [
+                    new MaaInterface.MaaResourceController()
+                    {
+                        Name = "adb 默认方式",
+                        Type = "adb"
+                    },
+                ],
+                Option = new Dictionary<string, MaaInterface.MaaInterfaceOption>
+                {
+                    {
+                        "测试", new MaaInterface.MaaInterfaceOption()
                         {
-                            "测试", new MaaInterface.MaaInterfaceOption()
-                            {
-                                Cases =
-                                [
+                            Cases =
+                            [
 
-                                    new MaaInterface.MaaInterfaceOptionCase
-                                    {
-                                        Name = "测试1",
-                                        PipelineOverride = new Dictionary<string, JToken>()
-                                    },
-                                    new MaaInterface.MaaInterfaceOptionCase
-                                    {
-                                        Name = "测试2",
-                                        PipelineOverride = new Dictionary<string, JToken>()
-                                    }
-                                ]
-                            }
+                                new MaaInterface.MaaInterfaceOptionCase
+                                {
+                                    Name = "测试1",
+                                    PipelineOverride = new Dictionary<string, JToken>()
+                                },
+                                new MaaInterface.MaaInterfaceOptionCase
+                                {
+                                    Name = "测试2",
+                                    PipelineOverride = new Dictionary<string, JToken>()
+                                }
+                            ]
                         }
                     }
                 }
-                ;
-            if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "/resource/base")))
-                Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "/resource/base"));
+            };
+            string resourceDir = Path.Combine(AppContext.BaseDirectory, "resource", "base");
+            if (!Directory.Exists(resourceDir))
+                Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, resourceDir));
             JsonHelper.SaveJson(Path.Combine(AppContext.BaseDirectory, "interface.json"),
                 Interface, new MaaInterfaceSelectAdvancedConverter(true), new MaaInterfaceSelectOptionConverter(true));
             Name = Interface?.Name ?? string.Empty;
@@ -1360,10 +1361,11 @@ public class MaaProcessor
                 {
                     foreach (var resourcePath in resources.Path)
                     {
-                        if (!Path.Exists($"{resourcePath}/pipeline/"))
+                        var pipeline = Path.Combine(resourcePath, "pipeline");
+                        if (!Path.Exists(pipeline))
                             break;
-                        var jsonFiles = Directory.GetFiles(Path.GetFullPath($"{resourcePath}/pipeline/"), "*.json", SearchOption.AllDirectories);
-                        var jsoncFiles = Directory.GetFiles(Path.GetFullPath($"{resourcePath}/pipeline/"), "*.jsonc", SearchOption.AllDirectories);
+                        var jsonFiles = Directory.GetFiles(Path.GetFullPath(pipeline), "*.json", SearchOption.AllDirectories);
+                        var jsoncFiles = Directory.GetFiles(Path.GetFullPath(pipeline), "*.jsonc", SearchOption.AllDirectories);
                         var allFiles = jsonFiles.Concat(jsoncFiles).ToArray();
                         fileCount = allFiles.Length;
                         // var taskDictionaryA = new Dictionary<string, MaaNode>();
@@ -1413,11 +1415,12 @@ public class MaaProcessor
             }
             if (fileCount == 0)
             {
-                if (!string.IsNullOrWhiteSpace($"{resourceP}/pipeline") && !Directory.Exists($"{resourceP}/pipeline"))
+                var pipeline = Path.Combine(resourceP, "pipeline");
+                if (!string.IsNullOrWhiteSpace(pipeline) && !Directory.Exists(pipeline))
                 {
                     try
                     {
-                        Directory.CreateDirectory($"{resourceP}/pipeline");
+                        Directory.CreateDirectory(pipeline);
                     }
                     catch (Exception ex)
                     {
@@ -1425,11 +1428,11 @@ public class MaaProcessor
                     }
                 }
 
-                if (!File.Exists($"{resourceP}/pipeline/sample.json"))
+                if (!File.Exists(Path.Combine(pipeline, "sample.json")))
                 {
                     try
                     {
-                        File.WriteAllText($"{resourceP}/pipeline/sample.json",
+                        File.WriteAllText(Path.Combine(pipeline, "sample.json"),
                             JsonConvert.SerializeObject(new Dictionary<string, MaaNode>
                             {
                                 {

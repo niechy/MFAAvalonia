@@ -154,126 +154,126 @@ public class ToastNotification
     }
 
 
-   public static void PlayNotificationSound(bool enable = true)
-{
-    if (!enable) return;
-
-    TaskManager.RunTask(async () =>
+    public static void PlayNotificationSound(bool enable = true)
     {
-        var uriString = "avares://MFAAvalonia/Assets/Sound/SystemNotification.wav";
-        var uri = new Uri(uriString);
+        if (!enable) return;
 
-        // 步骤1：检查嵌入资源
-        if (!AssetLoader.Exists(uri))
+        TaskManager.RunTask(async () =>
         {
-            LoggerHelper.Error($"未找到嵌入资源：{uriString}");
-            return;
-        }
+            var uriString = "avares://MFAAvalonia/Assets/Sound/SystemNotification.wav";
+            var uri = new Uri(uriString);
 
-        // 步骤2：获取资源流（确保可读取、可定位）
-        await using var stream = AssetLoader.Open(uri);
-        if (stream == null || stream.Length == 0 || !stream.CanSeek)
-        {
-            LoggerHelper.Error($"音频流无效：{(stream == null ? "流为空" : stream.CanSeek ? "长度为0" : "不可定位")}");
-            return;
-        }
-
-        MiniAudioEngine? engine = null;
-        AudioPlaybackDevice? playbackDevice = null;
-        SoundPlayer? player = null;
-        StreamDataProvider? dataProvider = null;
-
-        try
-        {
-            // 步骤3：初始化 MiniAudio 引擎（原生逻辑：自动初始化后端）
-            engine = new MiniAudioEngine();
-            LoggerHelper.Info($"MiniAudio 引擎初始化成功，活跃后端：{engine.ActiveBackend}");
-
-            // 步骤4：解析音频格式（优先自动解析，失败则用预设）
-            stream.Seek(0, SeekOrigin.Begin);
-            AudioFormat audioFormat = AudioFormat.Dvd; // 默认兜底
-            var parsedFormat = AudioFormat.GetFormatFromStream(stream);
-            if (parsedFormat.HasValue)
+            // 步骤1：检查嵌入资源
+            if (!AssetLoader.Exists(uri))
             {
-                audioFormat = parsedFormat.Value;
-            }
-            stream.Seek(0, SeekOrigin.Begin); // 解析后重置流位置
-
-            // 步骤5：获取默认播放设备（核心！之前遗漏：必须绑定设备才能输出声音）
-            engine.UpdateAudioDevicesInfo(); // 刷新设备列表
-            var defaultDevice = engine.PlaybackDevices.FirstOrDefault(d => d.IsDefault);
-            if (defaultDevice == null || defaultDevice.Id == IntPtr.Zero)
-            {
-                LoggerHelper.Warning("未找到默认音频播放设备，跳过播放");
+                LoggerHelper.Error($"未找到嵌入资源：{uriString}");
                 return;
             }
 
-            // 步骤6：创建播放设备实例（原生逻辑：绑定引擎、设备、格式）
-            playbackDevice = engine.InitializePlaybackDevice(
-                deviceInfo: defaultDevice,
-                format: audioFormat,
-                config: null // 使用默认设备配置
-            );
-
-            // 步骤7：创建流数据提供器（实现 ISoundDataProvider，原生要求）
-            dataProvider = new StreamDataProvider(engine, stream);
-
-            // 步骤8：创建 SoundPlayer（绑定引擎、格式、数据提供器）
-            player = new SoundPlayer(engine, audioFormat, dataProvider)
+            // 步骤2：获取资源流（确保可读取、可定位）
+            await using var stream = AssetLoader.Open(uri);
+            if (stream == null || stream.Length == 0 || !stream.CanSeek)
             {
-                Volume = 1.0f // 音量（0.0~1.0）
-            };
-
-            // 步骤9：关键！将 SoundPlayer 加入设备组件列表（否则音频数据无法传递）
-            playbackDevice.MasterMixer.AddComponent(player);
-
-            // 步骤10：标记播放完成状态（双重保障：回调+循环等待）
-            bool isPlaybackCompleted = false;
-            player.PlaybackEnded += (s, e) =>
-            {
-                isPlaybackCompleted = true;
-            };
-
-            // 步骤11：启动播放设备和播放器（原生顺序：先启动设备，再播放）
-            playbackDevice.Start();
-            player.Play();
-
-            // 步骤12：等待播放完成（避免 Task 提前结束释放资源）
-            while (!isPlaybackCompleted 
-                   && player.State == PlaybackState.Playing 
-                   && playbackDevice.IsRunning)
-            {
-                await Task.Delay(50);
+                LoggerHelper.Error($"音频流无效：{(stream == null ? "流为空" : stream.CanSeek ? "长度为0" : "不可定位")}");
+                return;
             }
-            playbackDevice.MasterMixer.RemoveComponent(player);
-            // 状态校验（贴合 SoundPlayerBase 原生逻辑）
-            if (player.State == PlaybackState.Stopped && !isPlaybackCompleted)
+
+            MiniAudioEngine? engine = null;
+            AudioPlaybackDevice? playbackDevice = null;
+            SoundPlayer? player = null;
+            StreamDataProvider? dataProvider = null;
+
+            try
             {
-                LoggerHelper.Warning("播放被中断（设备停止或流读取完毕）");
+                // 步骤3：初始化 MiniAudio 引擎（原生逻辑：自动初始化后端）
+                engine = new MiniAudioEngine();
+                LoggerHelper.Info($"MiniAudio 引擎初始化成功，活跃后端：{engine.ActiveBackend}");
+
+                // 步骤4：解析音频格式（优先自动解析，失败则用预设）
+                stream.Seek(0, SeekOrigin.Begin);
+                AudioFormat audioFormat = AudioFormat.Dvd; // 默认兜底
+                var parsedFormat = AudioFormat.GetFormatFromStream(stream);
+                if (parsedFormat.HasValue)
+                {
+                    audioFormat = parsedFormat.Value;
+                }
+                stream.Seek(0, SeekOrigin.Begin); // 解析后重置流位置
+
+                // 步骤5：获取默认播放设备（核心！之前遗漏：必须绑定设备才能输出声音）
+                engine.UpdateAudioDevicesInfo(); // 刷新设备列表
+                var defaultDevice = engine.PlaybackDevices.FirstOrDefault(d => d.IsDefault);
+                if (defaultDevice.Id == IntPtr.Zero)
+                {
+                    LoggerHelper.Warning("未找到默认音频播放设备，跳过播放");
+                    return;
+                }
+
+                // 步骤6：创建播放设备实例（原生逻辑：绑定引擎、设备、格式）
+                playbackDevice = engine.InitializePlaybackDevice(
+                    deviceInfo: defaultDevice,
+                    format: audioFormat,
+                    config: null // 使用默认设备配置
+                );
+
+                // 步骤7：创建流数据提供器（实现 ISoundDataProvider，原生要求）
+                dataProvider = new StreamDataProvider(engine, stream);
+
+                // 步骤8：创建 SoundPlayer（绑定引擎、格式、数据提供器）
+                player = new SoundPlayer(engine, audioFormat, dataProvider)
+                {
+                    Volume = 1.0f // 音量（0.0~1.0）
+                };
+
+                // 步骤9：关键！将 SoundPlayer 加入设备组件列表（否则音频数据无法传递）
+                playbackDevice.MasterMixer.AddComponent(player);
+
+                // 步骤10：标记播放完成状态（双重保障：回调+循环等待）
+                bool isPlaybackCompleted = false;
+                player.PlaybackEnded += (s, e) =>
+                {
+                    isPlaybackCompleted = true;
+                };
+
+                // 步骤11：启动播放设备和播放器（原生顺序：先启动设备，再播放）
+                playbackDevice.Start();
+                player.Play();
+
+                // 步骤12：等待播放完成（避免 Task 提前结束释放资源）
+                while (!isPlaybackCompleted
+                       && player.State == PlaybackState.Playing
+                       && playbackDevice.IsRunning)
+                {
+                    await Task.Delay(50);
+                }
+                playbackDevice.MasterMixer.RemoveComponent(player);
+                // 状态校验（贴合 SoundPlayerBase 原生逻辑）
+                if (player.State == PlaybackState.Stopped && !isPlaybackCompleted)
+                {
+                    LoggerHelper.Warning("播放被中断（设备停止或流读取完毕）");
+                }
             }
-        }
-        catch (InvalidOperationException ex)
-        {
-            LoggerHelper.Error($"设备初始化失败：{ex.Message}", ex);
-        }
-        catch (IOException ex)
-        {
-            LoggerHelper.Error($"音频流操作失败：{ex.Message}", ex);
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"提示音播放未知异常：{ex.Message}", ex);
-        }
-        finally
-        {
-            // 原生资源释放顺序：先停播放器→再停设备→最后释放引擎
-            player?.Stop();
-            playbackDevice?.Stop();
-            player?.Dispose();
-            dataProvider?.Dispose();
-            playbackDevice?.Dispose();
-            engine?.Dispose();
-        }
-    }, "播放音频");
-}
+            catch (InvalidOperationException ex)
+            {
+                LoggerHelper.Error($"设备初始化失败：{ex.Message}", ex);
+            }
+            catch (IOException ex)
+            {
+                LoggerHelper.Error($"音频流操作失败：{ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Error($"提示音播放未知异常：{ex.Message}", ex);
+            }
+            finally
+            {
+                // 原生资源释放顺序：先停播放器→再停设备→最后释放引擎
+                player?.Stop();
+                playbackDevice?.Stop();
+                player?.Dispose();
+                dataProvider?.Dispose();
+                playbackDevice?.Dispose();
+                engine?.Dispose();
+            }
+        }, "播放音频");
+    }
 }
