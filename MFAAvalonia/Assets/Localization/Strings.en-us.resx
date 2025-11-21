@@ -1214,4 +1214,19 @@
     <data name="Notification" xml:space="preserve">
         <value>Notification</value>
     </data>
+    <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
+        <value>Multi-instance Quick Settings</value>
+    </data>
+    <data name="EmulatorMultiInstanceEditor" xml:space="preserve">
+        <value>多開編輯器</value>
+    </data>
+    <data name="MuMuEmulator" xml:space="preserve">
+        <value>MuMu Emulator</value>
+    </data>
+    <data name="XYAZ" xml:space="preserve">
+        <value>MEmu</value>
+    </data>
+    <data name="EmulatorMultiInstanceNumber" xml:space="preserve">
+        <value>多開號</value>
+    </data>
 </root>

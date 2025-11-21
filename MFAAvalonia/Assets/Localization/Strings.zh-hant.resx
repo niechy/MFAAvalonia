@@ -120,7 +120,7 @@
         <value>基本主題​</value>
     </data>
     <data name="BlueStacks" xml:space="preserve">
-        <value>BlueStacks</value>
+        <value>藍疊模擬器</value>
     </data>
     <data name="ButtonAdd" xml:space="preserve">
         <value>新增</value>
@@ -1213,5 +1213,20 @@
     </data>
     <data name="Notification" xml:space="preserve">
         <value>通知</value>
+    </data>
+    <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
+        <value>多開快捷設定</value>
+    </data>
+    <data name="EmulatorMultiInstanceEditor" xml:space="preserve">
+        <value>Multi-instance Editor</value>
+    </data>
+    <data name="MuMuEmulator" xml:space="preserve">
+        <value>MuMu模擬器</value>
+    </data>
+    <data name="XYAZ" xml:space="preserve">
+        <value>逍遙模擬器</value>
+    </data>
+    <data name="EmulatorMultiInstanceNumber" xml:space="preserve">
+        <value>Multi-instance Number</value>
     </data>
 </root>

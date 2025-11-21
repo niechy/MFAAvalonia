@@ -7,7 +7,7 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
-        <LangVersion>default</LangVersion>
+        <LangVersion>14</LangVersion>
         <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
@@ -136,6 +136,10 @@
 		</Compile>
 		<Compile Update="Views\Pages\ScreenshotView.axaml.cs">
 		  <DependentUpon>ScreenshotView.axaml</DependentUpon>
+		  <SubType>Code</SubType>
+		</Compile>
+		<Compile Update="Views\UserControls\MultiInstanceEditorDialogView.axaml.cs">
+		  <DependentUpon>MultiInstanceEditorDialogView.axaml</DependentUpon>
 		  <SubType>Code</SubType>
 		</Compile>
 	</ItemGroup>

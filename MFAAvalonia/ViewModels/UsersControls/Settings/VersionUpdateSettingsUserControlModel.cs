@@ -50,7 +50,7 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
         {
             Name = "GitHub"
         },
-        new("MirrorChyan"),
+        new(LangKeys.MirrorChyan),
     ];
 
     [ObservableProperty] private int _downloadSourceIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.DownloadSourceIndex, 1);
@@ -62,9 +62,9 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
 
     public ObservableCollection<LocalizationViewModel> UIUpdateChannelList =>
     [
-        new("AlphaVersion"),
-        new("BetaVersion"),
-        new("StableVersion"),
+        new(LangKeys.AlphaVersion),
+        new(LangKeys.BetaVersion),
+        new(LangKeys.StableVersion),
     ];
     
     [ObservableProperty] private int _uIUpdateChannelIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.UIUpdateChannelIndex, 2);
@@ -73,11 +73,12 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
     {
         ConfigurationManager.Current.SetValue(ConfigurationKeys.UIUpdateChannelIndex, value);
     }
+    
     public ObservableCollection<LocalizationViewModel> ResourceUpdateChannelList =>
     [
-        new("AlphaVersion"),
-        new("BetaVersion"),
-        new("StableVersion"),
+        new(LangKeys.AlphaVersion),
+        new(LangKeys.BetaVersion),
+        new(LangKeys.StableVersion),
     ];
     
     [ObservableProperty] private int _resourceUpdateChannelIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.ResourceUpdateChannelIndex, 2);

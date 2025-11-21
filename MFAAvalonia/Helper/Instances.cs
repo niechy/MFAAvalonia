@@ -86,7 +86,6 @@ public static partial class Instances
                             throw new NullReferenceException("App.Services 未初始化（运行时必须先配置依赖注入）");
 
                         var runtimeInstance = App.Services.GetRequiredService<T>();
-                        LoggerHelper.Info($"运行时模式：从服务容器解析 {serviceType.Name} 并缓存");
                         return runtimeInstance;
                     }
                     catch (InvalidOperationException ex)

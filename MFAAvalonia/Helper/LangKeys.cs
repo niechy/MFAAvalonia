@@ -411,4 +411,9 @@ public static class LangKeys
 	public static readonly string UnknownError = "UnknownError";
 	public static readonly string UndefinedError = "UndefinedError";
 	public static readonly string Notification = "Notification";
+	public static readonly string EmulatorMultiInstanceQuickSettings = "EmulatorMultiInstanceQuickSettings";
+	public static readonly string EmulatorMultiInstanceEditor = "EmulatorMultiInstanceEditor";
+	public static readonly string MuMuEmulator = "MuMuEmulator";
+	public static readonly string XYAZ = "XYAZ";
+	public static readonly string EmulatorMultiInstanceNumber = "EmulatorMultiInstanceNumber";
 }
