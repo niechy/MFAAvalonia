@@ -20,7 +20,7 @@ dotnet_script_path="/tmp/dotnet-install.sh"  # 临时脚本路径
 detect_arch() {
     local uname_arch=$(uname -m)
     case $uname_arch in
-		x64|x86_64|amd64) arch="x64" ;;  # 兼容 amd64（部分系统输出）
+        x64|x86_64|amd64) arch="x64" ;;  # 兼容 amd64（部分系统输出）
         aarch64|arm64) arch="arm64" ;;  # 同时匹配 aarch64 和 arm64
         *) 
             echo -e "${RED}不支持的架构: $uname_arch${NC}"

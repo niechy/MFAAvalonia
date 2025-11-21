@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-// using System.Threading;
+using System.Threading;
 
 namespace MFAAvalonia;
 
@@ -42,7 +42,7 @@ sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     public static Dictionary<string, string> Args { get; private set; } = new();
-   // private static Mutex? _mutex;
+    private static Mutex? _mutex;
     public static bool IsNewInstance = true;
     public static void ReleaseMutex()
     {
@@ -82,7 +82,7 @@ sealed class Program
                 // 搜索模式说明："MaaFramework.*" 匹配所有以MaaFramework为文件名的文件
                 var maaFiles = Directory.EnumerateFiles(
                     runtimesPath,
-                    "MaaFramework.*", // 文件名固定为MaaFramework，扩展名任意
+                    "*MaaFramework*", // 文件名固定为MaaFramework，扩展名任意
                     SearchOption.AllDirectories // 包括所有子目录
                 );
 
@@ -103,14 +103,14 @@ sealed class Program
 
 
             var parsedArgs = ParseArguments(args);
-            // Fix: Replace both Windows (\) and Unix (/) path separators for cross-platform compatibility
-            // var mutexName = "MFA_"
-            //     + Directory.GetCurrentDirectory()
-            //         .Replace("\\", "_")
-            //         .Replace("/", "_")
-            //         .Replace(":", string.Empty);
-            // _mutex = new Mutex(true, mutexName, out IsNewInstance);
-            
+            //   Fix: Replace both Windows (\) and Unix (/) path separators for cross-platform compatibility
+            var mutexName = "MFA_"
+                + Directory.GetCurrentDirectory()
+                    .Replace("\\", "_")
+                    .Replace("/", "_")
+                    .Replace(":", string.Empty);
+            _mutex = new Mutex(true, mutexName, out IsNewInstance);
+
             LoggerHelper.Info("Args: " + JsonConvert.SerializeObject(parsedArgs, Formatting.Indented));
             LoggerHelper.Info("MFA version: " + RootViewModel.Version);
             LoggerHelper.Info(".NET version: " + RuntimeInformation.FrameworkDescription);
