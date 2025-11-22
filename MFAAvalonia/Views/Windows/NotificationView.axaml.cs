@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using MFAAvalonia.Helper;
 using SukiUI.Controls;
@@ -13,8 +14,48 @@ using System.Threading.Tasks;
 
 namespace MFAAvalonia.Views.Windows;
 
+[SupportedOSPlatform("windows")]
+internal static class WindowsPInvoke
+{
+    // 窗口消息：系统设置变化（任务栏隐藏/显示、工作区变化等）
+    public const uint WM_SETTINGCHANGE = 0x001A;
+
+    // 系统参数：工作区大小变化
+    public const uint SPI_SETWORKAREA = 0x002F;
+    public const uint SPI_GETWORKAREA = 0x0030;
+
+    // 获取最新工作区大小（仅保留这一个PInvoke，用于获取真实工作区）
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public extern static bool SystemParametersInfo(uint uiAction, uint uiParam, ref RECT pvParam, uint fWinIni);
+
+    // 矩形结构体（存储工作区坐标）
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+
+        // 转换为 Avalonia Rect（适配设备缩放，修正坐标计算）
+        public Rect ToAvaloniaRect()
+        {
+            return new Rect(
+                Left, // 物理坐标转设备无关坐标
+                Top,
+                (Right - Left), // 宽度 = 右-左
+                (Bottom - Top) // 高度 = 底-顶
+            );
+        }
+    }
+}
+
 public partial class NotificationView : SukiWindow
 {
+    [SupportedOSPlatform("windows")] private IntPtr _hwnd = IntPtr.Zero;
+    [SupportedOSPlatform("windows")] private bool _isWndProcHooked = false;
+
     public double ActualToastHeight { get; private set; }
 
     public event Action? OnActionButtonClicked;
@@ -62,17 +103,6 @@ public partial class NotificationView : SukiWindow
         set => SetValue(ActionButtonContentProperty, value);
     }
 
-    public static readonly StyledProperty<int> DurationProperty =
-        AvaloniaProperty.Register<NotificationView, int>(
-            nameof(Duration),
-            2000);
-
-    public int Duration
-    {
-        get => GetValue(DurationProperty);
-        set => SetValue(DurationProperty, value);
-    }
-
     // 超时时间（默认3秒）
     private Timer? _autoCloseTimer;
     private readonly TimeSpan _timeout;
@@ -82,11 +112,39 @@ public partial class NotificationView : SukiWindow
 
     public bool IsClosed => _isClosed;
     public bool IsClosing => _isClosing;
-    public NotificationView()
+    public PixelRect GetLatestWorkArea(Screen screen)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                WindowsPInvoke.RECT winRect = new();
+                // 调用 Windows 原生 API 获取最新工作区（不受 Avalonia 缓存影响）
+                if (WindowsPInvoke.SystemParametersInfo(WindowsPInvoke.SPI_GETWORKAREA, 0, ref winRect, 0))
+                {
+                    // 转换为 Avalonia 设备无关坐标
+                    return PixelRect.FromRect(winRect.ToAvaloniaRect(), screen.Scaling);
+                }
+                else
+                {
+                    LoggerHelper.Info("获取失败");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Warning($"获取原生工作区失败， fallback 到 Avalonia WorkingArea: {ex.Message}");
+            }
+        }
+
+        // 非 Windows 平台或获取失败时，使用 Avalonia 原生 WorkingArea
+        return screen.WorkingArea;
+    }
+
+    public NotificationView(long duration)
     {
         DataContext = this;
         InitializeComponent();
-        _timeout = TimeSpan.FromMilliseconds(Duration);
+        _timeout = TimeSpan.FromMilliseconds(duration);
 
         Opened += (_, _) =>
         {
@@ -98,7 +156,7 @@ public partial class NotificationView : SukiWindow
             double physicalWidth = this.Bounds.Width * scaling;
 
             // 更准确的初始位置计算
-            var x = screen.WorkingArea.Right - (int)physicalWidth - ToastNotification.MarginRight;
+            var x = (int)(GetLatestWorkArea(screen).Right - physicalWidth - ToastNotification.MarginRight * scaling);
             var y = screen.Bounds.Bottom;
 
             Position = new PixelPoint(x, y);
@@ -267,7 +325,7 @@ public partial class NotificationView : SukiWindow
                 var targetY = (int)(screen.WorkingArea.Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
                 MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
             });
-        },noMessage:true);
+        }, noMessage: true);
     }
 
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
@@ -353,11 +411,53 @@ public partial class NotificationView : SukiWindow
         base.OnLoaded(e);
 
         // 跨平台窗口隐藏设置
+        if (OperatingSystem.IsWindows())
+        {
+            HookWndProcForWorkAreaChange();
+        }
         SetWindowHideFromTaskSwitcher();
-
         DispatcherHelper.RunOnMainThreadAsync(
             StartSlideInAnimation, DispatcherPriority.Render);
     }
+
+    [SupportedOSPlatform("windows")]
+    private void HookWndProcForWorkAreaChange()
+    {
+        try
+        {
+            var topLevel = GetTopLevel(this);
+            var handle = topLevel?.TryGetPlatformHandle()?.Handle;
+            if (handle == null || handle == IntPtr.Zero)
+            {
+                LoggerHelper.Warning("无法获取窗口句柄，无法监听工作区变化");
+                return;
+            }
+
+            _hwnd = handle.Value;
+            // 注册窗口消息钩子，监听 WM_SETTINGCHANGE
+            Win32Properties.AddWndProcHookCallback(topLevel, (hwnd, msg, wParam, lParam, ref handled) =>
+            {
+                // 只处理 "系统设置变化" + "工作区大小变化" 事件
+                if (msg == WindowsPInvoke.WM_SETTINGCHANGE && (uint)wParam == WindowsPInvoke.SPI_SETWORKAREA)
+                {
+                    // 用 SystemIdle 优先级，确保获取最新工作区（兼容 Win7）
+                    DispatcherHelper.RunOnMainThreadAsync(() =>
+                    {
+                        ToastNotification.Instance.UpdateAllToastPositions();
+                    }, DispatcherPriority.SystemIdle);
+
+                    handled = true;
+                }
+                return IntPtr.Zero;
+            });
+            _isWndProcHooked = true;
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"注册窗口钩子失败: {ex.Message}", ex);
+        }
+    }
+
 
     /// <summary>
     /// 设置窗口不在任务切换器（Alt+Tab/Task View）中显示

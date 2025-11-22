@@ -49,15 +49,15 @@ public class ToastNotification
             LoggerHelper.Warning($"{ex.Message}");
         }
     }
+    
     public static void Show(string title, string content = "", int duration = 4000, bool sound = true)
     {
         DispatcherHelper.PostOnMainThread(() =>
         {
-            Instance.AddToast(new NotificationView
+            Instance.AddToast(new NotificationView(duration)
             {
                 TitleText = title,
-                MessageText = content,
-                Duration = duration
+                MessageText = content
             });
         });
         PlayNotificationSound(sound);
@@ -93,7 +93,7 @@ public class ToastNotification
     /// <summary>
     /// 重新计算并更新所有Toast的位置（核心逻辑）
     /// </summary>
-    private void UpdateAllToastPositions(NotificationView? newToast = null)
+    public void UpdateAllToastPositions(NotificationView? newToast = null)
     {
         DispatcherHelper.PostOnMainThread(() =>
         {
@@ -107,7 +107,7 @@ public class ToastNotification
                 if (screen == null) return;
 
                 // 从屏幕工作区底部开始计算
-                double currentY = screen.WorkingArea.Bottom - MarginBottom * screen.Scaling;
+                double currentY = referenceToast.GetLatestWorkArea(screen).Bottom - MarginBottom * screen.Scaling;
 
                 // 倒序遍历：最新的Toast在最下方，旧的依次往上排
                 for (int i = _toastQueue.Count - 1; i >= 0; i--)
@@ -132,7 +132,7 @@ public class ToastNotification
 
                     // 计算目标位置（确保在同一屏幕上计算）
                     var targetPosition = new PixelPoint(
-                        (int)(toastScreen.WorkingArea.Right - toast.Bounds.Width * toastScaling - MarginRight * toastScaling),
+                        (int)(referenceToast.GetLatestWorkArea(toastScreen).Right - toast.Bounds.Width * toastScaling - MarginRight * toastScaling),
                         (int)currentY
                     );
 
