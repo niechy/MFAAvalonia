@@ -383,37 +383,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         Instances.DialogManager.CreateDialog().WithTitle("AdbEditor").WithViewModel(dialog => new AdbEditorDialogViewModel(deviceInfo, dialog)).Dismiss().ByClickingBackground().TryShow();
     }
 
-    public static int ExtractNumberFromEmulatorConfig(string emulatorConfig)
-    {
-        var match = Regex.Match(emulatorConfig, @"\d+");
-
-        if (match.Success)
-        {
-            return int.Parse(match.Value);
-        }
-
-        return 0;
-    }
-
-    public bool TryGetIndexFromConfig(string config, out int index)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(config);
-            if (doc.RootElement.TryGetProperty("extras", out var extras) && extras.TryGetProperty("mumu", out var mumu) && mumu.TryGetProperty("index", out var indexElement))
-            {
-                index = indexElement.GetInt32();
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error(ex);
-        }
-
-        index = 0;
-        return false;
-    }
+   
     private CancellationTokenSource? _refreshCancellationTokenSource;
     [RelayCommand]
     private void Refresh()
@@ -470,6 +440,38 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     private int CalculateAdbDeviceIndex(IList<AdbDeviceInfo> devices)
     {
+        if (CurrentDevice is AdbDeviceInfo info)
+        {
+            bool isCurrentPortValid = TryExtractPortFromAdbSerial(info.AdbSerial, out int currentPort);
+            int currentDeviceIndex = DeviceDisplayConverter.GetFirstEmulatorIndex(info.Config);
+
+            // 合并条件：在同一个 Where 中完成端口提取和匹配判断（解决作用域问题）
+            var matchedDevices = devices
+                .Where(device => 
+                        // 第一步：提取当前设备端口号（必须有效）
+                        TryExtractPortFromAdbSerial(device.AdbSerial, out int devicePort) &&
+                        // 第二步：按规则匹配端口
+                        (currentDeviceIndex != -1 
+                            ? devicePort == currentDeviceIndex  // 原index有效：端口号 == index
+                            : isCurrentPortValid && devicePort == currentPort)  // 原index无效：端口号 == 记忆设备端口
+                )
+                .ToList();
+
+            // 多匹配时排序：先比AdbSerial前缀（冒号前），再比设备名称
+            if (matchedDevices.Any())
+            {
+                matchedDevices.Sort((a, b) =>
+                {
+                    var aPrefix = a.AdbSerial.Split(':', 2)[0];
+                    var bPrefix = b.AdbSerial.Split(':', 2)[0];
+                    int prefixCompare = string.Compare(aPrefix, bPrefix, StringComparison.Ordinal);
+                    return prefixCompare != 0 ? prefixCompare : string.Compare(a.Name, b.Name, StringComparison.Ordinal);
+                });
+
+                return devices.IndexOf(matchedDevices.First());
+            }
+        }
+
         var config = ConfigurationManager.Current.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty);
         if (string.IsNullOrWhiteSpace(config)) return 0;
 
@@ -477,6 +479,31 @@ public partial class TaskQueueViewModel : ViewModelBase
         return devices.Select((d, i) =>
                 TryGetIndexFromConfig(d.Config, out var index) && index == targetNumber ? i : -1)
             .FirstOrDefault(i => i >= 0);
+    }
+    
+    public static int ExtractNumberFromEmulatorConfig(string emulatorConfig)
+    {
+        var match = Regex.Match(emulatorConfig, @"\d+");
+
+        if (match.Success)
+        {
+            return int.Parse(match.Value);
+        }
+
+        return 0;
+    }
+
+    private bool TryGetIndexFromConfig(string configJson, out int index)
+    {
+        index = DeviceDisplayConverter.GetFirstEmulatorIndex(configJson);
+        return index != -1;
+    }
+    
+    private static bool TryExtractPortFromAdbSerial(string adbSerial, out int port)
+    {
+        port = -1;
+        var parts = adbSerial.Split(':', 2); // 分割为IP和端口（最多分割1次）
+        return parts.Length == 2 && int.TryParse(parts[1], out port);
     }
 
     private (ObservableCollection<object> devices, int index) DetectWin32Windows()
@@ -501,6 +528,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         filtered = ApplyRegexFilters(filtered, controller.Win32);
         return filtered.Count > 0 ? windows.IndexOf(filtered.First()) : 0;
     }
+   
 
     private List<DesktopWindowInfo> ApplyRegexFilters(List<DesktopWindowInfo> windows, MaaInterface.MaaResourceControllerWin32 win32)
     {
