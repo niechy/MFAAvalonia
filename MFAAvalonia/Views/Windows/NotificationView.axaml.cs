@@ -318,8 +318,8 @@ public partial class NotificationView : SukiWindow
                 double physicalWidth = this.Bounds.Width * scaling;
                 double physicalHeight = this.Bounds.Height * scaling;
                 ActualToastHeight = physicalHeight;
-                var targetX = (int)(screen.WorkingArea.Right - physicalWidth - ToastNotification.MarginRight * scaling);
-                var targetY = (int)(screen.WorkingArea.Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
+                var targetX = (int)(GetLatestWorkArea(screen).Right - physicalWidth - ToastNotification.MarginRight * scaling);
+                var targetY = (int)(GetLatestWorkArea(screen).Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
                 MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
             });
         }, noMessage: true);
