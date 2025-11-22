@@ -2253,7 +2253,8 @@ public class MaaProcessor
     public CancellationTokenSource? CancellationTokenSource { get; set; } = new();
 
     private DateTime? _startTime;
-
+    
+    private List<DragItemViewModel> _tempTasks = [];
     public async Task StartTask(List<DragItemViewModel>? tasks, bool onlyStart = false, bool checkUpdate = false)
     {
         Status = MFATask.MFATaskStatus.NOT_STARTED;
@@ -2266,11 +2267,12 @@ public class MaaProcessor
         if (!onlyStart)
         {
             tasks ??= new List<DragItemViewModel>();
+            _tempTasks = tasks;
             var taskAndParams = tasks.Select(CreateNodeAndParam).ToList();
             InitializeConnectionTasksAsync(token);
             AddCoreTasksAsync(taskAndParams, token);
         }
-
+        
         AddPostTasksAsync(onlyStart, checkUpdate, token);
         await TaskManager.RunTaskAsync(async () =>
         {
@@ -2639,6 +2641,7 @@ public class MaaProcessor
             }, isUpdateRelated: true));
         }
     }
+    
     private MFATask CreateMaaFWTask(string? name, Func<Task> action, int count = 1)
     {
         return new MFATask
@@ -2697,7 +2700,6 @@ public class MaaProcessor
 
                 HandleStopResult(status, stopResult, onlyStart, action, isUpdateRelated);
             });
-
         }
         catch (Exception ex)
         {
@@ -2764,6 +2766,7 @@ public class MaaProcessor
         {
             VersionChecker.Check();
         }
+        _tempTasks = [];
     }
 
     private void DisplayTaskCompletionMessage(MFATask.MFATaskStatus status, bool onlyStart = false, Action? action = null)
@@ -2785,7 +2788,8 @@ public class MaaProcessor
         {
             if (!onlyStart)
             {
-                Instances.TaskQueueViewModel.TaskItemViewModels.Where(t => t.IsCheckedWithNull == null).ToList().ForEach(d => d.IsCheckedWithNull = false);
+                var list = _tempTasks.Count > 0 ? _tempTasks : Instances.TaskQueueViewModel.TaskItemViewModels.ToList();
+                list.Where(t => t.IsCheckedWithNull == null).ToList().ForEach(d => d.IsCheckedWithNull = false);
 
                 if (_startTime != null)
                 {
