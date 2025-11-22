@@ -259,15 +259,45 @@ public partial class TaskQueueView : UserControl
         }
     }
     
-    private void Run(object? sender, RoutedEventArgs e)
+    private void RunSingleTask(object? sender, RoutedEventArgs e)
     {
         var menuItem = sender as MenuItem;
-        if (menuItem.DataContext is DragItemViewModel taskItemViewModel && DataContext is TaskQueueViewModel vm)
+        if (menuItem?.DataContext is DragItemViewModel taskItemViewModel && DataContext is TaskQueueViewModel vm)
         {
             MaaProcessor.Instance.Start([taskItemViewModel]);
         }
     }
     
+    private void RunCheckedFromCurrent(object? sender, RoutedEventArgs e)
+    {
+        var menuItem = sender as MenuItem;
+        // 空值保护 + 类型校验
+        if (menuItem?.DataContext is DragItemViewModel currentTaskViewModel && DataContext is TaskQueueViewModel vm)
+        {
+            // 避免任务列表为 null 的异常
+            if (vm.TaskItemViewModels.Count == 0)
+                return;
+
+            // 找到当前任务在列表中的位置
+            int currentTaskIndex = vm.TaskItemViewModels.IndexOf(currentTaskViewModel);
+            // 若当前任务不在列表中，直接退出
+            if (currentTaskIndex < 0)
+                return;
+
+            // 筛选：从当前任务开始，往后所有 IsChecked = true 的任务
+            var tasksToRun = vm.TaskItemViewModels
+                .Skip(currentTaskIndex) // 跳过当前任务之前的所有项
+                .Where(task => task.IsChecked) // 只保留已勾选的
+                .ToList(); // 转为列表（避免枚举多次）
+
+            // 有需要运行的任务才调用 Start（避免空集合无效调用）
+            if (tasksToRun.Any())
+            {
+                MaaProcessor.Instance.Start(tasksToRun);
+            }
+        }
+    }
+
     #region 任务选项
 
     private static readonly ConcurrentDictionary<string, Control> CommonPanelCache = new();

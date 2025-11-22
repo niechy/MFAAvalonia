@@ -1237,4 +1237,10 @@
     <data name="EmulatorMultiInstanceNumber" xml:space="preserve">
         <value>多开号</value>
     </data>
+    <data name="RunCheckedFromCurrent" xml:space="preserve">
+        <value>运行当前及后续勾选</value>
+    </data>
+    <data name="RunSingle" xml:space="preserve">
+        <value>单独运行</value>
+    </data>
 </root>

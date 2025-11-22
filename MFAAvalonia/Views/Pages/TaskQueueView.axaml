@@ -30,8 +30,10 @@
 
     <UserControl.Resources>
         <ContextMenu x:Key="TaskMenu">
-            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}" Click="Run"
-                      Header="{markup:I18n {x:Static helper:LangKeys.Execute}}" />
+            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}" Click="RunSingleTask"
+                      Header="{markup:I18n {x:Static helper:LangKeys.RunSingle}}" />
+            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}" Click="RunCheckedFromCurrent"
+                      Header="{markup:I18n {x:Static helper:LangKeys.RunCheckedFromCurrent}}" />
             <MenuItem Click="Delete" Header="{markup:I18n {x:Static helper:LangKeys.Delete}}" />
         </ContextMenu>
     </UserControl.Resources>

@@ -1229,4 +1229,10 @@
     <data name="EmulatorMultiInstanceNumber" xml:space="preserve">
         <value>Multi-instance Number</value>
     </data>
+    <data name="RunSingle" xml:space="preserve">
+        <value>單獨執行</value>
+    </data>
+    <data name="RunCheckedFromCurrent" xml:space="preserve">
+        <value>執行當前及後續勾選</value>
+    </data>
 </root>
