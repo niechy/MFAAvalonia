@@ -53,9 +53,6 @@ internal static class WindowsPInvoke
 
 public partial class NotificationView : SukiWindow
 {
-    [SupportedOSPlatform("windows")] private IntPtr _hwnd = IntPtr.Zero;
-    [SupportedOSPlatform("windows")] private bool _isWndProcHooked = false;
-
     public double ActualToastHeight { get; private set; }
 
     public event Action? OnActionButtonClicked;
@@ -377,7 +374,7 @@ public partial class NotificationView : SukiWindow
 
     private const int GWL_EX_STYLE = -20;
     private const int WS_EX_APPWINDOW = 0x00040000, WS_EX_TOOLWINDOW = 0x00000080;
-    
+
 
     protected override void OnLoaded(RoutedEventArgs e)
     {
@@ -389,7 +386,7 @@ public partial class NotificationView : SukiWindow
             HookWndProcForWorkAreaChange();
             SetWindowHideFromTaskSwitcher();
         }
-  
+
         DispatcherHelper.RunOnMainThreadAsync(
             StartSlideInAnimation, DispatcherPriority.Render);
     }
@@ -406,8 +403,7 @@ public partial class NotificationView : SukiWindow
                 LoggerHelper.Warning("无法获取窗口句柄，无法监听工作区变化");
                 return;
             }
-
-            _hwnd = handle.Value;
+            
             // 注册窗口消息钩子，监听 WM_SETTINGCHANGE
             Win32Properties.AddWndProcHookCallback(topLevel, (hwnd, msg, wParam, lParam, ref handled) =>
             {
@@ -424,7 +420,6 @@ public partial class NotificationView : SukiWindow
                 }
                 return IntPtr.Zero;
             });
-            _isWndProcHooked = true;
         }
         catch (Exception ex)
         {
