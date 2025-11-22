@@ -1135,7 +1135,7 @@
         <value>导出日志前请停止任务</value>
     </data>
     <data name="MirrorCdkEmpty" xml:space="preserve">
-        <value>CDK为空，请到设置中的更新设置中填写CDK或切换更新源至GitHub</value>
+        <value>请前往“设置”中的“更新设置”，将“更新源”切换至“GitHub”，或填写Mirror酱CDK</value>
     </data>
     <data name="ContinueRunningWhenError" xml:space="preserve">
         <value>任务运行失败后是否继续运行其它任务</value>

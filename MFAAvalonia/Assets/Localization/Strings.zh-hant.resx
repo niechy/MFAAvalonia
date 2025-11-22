@@ -1125,7 +1125,7 @@
         <value>導出日誌前請停止任務</value>
     </data>
     <data name="MirrorCdkEmpty" xml:space="preserve">
-        <value>CDK 為空，請到設定中的更新設定填寫 CDK 或切換更新源至 GitHub</value>
+        <value>請前往“設定”中的“更新設定”，將“更新源”切換至“GitHub”，或填寫Mirror醬 CDK</value>
     </data>
     <data name="ContinueRunningWhenError" xml:space="preserve">
         <value>任務執行失敗後是否繼續執行其他任務</value>
