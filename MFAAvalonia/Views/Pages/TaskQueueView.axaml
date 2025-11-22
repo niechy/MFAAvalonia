@@ -630,7 +630,7 @@
                                         <TextBlock
                                             FontSize="12"
                                             FontWeight="{Binding Weight}"
-                                            Foreground="{Binding Color}"
+                                            Foreground="{Binding Color}" Background="{Binding  BackgroundColor}"
                                             Grid.Column="1"
                                             HorizontalAlignment="Stretch"
                                             Margin="0,5" TextWrapping="WrapWithOverflow"

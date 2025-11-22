@@ -8,6 +8,7 @@ using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
 using MFAAvalonia.ViewModels.Other;
 using Newtonsoft.Json.Linq;
+using SukiUI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -493,5 +494,19 @@ public static class MFAExtensions
 
         result = rawData;
         return true;
+    }
+    
+    /// <summary>
+    /// 专为 SukiUI 适配：精准查找 Light/Dark.axaml 中的主题资源
+    /// </summary>
+    public static T? FindSukiUiResource<T>(object resourceKey) where T : struct
+    {
+
+        // 1. 直接通过 SukiUI 提供的 GetInstance() 获取 SukiTheme 实例（最靠谱）
+        var sukiTheme = SukiTheme.GetInstance();
+        var currentThemeVariant = sukiTheme.ActiveBaseTheme; // 当前主题（Light/Dark）
+        var sukiResources = sukiTheme.Resources; // SukiTheme 自身的资源字典（包含 ThemeDictionaries）
+
+        return sukiResources.TryGetResource(resourceKey, currentThemeVariant, out var value) && value is T t ? t : null;
     }
 }

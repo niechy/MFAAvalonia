@@ -1,4 +1,8 @@
-﻿using MaaFramework.Binding;
+﻿using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Markup.Xaml.MarkupExtensions;
+using Avalonia.Media;
+using MaaFramework.Binding;
 using MaaFramework.Binding.Buffers;
 using MFAAvalonia.Extensions.MaaFW.Custom;
 using MFAAvalonia.Helper;

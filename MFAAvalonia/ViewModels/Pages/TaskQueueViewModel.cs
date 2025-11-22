@@ -1,5 +1,4 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -234,9 +233,14 @@ public partial class TaskQueueViewModel : ViewModelBase
         // });
     }
 
-    public const string INFO = "info:";
-    public const string ERROR = "err:";
-    public const string WARN = "warn:";
+    
+    public readonly string INFO = "info:";
+    public readonly string[] ERROR = ["err:", "error:"];
+    public readonly string[] WARNING = ["warn:", "warning:"];
+    public readonly string TRACE = "trace:";
+    public readonly string DEBUG = "debug:";
+    public readonly string CRITICAL = "critical:";
+
     public void AddLog(string content,
         IBrush? brush,
         string weight = "Regular",
@@ -244,29 +248,80 @@ public partial class TaskQueueViewModel : ViewModelBase
         bool showTime = true)
     {
         brush ??= Brushes.Black;
-        if (content.StartsWith(INFO))
+
+        var backGroundBrush = Brushes.Transparent;
+        const StringComparison comparison = StringComparison.Ordinal; // 指定匹配规则（避免大小写问题，按需调整）
+
+        if (content.StartsWith(TRACE, comparison))
         {
-            brush = Brushes.Black;
+            brush = Brushes.MediumAquamarine;
+            content = content.Substring(TRACE.Length);
+            changeColor = false;
+        }
+
+        if (content.StartsWith(DEBUG, comparison))
+        {
+            brush = Brushes.DeepSkyBlue;
+            content = content.Substring(DEBUG.Length);
+            changeColor = false;
+        }
+
+        if (content.StartsWith(INFO, comparison))
+        {
+            var color = MFAExtensions.FindSukiUiResource<Color>(
+                "SukiMuteText"
+            );
+
+            if (color != null)
+                brush = new SolidColorBrush(color.Value);
+            else
+                brush = Brushes.Black;
             content = content.Substring(INFO.Length);
         }
-        if (content.StartsWith(WARN))
+
+        var warnPrefix = WARNING.FirstOrDefault(prefix =>
+            !string.IsNullOrEmpty(prefix) && content.StartsWith(prefix, comparison)
+        );
+        if (warnPrefix != null)
         {
             brush = Brushes.Orange;
-            content = content.Substring(WARN.Length);
+            content = content.Substring(warnPrefix.Length);
             changeColor = false;
         }
-        if (content.StartsWith(ERROR))
+
+        var errorPrefix = ERROR.FirstOrDefault(prefix =>
+            !string.IsNullOrEmpty(prefix) && content.StartsWith(prefix, comparison)
+        );
+
+        if (errorPrefix != null)
         {
             brush = Brushes.OrangeRed;
-            content = content.Substring(ERROR.Length);
+            content = content.Substring(errorPrefix.Length);
             changeColor = false;
         }
+        
+        if (content.StartsWith(CRITICAL, comparison))
+        {
+            var color = MFAExtensions.FindSukiUiResource<Color>(
+                "SukiLightBorderBrush"
+            );
+            if (color != null)
+                brush = new SolidColorBrush(color.Value);
+            else
+                brush = Brushes.White;
+            backGroundBrush = Brushes.OrangeRed;
+            content = content.Substring(CRITICAL.Length);
+        }
+
         Task.Run(() =>
         {
             DispatcherHelper.RunOnMainThread(() =>
             {
                 LogItemViewModels.Add(new LogItemViewModel(content, brush, weight, "HH':'mm':'ss",
-                    showTime: showTime, changeColor: changeColor));
+                    showTime: showTime, changeColor: changeColor)
+                {
+                    BackgroundColor = backGroundBrush
+                });
                 LoggerHelper.Info(content);
             });
         });
@@ -378,7 +433,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         Instances.DialogManager.CreateDialog().WithTitle("AdbEditor").WithViewModel(dialog => new AdbEditorDialogViewModel(deviceInfo, dialog)).Dismiss().ByClickingBackground().TryShow();
     }
 
-   
+
     private CancellationTokenSource? _refreshCancellationTokenSource;
     [RelayCommand]
     private void Refresh()
@@ -442,13 +497,14 @@ public partial class TaskQueueViewModel : ViewModelBase
             int currentDeviceIndex = DeviceDisplayConverter.GetFirstEmulatorIndex(info.Config);
 
             var matchedDevices = devices
-                .Where(device => 
-                        // 第一步：提取当前设备端口号（必须有效）
-                        TryExtractPortFromAdbSerial(device.AdbSerial, out int devicePort) &&
-                        // 第二步：按规则匹配端口
-                        (currentDeviceIndex != -1 
-                            ? DeviceDisplayConverter.GetFirstEmulatorIndex(device.Config) == currentDeviceIndex  && devicePort == currentPort // 原index有效：端口号 == index
-                            : isCurrentPortValid && devicePort == currentPort) 
+                .Where(device =>
+                    // 第一步：提取当前设备端口号（必须有效）
+                    TryExtractPortFromAdbSerial(device.AdbSerial, out int devicePort)
+                    &&
+                    // 第二步：按规则匹配端口
+                    (currentDeviceIndex != -1
+                        ? DeviceDisplayConverter.GetFirstEmulatorIndex(device.Config) == currentDeviceIndex && devicePort == currentPort // 原index有效：端口号 == index
+                        : isCurrentPortValid && devicePort == currentPort)
                 )
                 .ToList();
             // 多匹配时排序：先比AdbSerial前缀（冒号前），再比设备名称
@@ -473,7 +529,7 @@ public partial class TaskQueueViewModel : ViewModelBase
                 TryGetIndexFromConfig(d.Config, out var index) && index == targetNumber ? i : -1)
             .FirstOrDefault(i => i >= 0);
     }
-    
+
     public static int ExtractNumberFromEmulatorConfig(string emulatorConfig)
     {
         var match = Regex.Match(emulatorConfig, @"\d+");
@@ -491,7 +547,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         index = DeviceDisplayConverter.GetFirstEmulatorIndex(configJson);
         return index != -1;
     }
-    
+
     private static bool TryExtractPortFromAdbSerial(string adbSerial, out int port)
     {
         port = -1;
@@ -522,7 +578,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         filtered = ApplyRegexFilters(filtered, controller.Win32);
         return filtered.Count > 0 ? windows.IndexOf(filtered.First()) : 0;
     }
-   
+
 
     private List<DesktopWindowInfo> ApplyRegexFilters(List<DesktopWindowInfo> windows, MaaInterface.MaaResourceControllerWin32 win32)
     {
@@ -661,13 +717,13 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (!hasDevices)
         {
             ToastHelper.Info((
-                isAdb ?  LangKeys.NoEmulatorFound :  LangKeys.NoWindowFound).ToLocalization());
+                isAdb ? LangKeys.NoEmulatorFound : LangKeys.NoWindowFound).ToLocalization());
         }
     }
 
     private void HandleDetectionError(Exception ex, bool isAdb)
     {
-        var targetType = isAdb ?  LangKeys.Emulator :  LangKeys.Window;
+        var targetType = isAdb ? LangKeys.Emulator : LangKeys.Window;
         ToastHelper.Warn(string.Format(
             LangKeys.TaskStackError.ToLocalization(),
             targetType.ToLocalization(),
