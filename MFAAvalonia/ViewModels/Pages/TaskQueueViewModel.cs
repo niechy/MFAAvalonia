@@ -13,17 +13,12 @@ using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.ViewModels.Other;
 using MFAAvalonia.ViewModels.UsersControls;
 using MFAAvalonia.ViewModels.UsersControls.Settings;
-using MFAAvalonia.Views.Windows;
-using SukiUI;
+using Newtonsoft.Json;
 using SukiUI.Dialogs;
-using SukiUI.Enums;
-using SukiUI.Toasts;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -442,21 +437,20 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         if (CurrentDevice is AdbDeviceInfo info)
         {
+            LoggerHelper.Info(JsonConvert.SerializeObject(info));
             bool isCurrentPortValid = TryExtractPortFromAdbSerial(info.AdbSerial, out int currentPort);
             int currentDeviceIndex = DeviceDisplayConverter.GetFirstEmulatorIndex(info.Config);
 
-            // 合并条件：在同一个 Where 中完成端口提取和匹配判断（解决作用域问题）
             var matchedDevices = devices
                 .Where(device => 
                         // 第一步：提取当前设备端口号（必须有效）
                         TryExtractPortFromAdbSerial(device.AdbSerial, out int devicePort) &&
                         // 第二步：按规则匹配端口
                         (currentDeviceIndex != -1 
-                            ? devicePort == currentDeviceIndex  // 原index有效：端口号 == index
-                            : isCurrentPortValid && devicePort == currentPort)  // 原index无效：端口号 == 记忆设备端口
+                            ? DeviceDisplayConverter.GetFirstEmulatorIndex(device.Config) == currentDeviceIndex  && devicePort == currentPort // 原index有效：端口号 == index
+                            : isCurrentPortValid && devicePort == currentPort) 
                 )
                 .ToList();
-
             // 多匹配时排序：先比AdbSerial前缀（冒号前），再比设备名称
             if (matchedDevices.Any())
             {
@@ -467,7 +461,6 @@ public partial class TaskQueueViewModel : ViewModelBase
                     int prefixCompare = string.Compare(aPrefix, bPrefix, StringComparison.Ordinal);
                     return prefixCompare != 0 ? prefixCompare : string.Compare(a.Name, b.Name, StringComparison.Ordinal);
                 });
-
                 return devices.IndexOf(matchedDevices.First());
             }
         }
@@ -503,6 +496,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         port = -1;
         var parts = adbSerial.Split(':', 2); // 分割为IP和端口（最多分割1次）
+        LoggerHelper.Info(JsonConvert.SerializeObject(parts));
         return parts.Length == 2 && int.TryParse(parts[1], out port);
     }
 
