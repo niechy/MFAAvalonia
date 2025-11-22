@@ -1,172 +1,203 @@
 #!/bin/bash
 
-# 启用颜色输出
+# 启用颜色输出（
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
 BOLD='\033[1m'
 NC='\033[0m' # 重置颜色
 
-# 初始化错误标志和架构变量
-error_occurred=0
-arch="x64"
-dotnet_install_dir="/usr/share/dotnet"  # 系统级安装目录（全局可用）
-dotnet_script_path="/tmp/dotnet-install.sh"  # 临时脚本路径
+# 核心配置
+DOWNLOAD_DIR="$HOME/Downloads"  # 脚本下载目录（用户熟悉的下载文件夹）
+DOTNET_INSTALL_SCRIPT="dotnet-install.sh"
+DOTNET_INSTALL_PATH="$HOME/.dotnet"  # 非系统级目录，无需管理员权限
+DOTNET_CHANNEL="10.0"  # 强制安装 .NET 10，不支持其他版本
+INSTALL_TYPE="运行时"  # 固定为运行时，给用户明确提示
 
-# 检测系统架构（x64/arm64）
-detect_arch() {
-    local uname_arch=$(uname -m)
-    case $uname_arch in
-        x64|x86_64|amd64) arch="x64" ;;  # 兼容 amd64（部分系统输出）
-        aarch64|arm64) arch="arm64" ;;  # 同时匹配 aarch64 和 arm64
-        *) 
-            echo -e "${RED}不支持的架构: $uname_arch${NC}"
-            exit 1 
-            ;;
-    esac
-    echo -e "${BOLD}${BLUE}检测到系统架构: $arch${NC}"
+# 极简帮助说明
+show_help() {
+    echo -e "${BOLD}${BLUE}======================================= .NET 10 运行时专属安装工具（macOS）=======================================${NC}"
+    echo -e "📌 唯一功能：安装软件必需的 .NET 10 运行时（普通用户直接运行即可）"
+    echo -e "📌 适用场景：运行需要 .NET 10 环境的软件（无需开发功能）"
+    echo -e "\n${YELLOW}进阶选项（仅开发者使用）：${NC}"
+    echo -e "  ./脚本名.sh sdk   → 安装 .NET 10 SDK（普通用户无需使用）"
+    echo -e "${NC}"
 }
 
-# 检查并获取管理员权限（系统级安装必需）
-check_admin() {
-    if [ "$EUID" -ne 0 ]; then
-        echo -e "${YELLOW}需要管理员权限（系统级安装），即将请求 sudo 密码...${NC}"
-        sudo "$0" "$@"
-        exit $?
+# 解析参数
+parse_args() {
+    if [ $# -eq 1 ]; then
+        if [ "$1" = "sdk" ]; then
+            INSTALL_TYPE="SDK"
+            echo -e "${YELLOW}🔧 已切换为：安装 .NET 10 SDK（开发者专用）${NC}"
+        else
+            echo -e "${RED}❌ 无效参数！普通用户直接运行脚本即可（仅支持 'sdk' 开发者选项）${NC}"
+            exit 1
+        fi
+    elif [ $# -gt 1 ]; then
+        echo -e "${RED}❌ 无需输入任何参数！直接运行脚本即可安装 .NET 10 运行时${NC}"
+        exit 1
+    fi
+
+    # 显示最终安装信息（明确告知是 .NET 10）
+    echo -e "${YELLOW}📋 安装信息：${NC}"
+    echo -e "  - 安装版本：.NET 10（${INSTALL_TYPE}）"
+    echo -e "  - 安装目录：${DOTNET_INSTALL_PATH}"
+    echo -e "  - 无需管理员权限，安装后即可运行目标软件"
+    echo -e "${NC}"
+}
+
+# 检查并自动安装 Homebrew（普通用户无需手动操作）
+check_brew() {
+    echo -e "${YELLOW}🔍 检查必备工具 Homebrew...${NC}"
+    if ! command -v brew &> /dev/null; then
+        echo -e "${YELLOW}⚠️  未找到 Homebrew，正在自动安装（需输入 macOS 登录密码）...${NC}"
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}❌ Homebrew 安装失败，请检查网络连接后重试${NC}"
+            exit 1
+        fi
+        # 自动加载 Homebrew（用户无需手动配置）
+        if [ -x /opt/homebrew/bin/brew ]; then
+            eval "$(/opt/homebrew/bin/brew shellenv)"  # Apple Silicon 芯片
+        else
+            eval "$(/usr/local/bin/brew shellenv)"    # Intel 芯片
+        fi
+        echo -e "${GREEN}✅ Homebrew 安装成功${NC}"
+    else
+        echo -e "${GREEN}✅ Homebrew 已安装${NC}"
     fi
 }
 
-# 基于官方 dotnet-install.sh 脚本安装 .NET Runtime 10
-install_dotnet() {
-    echo -e "\n${BLUE}===================================================================================================="
-    echo -e "${BOLD}${CYAN}正在通过官方脚本安装 .NET Runtime 10 ($arch)${NC}"
-    echo -e "${BOLD}${CYAN}Installing .NET Runtime 10 ($arch) via official script${NC}"
-    echo -e "${BLUE}===================================================================================================="${NC}
-
-    # 步骤1：安装依赖工具 wget（如果未安装）
-    echo -e "${YELLOW}1/5 检查并安装依赖工具 wget...${NC}"
+# 自动安装 wget（下载官方脚本必需）
+install_wget() {
+    echo -e "${YELLOW}🔍 检查下载工具 wget...${NC}"
     if ! command -v wget &> /dev/null; then
-        echo -e "${YELLOW}wget 未安装，正在通过 apt 安装...${NC}"
-        apt-get update > /dev/null 2>&1  # 更新包列表
-        apt-get install -y wget > /dev/null 2>&1
+        echo -e "${YELLOW}⚠️  未找到 wget，正在自动安装...${NC}"
+        brew install wget -q  # 静默安装，不打扰用户
         if [ $? -ne 0 ]; then
-            error_occurred=1
-            echo -e "${RED}❌ 安装 wget 失败，请检查网络连接或包管理器配置${NC}"
-            return
+            echo -e "${RED}❌ wget 安装失败${NC}"
+            exit 1
         fi
         echo -e "${GREEN}✅ wget 安装成功${NC}"
     else
         echo -e "${GREEN}✅ wget 已安装${NC}"
     fi
+}
 
-    # 步骤2：下载官方 dotnet-install.sh 脚本
-    echo -e "${YELLOW}2/5 下载官方 dotnet-install.sh 脚本...${NC}"
-    wget -q -O "$dotnet_script_path" https://dot.net/v1/dotnet-install.sh  # -q 静默下载
-    if [ $? -ne 0 ] || [ ! -f "$dotnet_script_path" ]; then
-        error_occurred=1
-        echo -e "${RED}❌ 下载官方脚本失败，请检查网络连接（推荐科学上网）${NC}"
-        return
+# 下载官方安装脚本（普通用户无需手动下载）
+download_dotnet_script() {
+    echo -e "${YELLOW}📥 正在下载 .NET 10 官方安装脚本...${NC}"
+    mkdir -p "${DOWNLOAD_DIR}"  # 确保下载目录存在
+    cd "${DOWNLOAD_DIR}" || {
+        echo -e "${RED}❌ 无法访问下载文件夹，请检查权限${NC}"
+        exit 1
+    }
+
+    # 静默下载，避免用户看到复杂日志
+    wget https://dot.net/v1/dotnet-install.sh -O "${DOTNET_INSTALL_SCRIPT}" -q
+    if [ $? -ne 0 ] || [ ! -f "${DOTNET_INSTALL_SCRIPT}" ]; then
+        echo -e "${RED}❌ 官方脚本下载失败，请检查网络（推荐科学上网）${NC}"
+        exit 1
     fi
     echo -e "${GREEN}✅ 官方脚本下载成功${NC}"
+}
 
-    # 步骤3：授予脚本执行权限
-    echo -e "${YELLOW}3/5 授予脚本执行权限...${NC}"
-    chmod +x "$dotnet_script_path"
+# 自动授予执行权限（用户无需手动输入 chmod）
+add_exec_permission() {
+    echo -e "${YELLOW}🔑 正在准备安装脚本...${NC}"
+    chmod +x "${DOTNET_INSTALL_SCRIPT}"
     if [ $? -ne 0 ]; then
-        error_occurred=1
-        echo -e "${RED}❌ 授予脚本执行权限失败${NC}"
-        return
+        echo -e "${RED}❌ 脚本准备失败，请检查权限${NC}"
+        exit 1
     fi
-    echo -e "${GREEN}✅ 权限授予成功${NC}"
+    echo -e "${GREEN}✅ 脚本准备完成${NC}"
+}
 
-    # 步骤4：运行官方脚本安装 .NET Runtime 10
-    echo -e "${YELLOW}4/5 安装 .NET Runtime 10（可能需要几分钟，取决于网络速度）...${NC}"
-    "$dotnet_script_path" \
-        --channel 10.0 \          # 指定安装 10.x 版本通道
-        --runtime dotnet \        # 仅安装运行时（如需 SDK 可改为 --sdk）
-        --install-dir "$dotnet_install_dir" \  # 系统级安装目录（全局可用）
-        --architecture "$arch" \  # 指定架构（与检测结果一致）
-        --quiet                   # 静默安装（减少输出）
+# 核心安装步骤（仅安装 .NET 10，无其他版本）
+install_dotnet() {
+    echo -e "${YELLOW}🚀 开始安装 .NET 10 ${INSTALL_TYPE}...${NC}"
+    echo -e "${YELLOW}⌛ 安装过程约 1-3 分钟（取决于网络速度），请耐心等待...${NC}"
+
+    # 构造安装参数（固定 .NET 10 通道）
+    install_args=(
+        --channel "${DOTNET_CHANNEL}"
+        --install-dir "${DOTNET_INSTALL_PATH}"
+        --quiet  # 静默安装，只显示关键结果
+    )
+    # 区分运行时和 SDK（默认运行时）
+    if [ "${INSTALL_TYPE}" = "运行时" ]; then
+        install_args+=(--runtime dotnet)
+    fi
+
+    # 执行官方安装脚本
+    ./"${DOTNET_INSTALL_SCRIPT}" "${install_args[@]}"
     if [ $? -ne 0 ]; then
-        error_occurred=1
-        echo -e "${RED}❌ .NET Runtime 10 安装失败${NC}"
-        return
+        echo -e "${RED}❌ .NET 10 ${INSTALL_TYPE} 安装失败，请重试或检查网络${NC}"
+        exit 1
     fi
-    echo -e "${GREEN}✅ .NET Runtime 10 安装完成${NC}"
+    echo -e "${GREEN}✅ .NET 10 ${INSTALL_TYPE} 安装完成！${NC}"
+}
 
-    # 步骤5：配置全局环境变量（所有用户可用）
-    echo -e "${YELLOW}5/5 配置全局环境变量...${NC}"
-    local env_file="/etc/profile.d/dotnet.sh"  # 系统级环境变量配置文件
-    echo "export DOTNET_ROOT=$dotnet_install_dir" > "$env_file"
-    echo "export PATH=\$PATH:\$DOTNET_ROOT" >> "$env_file"
-    chmod 644 "$env_file"  # 确保所有用户可读取
+# 自动配置环境变量（普通用户无需手动输入命令）
+config_env() {
+    echo -e "${YELLOW}⚙️  正在配置环境变量...${NC}"
+    # 自动判断终端类型（macOS 默认 zsh，兼容 bash）
+    if [ -f "$HOME/.zshrc" ]; then
+        env_file="$HOME/.zshrc"
+        shell_type="zsh"
+    elif [ -f "$HOME/.bash_profile" ]; then
+        env_file="$HOME/.bash_profile"
+        shell_type="bash"
+    else
+        env_file="$HOME/.bash_profile"
+        shell_type="bash"
+    fi
 
-    # 验证安装结果
-    source "$env_file"  # 立即加载环境变量（当前终端生效）
+    # 写入环境变量（避免重复写入）
+    if ! grep -q "DOTNET_ROOT=$DOTNET_INSTALL_PATH" "$env_file"; then
+        echo "export DOTNET_ROOT=$DOTNET_INSTALL_PATH" >> "$env_file"
+        echo "export PATH=\$PATH:\$DOTNET_ROOT" >> "$env_file"
+    fi
+
+    # 立即生效（当前终端）
+    export DOTNET_ROOT="$DOTNET_INSTALL_PATH"
+    export PATH="$PATH:$DOTNET_ROOT"
+
+    echo -e "${GREEN}✅ 环境变量配置成功！${NC}"
+    echo -e "${YELLOW}💡 说明：重启终端后，软件即可识别 .NET 10 运行时${NC}"
+}
+
+# 简单验证安装结果（普通用户能看懂）
+verify_install() {
+    echo -e "\n${YELLOW}🔍 正在验证 .NET 10 安装结果...${NC}"
     if command -v dotnet &> /dev/null; then
         local dotnet_version=$(dotnet --version 2>/dev/null)
-        echo -e "${GREEN}✅ 环境变量配置成功！当前 .NET 版本：$dotnet_version${NC}"
+        echo -e "${GREEN}🎉 安装成功！当前 .NET 版本：${dotnet_version}${NC}"
+        echo -e "${GREEN}🎉 现在可以正常运行你的软件了！${NC}"
     else
-        echo -e "${YELLOW}⚠️  环境变量已配置，但当前终端未完全生效${NC}"
-        echo -e "${YELLOW}   解决方案：重启终端 或 执行命令：source $env_file${NC}"
+        echo -e "${YELLOW}⚠️  安装成功，但当前终端未加载环境变量${NC}"
+        echo -e "${YELLOW}   解决方案：关闭终端，重新打开即可${NC}"
     fi
 }
 
-# 输出手动下载链接（补充官方方案）
-print_manual_links() {
-    echo -e "\n${YELLOW}🔗 您可以手动下载以下组件安装：${NC}"
-    echo -e "${YELLOW}🔗 You can manually download and install the following components:${NC}\n"
-
-    # 官方 SDK 链接（安装 SDK 后无需单独安装 Runtime）
-    echo -e "${WHITE}• .NET SDK 10 ($arch)（推荐，包含 Runtime）:${NC}"
-    echo -e "  ${CYAN}https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.100/dotnet-sdk-10.0.100-linux-$arch.tar.gz${NC}"
-    
-    # 官方 Runtime 链接
-    echo -e "\n${WHITE}• .NET Runtime 10 ($arch)（仅运行时）:${NC}"
-    echo -e "  ${CYAN}https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.0/dotnet-runtime-10.0.0-linux-$arch.tar.gz${NC}"
-    
-    echo -e "\n${YELLOW}📝 手动安装说明：${NC}"
-    echo -e "${CYAN}1. 下载压缩包后解压到系统目录：${NC}"
-    echo -e "   sudo tar -zxf dotnet-*-linux-$arch.tar.gz -C /usr/share/dotnet"
-    echo -e "${CYAN}2. 配置环境变量（永久生效）：${NC}"
-    echo -e "   echo 'export DOTNET_ROOT=/usr/share/dotnet' | sudo tee -a /etc/profile.d/dotnet.sh"
-    echo -e "   echo 'export PATH=\$PATH:/usr/share/dotnet' | sudo tee -a /etc/profile.d/dotnet.sh"
-    echo -e "   source /etc/profile.d/dotnet.sh"
-}
-
-# 主逻辑
+# 主逻辑（普通用户无需干预，一键完成 .NET 10 运行时安装）
 main() {
-    detect_arch
-    check_admin
+    show_help
+    parse_args "$@"
+    check_brew
+    install_wget
+    download_dotnet_script
+    add_exec_permission
     install_dotnet
+    config_env
+    verify_install
 
-    # 输出最终结果
-    echo -e "\n"
-    if [ $error_occurred -eq 0 ]; then
-        echo -e "${BOLD}${GREEN}===================================================================================================="
-        echo -e "${BOLD}${GREEN}🎉 .NET Runtime 10 安装完成！${NC}"
-        echo -e "${BOLD}${GREEN}🎉 .NET Runtime 10 installed successfully!${NC}"
-        echo -e "${BOLD}${GREEN}===================================================================================================="${NC}
-        echo -e "${YELLOW}💡 注意事项：${NC}"
-        echo -e "1. 新终端会自动加载环境变量，无需手动配置"
-        echo -e "2. 若当前终端无法识别 dotnet 命令，执行：source /etc/profile.d/dotnet.sh"
-        echo -e "3. 建议重启系统以确保所有应用正常识别 .NET 运行时"
-    else
-        echo -e "${RED}===================================================================================================="
-        echo -e "${BOLD}${RED}❌ 安装过程中出现错误${NC}"
-        echo -e "${BOLD}${RED}❌ Errors occurred during installation${NC}"
-        echo -e "\n${YELLOW}💡 解决方案：${NC}"
-        echo -e "1. 检查网络连接（推荐科学上网，避免官方资源下载失败）"
-        echo -e "2. 确保系统是 Debian/Ubuntu 系列（如非该系列，请使用手动安装方式）"
-        echo -e "3. 清理残留后重试：sudo rm -rf $dotnet_install_dir $dotnet_script_path"
-        print_manual_links
-        echo -e "${RED}===================================================================================================="${NC}
-    fi
-
+    echo -e "\n${BOLD}${GREEN}======================================= 安装完成！=======================================${NC}"
+    echo -e "${YELLOW}📌 后续操作：关闭当前终端，重新打开后运行你的软件${NC}"
     read -p "按 Enter 键退出..."
 }
 
-main
+# 执行主逻辑（普通用户直接运行）
+main "$@"
