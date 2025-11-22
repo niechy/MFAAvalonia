@@ -1125,7 +1125,7 @@
         <value>Please stop the task before exporting logs</value>
     </data>
     <data name="MirrorCdkEmpty" xml:space="preserve">
-        <value>Please go to the Update Settings in the Settings, switch the update source to GitHub, or fill in Mirror CDK</value>
+        <value>Please go to the "Update Settings" in the "Settings", switch the "update source" to "GitHub", or fill in Mirror CDK</value>
     </data>
     <data name="ContinueRunningWhenError" xml:space="preserve">
         <value>Whether to continue running other tasks after a task fails</value>
