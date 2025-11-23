@@ -514,6 +514,21 @@ public class MaaProcessor
             }
         }
     }
+    private bool IsPathLike(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return false;
+
+        // 判定规则（可根据实际场景调整）：
+        // 1. 包含路径分隔符（\ 或 /）
+        // 2. 是绝对路径（以盘符/根目录开头）或相对路径（以./、../开头，或包含目录名+文件名）
+        // 3. 包含文件扩展名（如 .py、.json、.txt 等）且不是命令行选项（不以 -/-- 开头）
+        bool hasPathSeparator = input.Contains(Path.DirectorySeparatorChar) || input.Contains(Path.AltDirectorySeparatorChar);
+        bool isAbsolutePath = Path.IsPathRooted(input);
+        bool isRelativePath = input.StartsWith("./") || input.StartsWith("../") || (hasPathSeparator && !input.StartsWith("-"));
+        bool hasFileExtension = Path.HasExtension(input) && !input.StartsWith("-");
+
+        return hasPathSeparator || isAbsolutePath || isRelativePath || hasFileExtension;
+    }
 
     async private Task<(MaaTasker?, bool)> InitializeMaaTasker(CancellationToken token) // 添加 async 和 token
     {
@@ -658,12 +673,32 @@ public class MaaProcessor
                     if (!Directory.Exists($"{AppContext.BaseDirectory}"))
                         Directory.CreateDirectory($"{AppContext.BaseDirectory}");
                     var program = MaaInterface.ReplacePlaceholder(agentConfig.ChildExec, AppContext.BaseDirectory);
-                    var args = $"{string.Join(" ", MaaInterface.ReplacePlaceholder(agentConfig.ChildArgs ?? Enumerable.Empty<string>(), AppContext.BaseDirectory).Select(ConvertPath))} {_agentClient.Id}";
+                    if (IsPathLike(program))
+                        program = Path.GetFullPath(program, AppContext.BaseDirectory);
+                    var rawArgs = agentConfig.ChildArgs ?? [];
+                    var replacedArgs = MaaInterface.ReplacePlaceholder(rawArgs, AppContext.BaseDirectory)
+                        .Select(arg =>
+                        {
+                            if (IsPathLike(arg))
+                            {
+                                try
+                                {
+                                    return Path.GetFullPath(arg, AppContext.BaseDirectory);
+                                }
+                                catch (Exception)
+                                {
+                                    // 若路径解析失败（如伪路径），返回原参数
+                                    return arg;
+                                }
+                            }
+                            return arg;
+                        })
+                        .Select(ConvertPath).ToList();
                     var startInfo = new ProcessStartInfo
                     {
                         FileName = FindPythonPath(program),
                         WorkingDirectory = AppContext.BaseDirectory,
-                        Arguments = $"{(program.Contains("python") && args.Contains(".py") && !args.Contains("-u ") ? "-u " : "")}{args}",
+                        Arguments = $"{(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") ? "-u " : "")}{string.Join(" ", replacedArgs)}",
                         UseShellExecute = false,
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
@@ -718,7 +753,7 @@ public class MaaProcessor
 
                     _agentProcess.Start();
                     LoggerHelper.Info(
-                        $"Agent启动: {MaaInterface.ReplacePlaceholder(agentConfig.ChildExec, AppContext.BaseDirectory)} {string.Join(" ", MaaInterface.ReplacePlaceholder(agentConfig.ChildArgs ?? Enumerable.Empty<string>(), AppContext.BaseDirectory))} {_agentClient.Id} "
+                        $"Agent启动: {program} {string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
                     _agentProcess.BeginOutputReadLine();
                     _agentProcess.BeginErrorReadLine();
@@ -1217,8 +1252,8 @@ public class MaaProcessor
 
     public static bool CheckInterface(out string Name, out string Version, out string CustomTitle)
     {
-  
-        if (!File.Exists(Path.Combine(AppContext.BaseDirectory,"interface.json")))
+
+        if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "interface.json")))
         {
             LoggerHelper.Info("未找到interface文件，生成interface.json...");
             Interface = new MaaInterface
@@ -2253,7 +2288,7 @@ public class MaaProcessor
     public CancellationTokenSource? CancellationTokenSource { get; set; } = new();
 
     private DateTime? _startTime;
-    
+
     private List<DragItemViewModel> _tempTasks = [];
     public async Task StartTask(List<DragItemViewModel>? tasks, bool onlyStart = false, bool checkUpdate = false)
     {
@@ -2272,7 +2307,7 @@ public class MaaProcessor
             InitializeConnectionTasksAsync(token);
             AddCoreTasksAsync(taskAndParams, token);
         }
-        
+
         AddPostTasksAsync(onlyStart, checkUpdate, token);
         await TaskManager.RunTaskAsync(async () =>
         {
@@ -2641,7 +2676,7 @@ public class MaaProcessor
             }, isUpdateRelated: true));
         }
     }
-    
+
     private MFATask CreateMaaFWTask(string? name, Func<Task> action, int count = 1)
     {
         return new MFATask

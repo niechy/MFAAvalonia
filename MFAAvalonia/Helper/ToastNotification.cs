@@ -50,7 +50,7 @@ public class ToastNotification
         }
     }
     
-    public static void Show(string title, string content = "", int duration = 4000, bool sound = true)
+    public static void Show(string title, string content = "", int duration = 40000, bool sound = true)
     {
         DispatcherHelper.PostOnMainThread(() =>
         {
