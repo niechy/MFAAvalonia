@@ -698,7 +698,7 @@ public class MaaProcessor
                     {
                         FileName = FindPythonPath(program),
                         WorkingDirectory = AppContext.BaseDirectory,
-                        Arguments = $"{(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") ? "-u " : "")}{string.Join(" ", replacedArgs)}",
+                        Arguments = $"{(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id}",
                         UseShellExecute = false,
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
@@ -753,7 +753,7 @@ public class MaaProcessor
 
                     _agentProcess.Start();
                     LoggerHelper.Info(
-                        $"Agent启动: {program} {string.Join(" ", replacedArgs)} {_agentClient.Id} "
+                        $"Agent启动: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
                     _agentProcess.BeginOutputReadLine();
                     _agentProcess.BeginErrorReadLine();
