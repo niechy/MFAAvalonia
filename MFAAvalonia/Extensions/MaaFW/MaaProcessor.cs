@@ -2348,7 +2348,7 @@ public class MaaProcessor
     }
 
 
-    private void UpdateTaskDictionary(ref Dictionary<string, JToken> taskModels,
+    private void UpdateTaskDictionary(ref MaaToken taskModels,
         List<MaaInterface.MaaInterfaceSelectOption>? options,
         List<MaaInterface.MaaInterfaceSelectAdvanced>? advanceds)
     {
@@ -2366,7 +2366,7 @@ public class MaaProcessor
                 {
                     var param = interfaceOption.Cases[selectOption.Index.Value].PipelineOverride;
                     //       Instance.NodeDictionary = Instance.NodeDictionary.MergeMaaNodes(param);
-                    taskModels = taskModels.MergeJTokens(param);
+                    taskModels.Merge(param);
                 }
             }
         }
@@ -2379,24 +2379,25 @@ public class MaaProcessor
                 {
                     var param = JsonConvert.DeserializeObject<Dictionary<string, JToken>>(selectAdvanced.PipelineOverride);
                     //       Instance.NodeDictionary = Instance.NodeDictionary.MergeMaaNodes(param);
-                    taskModels = taskModels.MergeJTokens(param);
+                    taskModels.Merge(param);
                 }
             }
         }
     }
 
-    private string SerializeTaskParams(Dictionary<string, JToken> taskModels)
+    private string SerializeTaskParams(MaaToken taskModels)
     {
-        var settings = new JsonSerializerSettings
-        {
-            Formatting = Formatting.Indented,
-            NullValueHandling = NullValueHandling.Ignore,
-            DefaultValueHandling = DefaultValueHandling.Ignore
-        };
+        // var settings = new JsonSerializerSettings
+        // {
+        //     Formatting = Formatting.Indented,
+        //     NullValueHandling = NullValueHandling.Ignore,
+        //     DefaultValueHandling = DefaultValueHandling.Ignore
+        // };
 
         try
         {
-            return JsonConvert.SerializeObject(taskModels, settings);
+            return taskModels.ToString();
+            //     return JsonConvert.SerializeObject(taskModels.Tokens, settings);
         }
         catch (Exception)
         {
@@ -2411,7 +2412,8 @@ public class MaaProcessor
             Formatting = Formatting.Indented,
             NullValueHandling = NullValueHandling.Ignore,
             DefaultValueHandling = DefaultValueHandling.Ignore
-        }));
+        })).ToMaaToken();
+        
         UpdateTaskDictionary(ref taskModels, task.InterfaceItem?.Option, task.InterfaceItem?.Advanced);
 
         var taskParams = SerializeTaskParams(taskModels);
