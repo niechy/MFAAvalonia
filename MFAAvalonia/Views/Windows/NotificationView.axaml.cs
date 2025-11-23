@@ -180,7 +180,8 @@ public partial class NotificationView : SukiWindow
         };
     }
 
-
+    public NotificationView() : this(2000) { }
+    
     public void SetContent(string title, string message)
     {
         TitleText = title;

@@ -1,11 +1,15 @@
-﻿using Avalonia.Platform;
+﻿using Avalonia.Controls;
+using Avalonia.Platform;
 using Markdown.Avalonia.Utils;
 using MFAAvalonia.ViewModels.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Security;
+using System.Security.Authentication;
 using System.Threading.Tasks;
 
 namespace MFAAvalonia.Helper;
@@ -15,21 +19,23 @@ namespace MFAAvalonia.Helper;
 /// </summary>
 public class CustomPathResolver : IPathResolver
 {
-    // 自定义HttpClient：设置超时，解决响应提前结束问题
-    private static readonly HttpClient _httpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(10)
-    };
+    // 优化HttpClient配置：设置连接池和超时，避免连接耗尽
+    private static readonly HttpClient _httpClient;
 
     // 保留原属性
     public string? AssetPathRoot { set; private get; } = AppContext.BaseDirectory;
     public IEnumerable<string>? CallerAssemblyNames { set; private get; }
 
+    // 静态构造函数：初始化HttpClient（全局唯一，避免频繁创建）
+    static CustomPathResolver()
+    {
+        _httpClient = VersionChecker.CreateHttpClientWithProxy();
+    }
 
     /// <summary>
     /// 重写图片资源解析逻辑：整合新的相对路径解析规则
     /// </summary>
-    public async Task<Stream?>? ResolveImageResource(string relativeOrAbsolutePath)
+    public async Task<Stream?> ResolveImageResource(string relativeOrAbsolutePath)
     {
         // 空值校验：避免无效请求
         if (string.IsNullOrWhiteSpace(relativeOrAbsolutePath))
@@ -66,7 +72,19 @@ public class CustomPathResolver : IPathResolver
             {
                 var stream = await OpenStream(targetUri);
                 if (stream != null)
+                {
+                    // 确保返回的流是可寻址的（第三方库依赖）
+                    if (!stream.CanSeek)
+                    {
+                        var memoryStream = new MemoryStream();
+                        await stream.CopyToAsync(memoryStream);
+                        memoryStream.Position = 0;
+                        stream.Dispose();
+                        return memoryStream;
+                    }
+                    stream.Position = 0;
                     return stream;
+                }
             }
 
             // 保留原avares协议的兜底处理（兼容原有逻辑）
@@ -85,14 +103,15 @@ public class CustomPathResolver : IPathResolver
         }
         catch (Exception ex)
         {
-            // 捕获所有未预期异常，输出日志并返回null
-            LoggerHelper.Error($"[CustomPathResolver] 解析图片失败：{relativeOrAbsolutePath}，错误：{ex}");
+            // 捕获所有未预期异常，输出日志并返回null（杜绝异常传递到第三方库）
+            LoggerHelper.Error($"解析图片失败：{relativeOrAbsolutePath}，错误：{ex}");
             return null;
         }
     }
 
     #region 新添加的路径解析逻辑（ResolveUrl + 辅助方法）
 
+    // 【原有代码不变】保留 ResolveUrl、FindFileInDirectoryAndSubfolders、IsUrl、IsAbsolutePath 方法
     /// <summary>
     /// 新的路径解析核心方法：处理相对路径/绝对路径/网络URL
     /// </summary>
@@ -178,17 +197,17 @@ public class CustomPathResolver : IPathResolver
         catch (UnauthorizedAccessException)
         {
             // 忽略无权限目录
-            LoggerHelper.Info($"[CustomPathResolver] 无权限访问目录：{rootDir}");
+            LoggerHelper.Info($"无权限访问目录：{rootDir}");
         }
         catch (PathTooLongException)
         {
             // 忽略路径过长
-            LoggerHelper.Info($"[CustomPathResolver] 路径过长：{rootDir}");
+            LoggerHelper.Info($"路径过长：{rootDir}");
         }
         catch (IOException)
         {
             // 忽略I/O错误
-            LoggerHelper.Info($"[CustomPathResolver] I/O错误：{rootDir}");
+            LoggerHelper.Info($"I/O错误：{rootDir}");
         }
 
         // 未找到文件
@@ -222,7 +241,7 @@ public class CustomPathResolver : IPathResolver
     /// <summary>
     /// 打开流：处理http/https/file/avares协议
     /// </summary>
-    async private Task<Stream?> OpenStream(Uri? url)
+    private async Task<Stream?> OpenStream(Uri? url)
     {
         if (url == null)
             return null;
@@ -233,7 +252,8 @@ public class CustomPathResolver : IPathResolver
             {
                 case "http":
                 case "https":
-                    return await OpenHttpStream(url);
+                    // 新增：手动重试2次，应对临时网络波动
+                    return await RetryAsync(() => OpenHttpStream(url), retryCount: 2);
 
                 case "file":
                     if (File.Exists(url.LocalPath))
@@ -246,19 +266,19 @@ public class CustomPathResolver : IPathResolver
                     return null;
 
                 default:
-                    LoggerHelper.Info($"[CustomPathResolver] 不支持的协议：{url.Scheme}，URL：{url}");
+                    LoggerHelper.Info($"不支持的协议：{url.Scheme}，URL：{url}");
                     return null;
             }
         }
         catch (Exception ex)
         {
-            LoggerHelper.Info($"[CustomPathResolver] 打开流失败（URL：{url}）：{ex.Message}");
+            LoggerHelper.Info($"打开流失败（URL：{url}）：{ex.Message}");
             return null;
         }
     }
 
     /// <summary>
-    /// 处理HTTP/HTTPS流：添加超时和状态码校验
+    /// 处理HTTP/HTTPS流：核心优化→将网络流拷贝到内存流，避免ResponseEnded
     /// </summary>
     async private Task<Stream?> OpenHttpStream(Uri url)
     {
@@ -267,31 +287,73 @@ public class CustomPathResolver : IPathResolver
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.UserAgent.Add(new ProductInfoHeaderValue("MFA", RootViewModel.Version));
-            response = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
 
-            if (!response.IsSuccessStatusCode)
+            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
+
+            response = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+            // 严格校验状态码（包括301/302重定向，自动跟随）
+            response.EnsureSuccessStatusCode();
+
+            // 核心优化：将网络流立即拷贝到内存流，脱离网络依赖
+            var memoryStream = new MemoryStream();
+            await response.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            if (memoryStream.Length == 0)
             {
-                LoggerHelper.Info($"[CustomPathResolver] HTTP请求失败（URL：{url}）：状态码 {response.StatusCode}");
+                LoggerHelper.Warning($"HTTP响应流为空（URL：{url}）");
+                await memoryStream.DisposeAsync();
                 return null;
             }
 
-            return await response.Content.ReadAsStreamAsync();
+            return memoryStream; // 返回内存流，而非原始网络流
         }
         catch (HttpRequestException ex)
         {
-            LoggerHelper.Info($"[CustomPathResolver] HTTP请求异常（URL：{url}）：{ex.Message}");
+            LoggerHelper.Info($"HTTP请求异常（URL：{url}）：{ex.Message}");
             return null;
         }
         catch (TaskCanceledException ex)
         {
-            LoggerHelper.Info($"[CustomPathResolver] HTTP请求超时（URL：{url}）：{ex.Message}");
+            LoggerHelper.Info($"HTTP请求超时（URL：{url}）：{ex.Message}");
+            return null;
+        }
+        catch (IOException ex)
+        {
+            LoggerHelper.Info($"HTTP流拷贝失败（URL：{url}）：{ex.Message}");
             return null;
         }
         finally
         {
-            if (response != null && !response.IsSuccessStatusCode)
-                response.Dispose();
+            response?.Dispose(); // 及时释放响应对象
         }
+    }
+
+    /// <summary>
+    /// 手动重试逻辑：应对临时网络波动
+    /// </summary>
+    private async Task<T?> RetryAsync<T>(Func<Task<T?>> action, int retryCount) where T : class
+    {
+        int attempt = 0;
+        while (attempt <= retryCount)
+        {
+            try
+            {
+                return await action();
+            }
+            catch (Exception ex)
+            {
+                attempt++;
+                if (attempt > retryCount)
+                {
+                    LoggerHelper.Info($"重试{retryCount}次后仍失败：{ex.Message}");
+                    throw;
+                }
+                // 等待100ms后重试
+                await Task.Delay(100);
+            }
+        }
+        return null;
     }
 
     #endregion
