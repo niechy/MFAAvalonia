@@ -418,4 +418,5 @@ public static class LangKeys
 	public static readonly string EmulatorMultiInstanceNumber = "EmulatorMultiInstanceNumber";
 	public static readonly string RunCheckedFromCurrent = "RunCheckedFromCurrent";
 	public static readonly string RunSingle = "RunSingle";
+	public static readonly string MirrorChyanResourceUpdateShortTip = "MirrorChyanResourceUpdateShortTip";
 }

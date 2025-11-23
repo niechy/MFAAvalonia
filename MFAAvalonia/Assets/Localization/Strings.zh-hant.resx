@@ -1235,4 +1235,7 @@
     <data name="RunCheckedFromCurrent" xml:space="preserve">
         <value>執行當前及後續勾選</value>
     </data>
+    <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
+        <value>偵測到資源更新: {0}</value>
+    </data>
 </root>

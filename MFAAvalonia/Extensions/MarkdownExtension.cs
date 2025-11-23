@@ -16,8 +16,8 @@ public class MarkdownExtension : MarkupExtension
         var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
 
         var targetDir = string.IsNullOrEmpty(Directory)
-            ? Path.Combine(resourcePath, AnnouncementViewModel.AnnouncementFolder) 
-            : Path.Combine(resourcePath, Directory);
+            ? resourcePath
+            : Path.GetFullPath(Directory,AppContext.BaseDirectory);
         
         return new Markdown.Avalonia.Markdown
         {

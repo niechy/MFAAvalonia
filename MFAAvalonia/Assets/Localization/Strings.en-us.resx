@@ -1235,4 +1235,7 @@
     <data name="RunCheckedFromCurrent" xml:space="preserve">
         <value>Run Checked From Current</value>
     </data>
+    <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
+        <value>Resource update {0} detected</value>
+    </data>
 </root>

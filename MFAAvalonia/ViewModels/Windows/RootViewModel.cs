@@ -40,6 +40,8 @@ public partial class RootViewModel : ViewModelBase
         }
     }
 
+    [ObservableProperty] private string? _windowUpdateInfo = "";
+    
     [ObservableProperty] private string? _resourceName;
 
     [ObservableProperty] private bool _isResourceNameVisible;
@@ -65,7 +67,7 @@ public partial class RootViewModel : ViewModelBase
             Instances.TaskQueueViewModel.ShouldShow = (int)(MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
         }
     }
-    
+
     public void CheckDebug()
     {
         if (IsDebugMode && _shouldTip && !MaaProcessor.Instance.IsV2)

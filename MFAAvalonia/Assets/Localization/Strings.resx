@@ -1243,4 +1243,7 @@
     <data name="RunSingle" xml:space="preserve">
         <value>单独运行</value>
     </data>
+    <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
+        <value>检测到资源更新: {0}</value>
+    </data>
 </root>
