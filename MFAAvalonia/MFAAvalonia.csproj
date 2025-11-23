@@ -9,7 +9,7 @@
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
         <LangVersion>14</LangVersion>
         <TargetFramework>net10.0</TargetFramework>
-		<TargetFramework Condition="'$(OS)' == 'Windows_NT'">net10.0-windows</TargetFramework>
+		<TargetFramework Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))">net10.0-windows</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
