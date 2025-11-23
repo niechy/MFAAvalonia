@@ -33,7 +33,7 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
 
 ## 使用需求
 
-- .NET 8.0
+- .NET 10.0
 - 一个基于`MaaFramework`的资源项目
 
 ## 说明

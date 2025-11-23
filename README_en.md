@@ -34,7 +34,7 @@ on **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** ✨_
 
 ## Requirements
 
-- .NET 8.0
+- .NET 10.0
 - A resource project based on `MaaFramework`
 
 ## Documentation
