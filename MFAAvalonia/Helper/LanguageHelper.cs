@@ -1,8 +1,4 @@
-﻿using Avalonia.Collections;
-using Avalonia.Markup.Xaml.MarkupExtensions;
-using AvaloniaExtensions.Axaml.Markup;
-using CommunityToolkit.Mvvm.ComponentModel;
-using Lang.Avalonia;
+﻿using Lang.Avalonia;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Localization;
 using MFAAvalonia.ViewModels.Other;
@@ -10,10 +6,10 @@ using Newtonsoft.Json;
 using SukiUI;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Resources;
 using System.Threading;
 
@@ -25,12 +21,14 @@ public static class LanguageHelper
 
     public static readonly List<SupportedLanguage> SupportedLanguages =
     [
-        new("zh-hans", "简体中文"),
-        new("zh-hant", "繁體中文"),
-        new("en-us", "English"),
+        new("zh-CN", "简体中文"),
+        new("zh-Hant", "繁體中文"),
+        new("en-US", "English"),
     ];
 
-    public static Dictionary<string, CultureInfo> Cultures { get; } = new() {};
+    public static Dictionary<string, CultureInfo> Cultures { get; } = new()
+    {
+    };
 
     public static SupportedLanguage GetLanguage(string key)
     {
@@ -44,6 +42,8 @@ public static class LanguageHelper
             ? culture
             : Cultures[language.Key] = new CultureInfo(language.Key);
         _currentLanguage = language.Key;
+        CultureInfo.CurrentCulture = I18nManager.Instance.Culture ?? CultureInfo.InvariantCulture;
+        CultureInfo.CurrentUICulture = I18nManager.Instance.Culture ?? CultureInfo.InvariantCulture;
         SukiTheme.GetInstance().Locale = I18nManager.Instance.Culture;
         LanguageChanged?.Invoke(null, new LanguageEventArgs(language));
     }
@@ -54,22 +54,30 @@ public static class LanguageHelper
             ? culture
             : Cultures[language] = new CultureInfo(language);
         _currentLanguage = language;
+        CultureInfo.CurrentCulture = I18nManager.Instance.Culture ?? CultureInfo.InvariantCulture;
+        CultureInfo.CurrentUICulture = I18nManager.Instance.Culture ?? CultureInfo.InvariantCulture;
         SukiTheme.GetInstance().Locale = I18nManager.Instance.Culture;
         LanguageChanged?.Invoke(null, new LanguageEventArgs(GetLanguage(language)));
     }
 
     // 存储语言的字典
     private static readonly Dictionary<string, Dictionary<string, string>> Langs = new();
-    private static string _currentLanguage = ConfigurationManager.Current.GetValue(ConfigurationKeys.CurrentLanguage, LanguageHelper.SupportedLanguages[0].Key, ["zh-hans", "zh-hant", "en-us"]);
+    private static string _currentLanguage = ConfigurationManager.Current.GetValue(ConfigurationKeys.CurrentLanguage, LanguageHelper.SupportedLanguages[0].Key, ["zh-CN", "zh-Hant", "en-US"]);
     public static string CurrentLanguage => _currentLanguage;
     public static void Initialize()
     {
         LoggerHelper.Info("Initializing LanguageManager...");
+        var plugin = new MFAResxLangPlugin();
+        var defaultCulture = CultureInfo.CurrentUICulture;
         I18nManager.Instance.Register(
-            plugin: new MFAResxLangPlugin(),  // 格式插件
-            defaultCulture: CultureInfo.InvariantCulture,  // 默认语言
-            error: out var error  // 错误信息（可选）
+            plugin, // 格式插件
+            defaultCulture: defaultCulture, // 默认语言
+            error: out var error // 错误信息（可选）
         );
+        if (!plugin.IsLoaded)
+        {
+            plugin.Load(defaultCulture);
+        }
         LoadLanguages();
     }
 
@@ -82,7 +90,7 @@ public static class LanguageHelper
             var langFiles = Directory.GetFiles(langPath, "*.json");
             foreach (string langFile in langFiles)
             {
-                
+
                 var langCode = Path.GetFileNameWithoutExtension(langFile).ToLower();
                 if (IsSimplifiedChinese(langCode))
                 {

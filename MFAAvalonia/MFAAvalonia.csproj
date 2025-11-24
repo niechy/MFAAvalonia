@@ -128,11 +128,11 @@
 		  <DesignTime>True</DesignTime>
 		  <DependentUpon>LangKeys.tt</DependentUpon>
 		</Compile>
-		<Compile Update="Assets\Localization\Strings.Designer.cs">
-		  <DesignTime>True</DesignTime>
-		  <AutoGen>True</AutoGen>
-		  <DependentUpon>Strings.resx</DependentUpon>
-		</Compile>
+        <Compile Update="Assets\Localization\Strings.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Strings.resx</DependentUpon>
+        </Compile>
 		<Compile Update="Helper\LangKeys.cs">
 		  <AutoGen>True</AutoGen>
 		  <DesignTime>True</DesignTime>
@@ -188,7 +188,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Update="Assets\Localization\Strings.resx">
+      <EmbeddedResource Update="Assets\Localization\Strings*.resx">
         <Generator>PublicResXFileCodeGenerator</Generator>
         <LastGenOutput>Strings.Designer.cs</LastGenOutput>
       </EmbeddedResource>

@@ -64,7 +64,19 @@ public static class LoggerHelper
             _logger.Information(message?.ToString() ?? string.Empty);
         }
     }
-
+    
+    public static void Debug(object? message)
+    {
+        if (_logger == null)
+        {
+            _logCache.Add((LogLevel.Debug, message?.ToString() ?? string.Empty));
+        }
+        else
+        {
+            _logger.Debug(message?.ToString() ?? string.Empty);
+        }
+    }
+    
     public static void Error(object message)
     {
         if (_logger == null)
@@ -89,7 +101,19 @@ public static class LoggerHelper
             _logger.Error(errorMsg);
         }
     }
-
+    
+    public static void Warn(object message)
+    {
+        if (_logger == null)
+        {
+            _logCache.Add((LogLevel.Warn, message.ToString() ?? string.Empty));
+        }
+        else
+        {
+            _logger.Warning(message.ToString() ?? string.Empty);
+        }
+    }
+    
     public static void Warning(object message)
     {
         if (_logger == null)
