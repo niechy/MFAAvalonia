@@ -65,7 +65,8 @@ namespace Markdown.Avalonia.Full
             if (!hasHtml)
             {
                 var htmlPlugin = new HtmlPlugin();
-                htmlPlugin.Inject(new[] { syntaxPlugin });
+                if (syntaxPlugin != null)
+                    htmlPlugin.Inject([syntaxPlugin]);
                 htmlPlugin.Setup(setupInf);
             }
 

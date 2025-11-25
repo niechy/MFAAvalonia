@@ -8,6 +8,8 @@
         <ApplicationIcon>logo.ico</ApplicationIcon>
         <AssemblyVersion>1.0.9</AssemblyVersion>
         <FileVersion>1.0.9</FileVersion>
+				<DebugSymbols>False</DebugSymbols>
+		<DebugType>None</DebugType>
     </PropertyGroup>
 	
     <PropertyGroup>
