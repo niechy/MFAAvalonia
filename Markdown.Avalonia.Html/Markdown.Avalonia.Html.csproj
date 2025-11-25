@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.0" />
+    <PackageReference Include="Avalonia" Version="11.3.9" />
     <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
   </ItemGroup>
     <PropertyGroup>
