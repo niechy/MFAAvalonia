@@ -1044,7 +1044,6 @@ namespace Markdown.Avalonia
         /// </summary>
         private IEnumerable<CInline> DoTextDecorations(string text, Func<string, IEnumerable<CInline>> defaultHandler)
         {
-            Console.WriteLine(text);
             var rtn = new List<CInline>();
 
             var buff = new StringBuilder();
