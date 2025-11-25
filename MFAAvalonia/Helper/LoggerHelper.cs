@@ -1,6 +1,4 @@
-﻿using MFAAvalonia.Helper;
-using Serilog;
-using Serilog.Core;
+﻿using Serilog;
 using SharpHook.Data;
 using System;
 using System.Collections.Generic;
@@ -9,7 +7,7 @@ namespace MFAAvalonia.Helper;
 
 public static class LoggerHelper
 {
-    private static Logger? _logger;
+    private static Serilog.Core.Logger? _logger;
     private static readonly List<(LogLevel level, string message)> _logCache = [];
 
     public static void InitializeLogger()
