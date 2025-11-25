@@ -1241,4 +1241,7 @@
     <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
         <value>Lark webhook</value>
     </data>
+    <data name="ExternalNotificationLarkWebhookDescription" xml:space="preserve">
+        <value>After filling in the Webhook address, you do not need to fill in the Lark ID and Bot Token</value>
+    </data>
 </root>

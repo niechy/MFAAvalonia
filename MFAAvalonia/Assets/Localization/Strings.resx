@@ -1249,4 +1249,7 @@
     <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
         <value>飞书 webhook</value>
     </data>
+    <data name="ExternalNotificationLarkWebhookDescription" xml:space="preserve">
+        <value>填写 Webhook 地址后，无需再填写飞书 ID 和 机器人令牌</value>
+    </data>
 </root>

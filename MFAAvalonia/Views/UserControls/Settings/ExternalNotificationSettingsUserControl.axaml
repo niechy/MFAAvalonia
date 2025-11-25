@@ -195,11 +195,13 @@
                             HorizontalAlignment="Center"
                             Text="{Binding LarkWebhookUrl}"
                             Width="215" />
-                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                        
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Orientation="Horizontal">
                             <TextBlock
                                 FontSize="16"
                                 Text="{markup:I18n {x:Static helper:LangKeys.ExternalNotificationLarkWebhookUrl}}"
                                 VerticalAlignment="Center" />
+                            <userControls:TooltipBlock TooltipText="{markup:I18n {x:Static helper:LangKeys.ExternalNotificationLarkWebhookDescription}}"/>
                         </StackPanel>
                     </DockPanel>
                     <DockPanel>

@@ -1241,4 +1241,7 @@
     <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
         <value>飛書 webhook</value>
     </data>
+    <data name="ExternalNotificationLarkWebhookDescription" xml:space="preserve">
+        <value>填寫 Webhook 位址後，無需再填寫飛書 ID 和 機器人 Token</value>
+    </data>
 </root>
