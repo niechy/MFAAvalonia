@@ -1,4 +1,6 @@
 ﻿using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using System;
@@ -14,13 +16,36 @@ namespace ColorTextBlock.Avalonia.Geometries
 
         internal ImageGeometry(
             CImage owner,
-            IImage image, double width, double height,
+            IImage image,
+            double width,
+            double height,
             TextVerticalAlignment alignment) :
             base(owner, width, height, height, alignment, false)
         {
             this.Image = image;
             this.Width = width;
             this.Height = height;
+            this.OnMousePressed = _ =>
+            {
+                owner.ClickCommand?.Execute(owner.ClickCommandParameter);
+            };
+            this.OnMouseEnter = ctrl =>
+            {
+                try
+                {
+                    ctrl.Cursor = new Cursor(StandardCursorType.Hand);
+                }
+                catch
+                {
+                    /*I cannot assume Cursor.ctor doesn't throw an exception.*/
+                }
+            };
+
+            this.OnMouseLeave = ctrl =>
+            {
+
+                ctrl.Cursor = Cursor.Default;
+            };
         }
 
         public override void Render(DrawingContext ctx)

@@ -3,6 +3,7 @@ using Avalonia.Data;
 using Avalonia.Data.Converters;
 using Avalonia.Layout;
 using ColorTextBlock.Avalonia;
+using ColorTextBlock.Avalonia.Utils;
 using HtmlAgilityPack;
 using Markdown.Avalonia.Html.Core.Utils;
 using Markdown.Avalonia.Plugins;
@@ -22,7 +23,11 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             _setupInfo = info;
         }
 
-        public IEnumerable<string> SupportTag => new[] { "img", "image" };
+        public IEnumerable<string> SupportTag => new[]
+        {
+            "img",
+            "image"
+        };
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -46,8 +51,12 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
 
             CImage image = _setupInfo.LoadImage(link);
+            
+            image.ClickCommand = new ImageOpenCommand();
+            image.ClickCommandParameter = link;
+            
             if (!String.IsNullOrEmpty(title)
-                && !title.Any(ch => !Char.IsLetterOrDigit(ch)))
+                && title.All(char.IsLetterOrDigit))
             {
                 image.Classes.Add(title);
             }
@@ -58,15 +67,15 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 if (heightLen.Unit == Unit.Percentage)
                 {
                     image.Bind(CImage.LayoutHeightProperty,
-                               new Binding(nameof(Layoutable.Height))
-                               {
-                                   RelativeSource = new RelativeSource()
-                                   {
-                                       Mode = RelativeSourceMode.FindAncestor,
-                                       AncestorType = typeof(CTextBlock),
-                                   },
-                                   Converter = new MultiplyConverter(heightLen.Value / 100)
-                               });
+                        new Binding(nameof(Layoutable.Height))
+                        {
+                            RelativeSource = new RelativeSource()
+                            {
+                                Mode = RelativeSourceMode.FindAncestor,
+                                AncestorType = typeof(CTextBlock),
+                            },
+                            Converter = new MultiplyConverter(heightLen.Value / 100)
+                        });
                 }
                 else
                 {
@@ -80,15 +89,15 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 if (widthLen.Unit == Unit.Percentage)
                 {
                     image.Bind(CImage.LayoutHeightProperty,
-                               new Binding(nameof(Layoutable.Width))
-                               {
-                                   RelativeSource = new RelativeSource()
-                                   {
-                                       Mode = RelativeSourceMode.FindAncestor,
-                                       AncestorType = typeof(CTextBlock),
-                                   },
-                                   Converter = new MultiplyConverter(widthLen.Value / 100)
-                               });
+                        new Binding(nameof(Layoutable.Width))
+                        {
+                            RelativeSource = new RelativeSource()
+                            {
+                                Mode = RelativeSourceMode.FindAncestor,
+                                AncestorType = typeof(CTextBlock),
+                            },
+                            Converter = new MultiplyConverter(widthLen.Value / 100)
+                        });
                 }
                 else
                 {
@@ -99,7 +108,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 }
             }
 
-            generated = new[] { image };
+            generated =
+            [
+                image
+            ];
             return true;
         }
 

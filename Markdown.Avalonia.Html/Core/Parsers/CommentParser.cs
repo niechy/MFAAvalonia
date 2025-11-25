@@ -11,7 +11,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
     /// <summary>
     /// remove comment element
     /// </summary>
-    public class CommentParsre : IBlockTagParser, IInlineTagParser
+    public class CommentParser : IBlockTagParser, IInlineTagParser
     {
         public IEnumerable<string> SupportTag => new[] { HtmlNode.HtmlNodeTypeNameComment };
 

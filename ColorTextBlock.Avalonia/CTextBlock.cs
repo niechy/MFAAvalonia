@@ -417,7 +417,6 @@ namespace ColorTextBlock.Avalonia
         protected override void OnPointerReleased(PointerReleasedEventArgs e)
         {
             base.OnPointerReleased(e);
-
             if (_pressed is not null && e.InitialPressMouseButton == MouseButton.Left)
             {
                 e.Handled = true;

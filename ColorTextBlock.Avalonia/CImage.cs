@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
+using System.Windows.Input;
 
 namespace ColorTextBlock.Avalonia
 {
@@ -38,6 +40,12 @@ namespace ColorTextBlock.Avalonia
         /// </summary>
         public static readonly StyledProperty<bool> SaveAspectRatioProperty =
             AvaloniaProperty.Register<CImage, bool>(nameof(SaveAspectRatio));
+        
+        public static readonly StyledProperty<ICommand?> ClickCommandProperty =
+            AvaloniaProperty.Register<CImage, ICommand?>(nameof(ClickCommand));
+
+        public static readonly StyledProperty<object?> ClickCommandParameterProperty =
+            AvaloniaProperty.Register<CImage, object?>(nameof(ClickCommandParameter));
 
         public double? LayoutWidth
         {
@@ -67,7 +75,23 @@ namespace ColorTextBlock.Avalonia
             get => GetValue(SaveAspectRatioProperty);
             set => SetValue(SaveAspectRatioProperty, value);
         }
+        /// <summary>
+        /// 图片点击命令
+        /// </summary>
+        public ICommand? ClickCommand
+        {
+            get => GetValue(ClickCommandProperty);
+            set => SetValue(ClickCommandProperty, value);
+        }
 
+        /// <summary>
+        /// 图片点击命令参数（通常为图片路径/URL）
+        /// </summary>
+        public object? ClickCommandParameter
+        {
+            get => GetValue(ClickCommandParameterProperty);
+            set => SetValue(ClickCommandParameterProperty, value);
+        }
         public Task<IImage?>? Task { get; }
         private IImage WhenError { get; }
         public IImage? Image { private set; get; }

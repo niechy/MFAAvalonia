@@ -2,10 +2,12 @@
 using Avalonia.Layout;
 using AvaloniaEdit;
 using ColorTextBlock.Avalonia;
+using HtmlAgilityPack;
 using Markdown.Avalonia.SyntaxHigh;
 using Markdown.Avalonia.SyntaxHigh.Extensions;
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 
@@ -13,6 +15,41 @@ namespace Markdown.Avalonia.Html.Core.Utils
 {
     static class DocUtils
     {
+        public static HorizontalAlignment? GetHorizontalAlignment(HtmlNode node)
+        {
+            // 优先解析 align 属性（如 <p align="center">）
+            var alignAttr = node.Attributes["align"];
+            if (alignAttr != null)
+            {
+                return alignAttr.Value.ToLower() switch
+                {
+                    "left" => HorizontalAlignment.Left,
+                    "right" => HorizontalAlignment.Right,
+                    "center" => HorizontalAlignment.Center,
+                    _ => null
+                };
+            }
+
+            // 解析 style 中的 text-align（如 <div style="text-align: center;">）
+            var styleAttr = node.Attributes["style"];
+            if (styleAttr != null)
+            {
+                var match = Regex.Match(styleAttr.Value, @"text-align\s*:\s*(\w+)", RegexOptions.IgnoreCase);
+                if (match.Success)
+                {
+                    return match.Groups[1].Value.ToLower() switch
+                    {
+                        "left" => HorizontalAlignment.Left,
+                        "right" => HorizontalAlignment.Right,
+                        "center" => HorizontalAlignment.Center,
+                        _ => null
+                    };
+                }
+            }
+
+            return null;
+        }
+        
         public static Control CreateCodeBlock(string? lang, string code, ReplaceManager manager, SyntaxHighlightProvider provider)
         {
             var txtEdit = new TextEditor();

@@ -8,6 +8,7 @@ using Avalonia.Styling;
 using ColorDocument.Avalonia;
 using ColorDocument.Avalonia.DocumentElements;
 using ColorTextBlock.Avalonia;
+using ColorTextBlock.Avalonia.Utils;
 using Markdown.Avalonia.Controls;
 using Markdown.Avalonia.Parsers;
 using Markdown.Avalonia.Parsers.Builtin;
@@ -16,6 +17,7 @@ using Markdown.Avalonia.Tables;
 using Markdown.Avalonia.Utils;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -28,6 +30,7 @@ namespace Markdown.Avalonia
     public class Markdown : AvaloniaObject, IMarkdownEngine, IMarkdownEngine2
     {
         #region const
+
         /// <summary>
         /// maximum nested depth of [] and () supported by the transform; implementation detail
         /// </summary>
@@ -74,6 +77,7 @@ namespace Markdown.Avalonia
         public bool StrictBoldItalic { get; set; }
 
         private string _assetPathRoot;
+
         /// <inheritdoc/>
         public string AssetPathRoot
         {
@@ -94,6 +98,7 @@ namespace Markdown.Avalonia
         public IEnumerable<string> AssetAssemblyNames => _assetAssemblyNames;
 
         private ICommand? _hyperlinkCommand;
+
         /// <inheritdoc/>
         public ICommand? HyperlinkCommand
         {
@@ -106,8 +111,8 @@ namespace Markdown.Avalonia
 
         public MdAvPlugins Plugins { get; set; }
 
-        [Obsolete]
-        private IBitmapLoader? _loader;
+        [Obsolete] private IBitmapLoader? _loader;
+
         /// <inheritdoc/>
         [Obsolete("Please use Plugins propety. see https://github.com/whistyun/Markdown.Avalonia/wiki/How-to-migrages-to-ver11")]
         public IBitmapLoader? BitmapLoader
@@ -124,6 +129,7 @@ namespace Markdown.Avalonia
         }
 
         private IContainerBlockHandler? _containerBlockHandler;
+
         public IContainerBlockHandler? ContainerBlockHandler
         {
             get => _containerBlockHandler ?? _setupInfo?.ContainerBlock;
@@ -176,11 +182,11 @@ namespace Markdown.Avalonia
 
             var stack = new StackTrace();
             _assetAssemblyNames = stack.GetFrames()
-                            .Select(frm => frm?.GetMethod()?.DeclaringType?.Assembly?.GetName()?.Name)
-                            .OfType<string>()
-                            .Where(name => !name.Equals("Markdown.Avalonia"))
-                            .Distinct()
-                            .ToArray();
+                .Select(frm => frm?.GetMethod()?.DeclaringType?.Assembly?.GetName()?.Name)
+                .OfType<string>()
+                .Where(name => !name.Equals("Markdown.Avalonia"))
+                .Distinct()
+                .ToArray();
 
             Plugins = new MdAvPlugins();
 
@@ -204,9 +210,7 @@ namespace Markdown.Avalonia
 
             // top-level block parser
             topBlocks.Add(
-                info.EnableListMarkerExt ?
-                    new ExtListParser() :
-                    new CommonListParser());
+                info.EnableListMarkerExt ? new ExtListParser() : new CommonListParser());
 
             topBlocks.Add(new FencedCodeBlockParser(info.EnablePreRenderingCodeBlock));
 
@@ -222,9 +226,7 @@ namespace Markdown.Avalonia
             subBlocks.Add(new AtxHeaderParser());
 
             subBlocks.Add(
-                info.EnableRuleExt ?
-                    new ExtHorizontalParser() :
-                    new CommonHorizontalParser());
+                info.EnableRuleExt ? new ExtHorizontalParser() : new CommonHorizontalParser());
 
             if (info.EnableTableBlock)
             {
@@ -252,7 +254,6 @@ namespace Markdown.Avalonia
                     inlines.Add(InlineParser.New(_strikethrough, nameof(StrikethroughEvaluator), StrikethroughEvaluator));
             }
 
-
             // parser registered by plugin
 
             topBlocks.AddRange(info.TopBlock.Select(bp => bp.Upgrade()));
@@ -278,6 +279,28 @@ namespace Markdown.Avalonia
             _setupInfo = info;
         }
 
+        private string? PreprocessText(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return input;
+
+            // 正则匹配HTML注释，捕获注释内容（不含前后标签）
+            var commentPattern = new Regex(@"<!--([\s\S]*?)-->", RegexOptions.Compiled);
+
+            // 对每个匹配项进行处理
+            return commentPattern.Replace(input, match =>
+            {
+                // 提取注释中间的内容（捕获组1）
+                string commentContent = match.Groups[1].Value;
+
+                // 检查内容中是否包含中文字符（仅汉字，范围：\u4e00-\u9fa5）
+                bool hasChineseChars = Regex.IsMatch(commentContent, @"[\u4e00-\u9fa5]");
+
+                // 若包含汉字，则保留中间内容；否则完全移除
+                return hasChineseChars ? commentContent : string.Empty;
+            });
+        }
+
         public Control Transform(string? text)
         {
             return TransformElement(text).Control;
@@ -289,7 +312,7 @@ namespace Markdown.Avalonia
             {
                 throw new ArgumentNullException(nameof(text));
             }
-
+            text = PreprocessText(text);
             SetupParser();
 
             text = TextUtil.Normalize(text, _tabWidth);
@@ -356,7 +379,7 @@ namespace Markdown.Avalonia
 
             var candidates = new List<Candidate<BlockParser2>>();
 
-            for (; ; )
+            for (;;)
             {
                 candidates.Clear();
 
@@ -402,16 +425,18 @@ namespace Markdown.Avalonia
 
 
             void RunBlockRest(
-               string text, int index, int length,
-               ParseStatus status,
+                string text,
+                int index,
+                int length,
+                ParseStatus status,
                 int parserStart,
-               List<DocumentElement> outto)
+                List<DocumentElement> outto)
             {
                 for (; parserStart < _blockParsers.Length; ++parserStart)
                 {
                     var parser = _blockParsers[parserStart];
 
-                    for (; ; )
+                    for (;;)
                     {
                         var match = parser.Pattern.Match(text, index, length);
                         if (!match.Success) break;
@@ -439,37 +464,321 @@ namespace Markdown.Avalonia
             }
         }
 
+
         private IEnumerable<CInline> PrivateRunSpanGamut(string text)
         {
+            // Debug：初始解析入口
             var rtn = new List<CInline>();
-            RunSpanRest(text, 0, text.Length, 0, rtn);
-            return rtn;
 
-            void RunSpanRest(
-                string text, int index, int length,
-                int parserStart,
-                List<CInline> outto)
+            // 步骤1：先递归处理所有成对符号（分阶段核心：成对匹配优先）
+            var pairParsedResult = ParseAllNestedPairs(text, 1);
+            rtn.AddRange(pairParsedResult);
+
+            return rtn;
+        }
+
+        #region 核心：通用成对符号解析（可扩展、支持嵌套）
+
+        /// <summary>
+        /// 可扩展的成对符号配置（支持任意成对符号，按优先级排序：长符号优先，避免短符号截断长符号）
+        /// 格式：(开始符号, 结束符号, 生成对应Inline元素的工厂方法)
+        /// </summary>
+// 显式指定 ImmutableList 的泛型参数为完整元组类型，解决类型推断失败问题
+        private readonly ImmutableList<(
+            string Start,
+            string End,
+            Func<IEnumerable<CInline>, CInline> ElementFactory
+            )> _pairSymbols = ImmutableList.Create<(
+            string Start,
+            string End,
+            Func<IEnumerable<CInline>, CInline> ElementFactory
+            )>(
+            // 优先级：长符号 > 短符号（避免 "**" 被 "*" 截断）
+            ("**", "**", inlines => new CBold(inlines)), // 加粗
+            ("__", "__", inlines => new CUnderline(inlines)), // 下划线
+            ("~~", "~~", inlines => new CStrikethrough(inlines)), // 删除线
+            ("*", "*", inlines => new CItalic(inlines)), // 斜体
+            ("_", "_", inlines => new CItalic(inlines)) // 斜体（下划线版）
+            // 可扩展添加其他成对符号，例如：
+            // ("===", "===", inlines => new CHighlight(inlines)), // 高亮
+            // ("::", "::", inlines => new CCustom(inlines))       // 自定义符号
+        );
+        private bool IsRangeOverlapped(int targetStart, int targetEnd, List<(int Start, int End)> usedRanges)
+        {
+            foreach (var (usedStart, usedEnd) in usedRanges)
+            {
+                // 目标范围与已占用范围有重叠 → 返回true
+                if (targetStart < usedEnd && targetEnd > usedStart)
+                    return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// 递归解析所有嵌套的成对符号（分阶段第一步：先处理完所有成对符号）
+        /// </summary>
+        /// <param name="text">当前要解析的文本</param>
+        /// <param name="level">解析层级（用于Debug缩进）</param>
+        /// <returns>成对符号解析后的Inline元素列表</returns>
+        private List<CInline> ParseAllNestedPairs(string text, int level)
+        {
+            var result = new List<CInline>();
+            if (string.IsNullOrEmpty(text))
+            {
+                return result;
+            }
+            // 步骤1：找到当前文本中最内层的成对符号（避免外层符号截断内层）
+            var (found, startSym, endSym, elementFactory, startIdx, endIdx) = FindInnermostPair(text, level);
+
+            if (!found)
+            {
+                var parserResult = ProcessWithOriginalParsers(text, level);
+                result.AddRange(parserResult);
+                return result;
+            }
+
+            // 步骤3：有成对符号 → 拆分前/中/后三段处理
+            string preText = text.Substring(0, startIdx); // 成对符号之前的文本
+            string middleText = text.Substring(
+                startIdx + startSym.Length,
+                endIdx - (startIdx + startSym.Length) // 成对符号之间的文本（要递归解析）
+            );
+            string postText = text.Substring(endIdx + endSym.Length); // 成对符号之后的文本
+
+            // ① 处理“成对符号之前”的文本（递归解析，确保前面的成对符号也被处理）
+            if (!string.IsNullOrEmpty(preText))
+            {
+                var preResult = ParseAllNestedPairs(preText, level + 1);
+                result.AddRange(preResult);
+            }
+            var middleResult = ParseAllNestedPairs(middleText, level + 1);
+
+            // ③ 生成当前成对符号对应的Inline元素（如CBold、CItalic）
+            var pairElement = elementFactory(middleResult);
+            result.Add(pairElement);
+
+            // ④ 处理“成对符号之后”的文本（递归解析，确保后面的成对符号也被处理）
+            if (!string.IsNullOrEmpty(postText))
+            {
+                var postResult = ParseAllNestedPairs(postText, level + 1);
+                result.AddRange(postResult);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 查找文本中最内层的成对符号（核心：避免外层符号截断内层）
+        /// </summary>
+        /// <returns>是否找到、开始符号、结束符号、元素工厂、开始索引、结束索引</returns>
+        private (bool Found, string StartSym, string EndSym, Func<IEnumerable<CInline>, CInline> ElementFactory, int StartIdx, int EndIdx) FindInnermostPair(string text, int level)
+        {
+            // 拆分：长符号组（长度≥2）、短符号组（长度=1），长符号优先处理
+            var longPairs = _pairSymbols.Where(p => p.Start.Length >= 2).ToList();
+            var shortPairs = _pairSymbols.Where(p => p.Start.Length == 1).ToList();
+
+            var allValidPairs = new List<(string Start, string End, Func<IEnumerable<CInline>, CInline> Factory, int StartIdx, int EndIdx, int NestLevel)>();
+
+            // 步骤1：先收集长符号的“完整有效匹配”（优先处理，不被短符号干扰）
+            foreach (var (start, end, factory) in longPairs)
+            {
+                int currentStartIdx = 0;
+                while (true)
+                {
+                    // 查找长符号起始标记（非转义）
+                    currentStartIdx = FindNonEscaped(text, start, currentStartIdx);
+                    if (currentStartIdx == -1) break;
+
+                    // 关键：只找长符号对应的结束标记（不找短符号）
+                    int currentEndIdx = FindNonEscaped(text, end, currentStartIdx + start.Length);
+                    if (currentEndIdx == -1)
+                    {
+                        // 找不到长符号结束标记 → 跳过当前起始标记，继续找下一个
+                        currentStartIdx += start.Length;
+                        continue;
+                    }
+
+                    // 计算嵌套层级
+                    int nestLevel = CalculateNestLevel(text, currentStartIdx + start.Length, currentEndIdx, level);
+                    // 添加长符号有效匹配
+                    allValidPairs.Add((start, end, factory, currentStartIdx, currentEndIdx, nestLevel));
+
+                    // 跳过当前长符号的范围，避免重复匹配
+                    currentStartIdx = currentEndIdx + end.Length;
+                }
+            }
+
+            // 步骤2：收集短符号的有效匹配（跳过长符号已经占用的位置）
+            var longUsedRanges = allValidPairs.Select(p => (Start: p.StartIdx, End: p.EndIdx + p.End.Length)).ToList();
+            foreach (var (start, end, factory) in shortPairs)
+            {
+                int currentStartIdx = 0;
+                while (true)
+                {
+                    // 查找短符号起始标记（非转义）
+                    currentStartIdx = FindNonEscaped(text, start, currentStartIdx);
+                    if (currentStartIdx == -1) break;
+
+                    // 检查当前位置是否被长符号占用 → 占用则跳过
+                    if (IsRangeOverlapped(currentStartIdx, currentStartIdx + start.Length, longUsedRanges))
+                    {
+                        currentStartIdx += start.Length;
+                        continue;
+                    }
+
+                    // 查找短符号结束标记（非转义，且不被长符号占用）
+                    int currentEndIdx = FindNonEscaped(text, end, currentStartIdx + start.Length);
+                    if (currentEndIdx == -1) break;
+
+                    // 检查结束位置是否被长符号占用 → 占用则跳过
+                    if (IsRangeOverlapped(currentEndIdx, currentEndIdx + end.Length, longUsedRanges))
+                    {
+                        currentStartIdx = currentEndIdx + end.Length;
+                        continue;
+                    }
+
+                    // 计算嵌套层级
+                    int nestLevel = CalculateNestLevel(text, currentStartIdx + start.Length, currentEndIdx, level);
+                    // 添加短符号有效匹配
+                    allValidPairs.Add((start, end, factory, currentStartIdx, currentEndIdx, nestLevel));
+
+                    // 跳过当前短符号的范围
+                    currentStartIdx = currentEndIdx + end.Length;
+                }
+            }
+
+            if (allValidPairs.Count == 0)
+                return (false, "", "", null, -1, -1);
+
+            // 保持原排序规则：最内层→结束位置靠前→符号长度长
+            var bestPair = allValidPairs
+                .OrderByDescending(p => p.NestLevel) // 最内层优先
+                .ThenBy(p => p.EndIdx) // 结束位置靠前优先
+                .ThenByDescending(p => p.Start.Length) // 长符号优先（兜底，避免短符号截断）
+                .First();
+
+            return (true, bestPair.Start, bestPair.End, bestPair.Factory, bestPair.StartIdx, bestPair.EndIdx);
+        }
+
+        /// <summary>
+        /// 查找非转义的目标字符串（跳过 \ 开头的符号）
+        /// </summary>
+        private int FindNonEscaped(string text, string target, int startFrom)
+        {
+            int index = text.IndexOf(target, startFrom);
+            while (index != -1)
+            {
+                // 检查是否被转义（前面不是 \，或前面是 \\ 双重转义）
+                bool isEscaped = index > 0 && text[index - 1] == '\\';
+                if (isEscaped)
+                {
+                    index = text.IndexOf(target, index + target.Length);
+                    continue;
+                }
+
+                // 优化：如果目标是长符号（≥2字符），检查是否被短符号“截断”（比如 ** 中间夹了 *）
+                if (target.Length >= 2)
+                {
+                    bool isTruncated = false;
+                    // 检查长符号内部是否包含对应的短符号（比如 ** 内部有 * → 不视为完整长符号）
+                    string innerText = text.Substring(index, target.Length);
+                    var shortSymbol = target.Substring(0, 1); // 长符号对应的短符号（如 **→*）
+                    if (innerText.Count(c => c.ToString() == shortSymbol) != target.Length)
+                    {
+                        isTruncated = true;
+                    }
+
+                    if (isTruncated)
+                    {
+                        index = text.IndexOf(target, index + target.Length);
+                        continue;
+                    }
+                }
+
+                return index;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// 计算文本片段的嵌套层级（用于判断最内层成对符号）
+        /// </summary>
+        private int CalculateNestLevel(string text, int startIdx, int endIdx, int level)
+        {
+            int nestLevel = 0;
+            int currentIdx = startIdx;
+
+            while (currentIdx < endIdx)
+            {
+                // 遍历所有成对符号，统计嵌套次数
+                foreach (var (start, end, _) in _pairSymbols)
+                {
+                    if (currentIdx + start.Length <= endIdx && text.Substring(currentIdx, start.Length) == start)
+                    {
+                        nestLevel++;
+                        currentIdx += start.Length;
+                        break;
+                    }
+                    if (currentIdx + end.Length <= endIdx && text.Substring(currentIdx, end.Length) == end)
+                    {
+                        nestLevel--;
+                        currentIdx += end.Length;
+                        break;
+                    }
+                }
+                currentIdx++;
+            }
+
+            return nestLevel;
+        }
+
+        #endregion
+
+        #region 原Parser处理逻辑（分阶段第二步：处理非成对符号文本）
+
+        /// <summary>
+        /// 对非成对符号的文本，执行原有的InlineParser Pattern判断（保持原逻辑不变）
+        /// </summary>
+        private List<CInline> ProcessWithOriginalParsers(string text, int level)
+        {
+            var rtn = new List<CInline>();
+
+            void OriginalRunSpanRest(
+                string txt,
+                int index,
+                int length,
+                int parserStart)
             {
                 for (; parserStart < _inlines.Length; ++parserStart)
                 {
                     var parser = _inlines[parserStart];
 
-                    for (; ; )
+                    for (;;)
                     {
-                        var match = parser.Pattern.Match(text, index, length);
-                        if (!match.Success) break;
+                        var match = parser.Pattern.Match(txt, index, length);
+                        if (!match.Success)
+                        {
+                            break;
+                        }
 
-                        var rslt = parser.Convert(text, match, this, out int parseBegin, out int parserEnd);
-                        if (rslt is null) break;
+                        var rslt = parser.Convert(txt, match, this, out int parseBegin, out int parserEnd);
+                        if (rslt is null)
+                        {
+                            break;
+                        }
 
                         if (parseBegin > index)
                         {
-                            RunSpanRest(text, index, parseBegin - index, parserStart + 1, outto);
+                            OriginalRunSpanRest(txt, index, parseBegin - index, parserStart + 1);
                         }
-                        outto.AddRange(rslt);
+
+                        rtn.AddRange(rslt);
 
                         length -= parserEnd - index;
                         index = parserEnd;
+
+                        if (length == 0)
+                        {
+                            break;
+                        }
                     }
 
                     if (length == 0) break;
@@ -478,15 +787,15 @@ namespace Markdown.Avalonia
                 if (length != 0)
                 {
                     var subtext = text.Substring(index, length);
-
-                    outto.AddRange(
-                        StrictBoldItalic ?
-                            DoText(subtext) :
-                            DoTextDecorations(subtext, s => DoText(s)));
+                    rtn.AddRange(StrictBoldItalic ? DoText(subtext) : DoTextDecorations(subtext, s => DoText(s)));
                 }
             }
+
+            OriginalRunSpanRest(text, 0, text.Length, 0);
+            return rtn;
         }
 
+        #endregion
 
         #region grammer - paragraph
 
@@ -501,9 +810,7 @@ namespace Markdown.Avalonia
         {
             var trimemdText = _newlinesLeadingTrailing.Replace(text, "");
 
-            string[] grafs = trimemdText == "" ?
-                new string[0] :
-                _newlinesMultiple.Split(trimemdText);
+            string[] grafs = trimemdText == "" ? new string[0] : _newlinesMultiple.Split(trimemdText);
 
             foreach (var g in grafs)
             {
@@ -533,9 +840,7 @@ namespace Markdown.Avalonia
                 }
 
                 var inlines = PrivateRunSpanGamut(chip);
-                var ctbox = indiAlignment.HasValue ?
-                    new CTextBlockElement(inlines, ParagraphClass, indiAlignment.Value) :
-                    new CTextBlockElement(inlines, ParagraphClass);
+                var ctbox = indiAlignment.HasValue ? new CTextBlockElement(inlines, ParagraphClass, indiAlignment.Value) : new CTextBlockElement(inlines, ParagraphClass);
 
                 yield return ctbox;
             }
@@ -563,7 +868,7 @@ namespace Markdown.Avalonia
                         )?                  # title is optional
                     \)
                 )", GetNestedBracketsPattern(), GetNestedParensPattern()),
-                  RegexOptions.Singleline | RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
+            RegexOptions.Singleline | RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
 
 
         private CInline ImageOrHrefInlineEvaluator(Match match)
@@ -645,8 +950,12 @@ namespace Markdown.Avalonia
 
                 if (cimg is not null)
                 {
+                    cimg.ClickCommand = new ImageOpenCommand();
+                    // 命令参数为图片的原始路径/URL（urlTxt）
+                    cimg.ClickCommandParameter = urlTxt;
+
                     if (!String.IsNullOrEmpty(title)
-                        && !title.Any(ch => !Char.IsLetterOrDigit(ch)))
+                        && title.All(Char.IsLetterOrDigit))
                     {
                         cimg.Classes.Add(title);
                     }
@@ -655,16 +964,17 @@ namespace Markdown.Avalonia
             }
 
             CImage image = _setupInfo.LoadImage(urlTxt);
+            image.ClickCommand = new ImageOpenCommand();
+            image.ClickCommandParameter = urlTxt; // 传递图片路径/URL
 
             if (!String.IsNullOrEmpty(title)
-                && !title.Any(ch => !Char.IsLetterOrDigit(ch)))
+                && title.All(char.IsLetterOrDigit))
             {
                 image.Classes.Add(title);
             }
 
             return image;
         }
-
 
         #endregion
 
@@ -705,7 +1015,13 @@ namespace Markdown.Avalonia
             span = Regex.Replace(span, @"^[ ]*", ""); // leading whitespace
             span = Regex.Replace(span, @"[ ]*$", ""); // trailing whitespace
 
-            var result = new CCode(new[] { new CRun() { Text = span } });
+            var result = new CCode(new[]
+            {
+                new CRun()
+                {
+                    Text = span
+                }
+            });
 
             return result;
         }
@@ -728,6 +1044,7 @@ namespace Markdown.Avalonia
         /// </summary>
         private IEnumerable<CInline> DoTextDecorations(string text, Func<string, IEnumerable<CInline>> defaultHandler)
         {
+            Console.WriteLine(text);
             var rtn = new List<CInline>();
 
             var buff = new StringBuilder();
@@ -775,80 +1092,80 @@ namespace Markdown.Avalonia
                         break;
 
                     case ':': // emoji?
+                    {
+                        var nxtI = text.IndexOf(':', i + 1);
+                        if (nxtI != -1 && EmojiTable.TryGet(text.Substring(i + 1, nxtI - i - 1), out var emoji))
                         {
-                            var nxtI = text.IndexOf(':', i + 1);
-                            if (nxtI != -1 && EmojiTable.TryGet(text.Substring(i + 1, nxtI - i - 1), out var emoji))
-                            {
-                                buff.Append(emoji);
-                                i = nxtI;
-                            }
-                            else buff.Append(':');
-                            break;
+                            buff.Append(emoji);
+                            i = nxtI;
                         }
+                        else buff.Append(':');
+                        break;
+                    }
 
                     case '*': // bold? or italic
+                    {
+                        var oldI = i;
+                        var inline = ParseAsBoldOrItalic(text, ref i);
+                        if (inline == null)
                         {
-                            var oldI = i;
-                            var inline = ParseAsBoldOrItalic(text, ref i);
-                            if (inline == null)
-                            {
-                                buff.Append(text, oldI, i - oldI + 1);
-                            }
-                            else
-                            {
-                                HandleBefore();
-                                rtn.Add(inline);
-                            }
-                            break;
+                            buff.Append(text, oldI, i - oldI + 1);
                         }
+                        else
+                        {
+                            HandleBefore();
+                            rtn.Add(inline);
+                        }
+                        break;
+                    }
 
                     case '~': // strikethrough?
+                    {
+                        var oldI = i;
+                        var inline = ParseAsStrikethrough(text, ref i);
+                        if (inline == null)
                         {
-                            var oldI = i;
-                            var inline = ParseAsStrikethrough(text, ref i);
-                            if (inline == null)
-                            {
-                                buff.Append(text, oldI, i - oldI + 1);
-                            }
-                            else
-                            {
-                                HandleBefore();
-                                rtn.Add(inline);
-                            }
-                            break;
+                            buff.Append(text, oldI, i - oldI + 1);
                         }
+                        else
+                        {
+                            HandleBefore();
+                            rtn.Add(inline);
+                        }
+                        break;
+                    }
 
                     case '_': // underline?
+                    {
+                        var oldI = i;
+                        var inline = ParseAsUnderline(text, ref i);
+                        if (inline == null)
                         {
-                            var oldI = i;
-                            var inline = ParseAsUnderline(text, ref i);
-                            if (inline == null)
-                            {
-                                buff.Append(text, oldI, i - oldI + 1);
-                            }
-                            else
-                            {
-                                HandleBefore();
-                                rtn.Add(inline);
-                            }
-                            break;
+                            buff.Append(text, oldI, i - oldI + 1);
                         }
+                        else
+                        {
+                            HandleBefore();
+                            rtn.Add(inline);
+                        }
+                        break;
+                    }
 
                     case '%': // color?
+                    {
+                        var oldI = i;
+                        var inline = ParseAsColor(text, ref i);
+                        if (inline == null)
                         {
-                            var oldI = i;
-                            var inline = ParseAsColor(text, ref i);
-                            if (inline == null)
-                            {
-                                buff.Append(text, oldI, i - oldI + 1);
-                            }
-                            else
-                            {
-                                HandleBefore();
-                                rtn.Add(inline);
-                            }
-                            break;
+                            buff.Append(text, oldI, i - oldI + 1);
                         }
+                        else
+                        {
+                            HandleBefore();
+                            rtn.Add(inline);
+                        }
+                        break;
+                    }
                 }
             }
 
@@ -874,9 +1191,12 @@ namespace Markdown.Avalonia
                 int bgn = start + cnt;
                 int end = last;
 
+                // 核心修改：递归解析 __ 内部的内容
+                var innerText = text.Substring(bgn, end - bgn);
+                var innerInlines = PrivateRunSpanGamut(innerText);
+
                 start = end + cnt - 1;
-                var span = new CUnderline(PrivateRunSpanGamut(text.Substring(bgn, end - bgn)));
-                return span;
+                return new CUnderline(innerInlines); // 用递归结果创建下划线
             }
             else
             {
@@ -899,9 +1219,12 @@ namespace Markdown.Avalonia
                 int bgn = start + cnt;
                 int end = last;
 
+                // 核心修改：递归解析 ~~ 内部的内容
+                var innerText = text.Substring(bgn, end - bgn);
+                var innerInlines = PrivateRunSpanGamut(innerText);
+
                 start = end + cnt - 1;
-                var span = new CStrikethrough(PrivateRunSpanGamut(text.Substring(bgn, end - bgn)));
-                return span;
+                return new CStrikethrough(innerInlines); // 用递归结果创建删除线
             }
             else
             {
@@ -925,31 +1248,26 @@ namespace Markdown.Avalonia
                 int bgn = start + cnt;
                 int end = last;
 
+                // 核心修改：递归解析 **/* 内部的内容（比如链接）
+                var innerText = text.Substring(bgn, end - bgn);
+                var innerInlines = PrivateRunSpanGamut(innerText); // 递归！解析内部的链接/其他格式
+
                 switch (cnt)
                 {
-                    case 1: // italic
-                        {
-                            start = end + cnt - 1;
-
-                            var span = new CItalic(PrivateRunSpanGamut(text.Substring(bgn, end - bgn)));
-                            return span;
-                        }
+                    case 1: //  italic
+                        start = end + cnt - 1;
+                        return new CItalic(innerInlines); // 用递归解析后的内容创建斜体
                     case 2: // bold
-                        {
-                            start = end + cnt - 1;
-                            var span = new CBold(PrivateRunSpanGamut(text.Substring(bgn, end - bgn)));
-                            return span;
-                        }
-
+                        start = end + cnt - 1;
+                        return new CBold(innerInlines); // 用递归解析后的内容创建加粗
                     default: // >3; bold-italic
+                        bgn = start + 3;
+                        start = end + 3 - 1;
+                        var inline = new CItalic(innerInlines);
+                        return new CBold(new[]
                         {
-                            bgn = start + 3;
-                            start = end + 3 - 1;
-
-                            var inline = new CItalic(PrivateRunSpanGamut(text.Substring(bgn, end - bgn)));
-                            var span = new CBold(new[] { inline });
-                            return span;
-                        }
+                            inline
+                        });
                 }
             }
             else
@@ -1003,9 +1321,7 @@ namespace Markdown.Avalonia
                     case "color":
                         try
                         {
-                            var color = colorLbl.StartsWith("#") ?
-                                (IBrush?)new BrushConverter().ConvertFrom(colorLbl) :
-                                (IBrush?)new BrushConverter().ConvertFromString(colorLbl);
+                            var color = colorLbl.StartsWith("#") ? (IBrush?)new BrushConverter().ConvertFrom(colorLbl) : (IBrush?)new BrushConverter().ConvertFromString(colorLbl);
 
                             span.Foreground = color;
                         }
@@ -1015,9 +1331,7 @@ namespace Markdown.Avalonia
                     case "background":
                         try
                         {
-                            var color = colorLbl.StartsWith("#") ?
-                                (IBrush?)new BrushConverter().ConvertFrom(colorLbl) :
-                                (IBrush?)new BrushConverter().ConvertFromString(colorLbl);
+                            var color = colorLbl.StartsWith("#") ? (IBrush?)new BrushConverter().ConvertFrom(colorLbl) : (IBrush?)new BrushConverter().ConvertFromString(colorLbl);
 
                             span.Background = color;
                         }
@@ -1103,7 +1417,10 @@ namespace Markdown.Avalonia
                 else
                     yield return new CLineBreak();
                 var t = _eoln.Replace(line, " ");
-                yield return new CRun() { Text = t };
+                yield return new CRun()
+                {
+                    Text = t
+                };
             }
         }
 
@@ -1124,10 +1441,11 @@ namespace Markdown.Avalonia
                       [^\[\]]+      # Anything other than brackets
                     |
                       \[
-                          ", _nestDepth) + RepeatString(
-                   @" \]
+                          ", _nestDepth)
+                + RepeatString(
+                    @" \]
                    )*"
-                   , _nestDepth);
+                    , _nestDepth);
         }
 
         /// <summary>
@@ -1143,10 +1461,11 @@ namespace Markdown.Avalonia
                       [^()\n\t]+? # Anything other than parens or whitespace
                     |
                       \(
-                          ", _nestDepth) + RepeatString(
-                   @" \)
+                          ", _nestDepth)
+                + RepeatString(
+                    @" \)
                    )*?"
-                   , _nestDepth);
+                    , _nestDepth);
         }
 
         /// <summary>

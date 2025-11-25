@@ -32,9 +32,9 @@ namespace Markdown.Avalonia.Html.Core
             _bindParsers = new();
 
             UnknownTags = UnknownTagsOption.PassThrough;
-
+            
+            Register(new CommentParser());
             Register(new TagIgnoreParser());
-            Register(new CommentParsre());
             Register(new ImageParser(info));
             Register(new CodeBlockParser(highlight));
             //Register(new CodeSpanParser());
@@ -172,10 +172,10 @@ namespace Markdown.Avalonia.Html.Core
         /// </summary>
         public IEnumerable<StyledElement> ParseChildrenJagging(HtmlNode node)
         {
-            return ParseChildrenJagigng(node.ChildNodes);
+            return ParseChildrenJagging(node.ChildNodes);
         }
 
-        public IEnumerable<StyledElement> ParseChildrenJagigng(IEnumerable<HtmlNode> nodes)
+        public IEnumerable<StyledElement> ParseChildrenJagging(IEnumerable<HtmlNode> nodes)
         {
             // search empty line
             var empNd = nodes.Select((nd, idx) => new { Node = nd, Index = idx })

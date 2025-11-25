@@ -1,7 +1,8 @@
-﻿using Avalonia;
+﻿﻿using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using ColorTextBlock.Avalonia;
 using HtmlAgilityPack;
 using Markdown.Avalonia.Html.Core.Utils;
@@ -10,7 +11,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Xml.Linq;
 
 namespace Markdown.Avalonia.Html.Core.Parsers
 {
@@ -74,8 +74,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
             static string? GetArrayAt(string[] array, int idx)
             {
-                if (idx < array.Length
-                    && !string.IsNullOrWhiteSpace(array[idx]))
+                if (idx < array.Length && !string.IsNullOrWhiteSpace(array[idx]))
                 {
                     return array[idx];
                 }
@@ -85,25 +84,20 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
         public bool TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
-            // create instance
-
+            // 创建控件实例
             if (FlowDocumentTag is null)
             {
                 switch (FlowDocumentTagText)
                 {
                     case "#border":
-                        var pnl = new StackPanel();
-                        pnl.Orientation = Orientation.Vertical;
+                        var pnl = new StackPanel { Orientation = Orientation.Vertical };
                         var parseResult = manager.ParseChildrenAndGroup(node).ToArray();
                         foreach (var ctrl in parseResult)
                             pnl.Children.Add(ctrl);
 
-                        var bdr = new Border();
-                        bdr.Child = pnl;
-
+                        var bdr = new Border { Child = pnl };
                         generated = new[] { bdr };
                         break;
-
 
                     case "#blocks":
                         generated = manager.ParseChildrenAndGroup(node).ToArray();
@@ -128,23 +122,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                     default:
                         throw new InvalidOperationException();
                 }
-
-                // for href anchor
-                //if (node.Attributes["id"]?.Value is string idval
-                //    && generated.FirstOrDefault() is AvaloniaObject tag)
-                //{
-                //    tag.SetValue(DocumentAnchor.HyperlinkAnchorProperty, idval);
-                //}
             }
             else
             {
                 var tag = (StyledElement)Activator.CreateInstance(FlowDocumentTag)!;
-
-                // for href anchor
-                //if (node.Attributes["id"]?.Value is string idval)
-                //{
-                //    tag.SetValue(DocumentAnchor.HyperlinkAnchorProperty, idval);
-                //}
 
                 if (tag is StackPanel pnl)
                 {
@@ -201,7 +182,6 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 bool SetupCSpan(CSpan span)
                 {
                     var content = (AvaloniaList<CInline>)span.Content;
-
                     var parseResult = manager.ParseChildrenJagging(node).ToArray();
 
                     if (parseResult.TryCast<CInline>(out var parsed))
@@ -210,7 +190,6 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                     }
                     else if (tag is CSpan && manager.Grouping(parseResult).TryCast<CTextBlock>(out var paragraphs))
                     {
-                        // FIXME: Markdonw.Avalonia can't bubbling a block element in a inline element.
                         foreach (var para in paragraphs)
                             foreach (var inline in para.Content.ToArray())
                                 content.Add(inline);
@@ -221,21 +200,54 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 }
             }
 
-            // apply tag
+            // 应用对齐样式（核心逻辑：处理align属性和text-align样式）
+            var alignment = DocUtils.GetHorizontalAlignment(node);
+            if (alignment.HasValue)
+            {
+                foreach (var element in generated)
+                {
+                    // 处理容器控件（如StackPanel、Border）的水平对齐
+                    if (element is Panel panel)
+                    {
+                        panel.HorizontalAlignment = alignment.Value;
+                    }
+                    // 处理文本控件（如CTextBlock）的文本对齐
+                    if (element is CTextBlock textBlock)
+                    {
+                        textBlock.TextAlignment = alignment.Value switch
+                        {
+                            HorizontalAlignment.Left => TextAlignment.Left,
+                            HorizontalAlignment.Right => TextAlignment.Right,
+                            HorizontalAlignment.Center => TextAlignment.Center,
+                            _ => textBlock.TextAlignment
+                        };
+                        textBlock.HorizontalAlignment = alignment.Value;
+                    }
+                    // 处理Border控件的对齐
+                    if (element is Border border)
+                    {
+                        border.HorizontalAlignment = alignment.Value;
+                        if (border.Child is Panel borderChild)
+                        {
+                            borderChild.HorizontalAlignment = alignment.Value;
+                        }
+                    }
+                }
+            }
 
+            // 应用标签样式
             if (TagNameReference is not null)
             {
                 var clsNm = TagName.GetClass();
                 foreach (var tag in generated)
                 {
                     tag.Classes.Add(clsNm);
-
                     if (tag is Border bdr)
                         bdr.Child.Classes.Add(clsNm);
                 }
             }
 
-            // extra modify
+            // 额外样式修改
             if (ExtraModifyName is not null)
             {
                 switch ("ExtraModify" + ExtraModifyName)
@@ -270,11 +282,9 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             return true;
         }
 
-
         public void ExtraModifyHyperlink(CHyperlink link, HtmlNode node, ReplaceManager manager)
         {
             var href = node.Attributes["href"]?.Value;
-
             if (href is not null)
             {
                 link.CommandParameter = href;
@@ -296,28 +306,22 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
         public void ExtraModifySubscript(CSpan span, HtmlNode node, ReplaceManager manager)
         {
-            // TODO implements Subscript
-            //Typography.SetVariants(span, FontVariants.Subscript);
+            // TODO: 实现下标逻辑
         }
 
         public void ExtraModifySuperscript(CSpan span, HtmlNode node, ReplaceManager manager)
         {
-            // TODO implements Superscript
-            //Typography.SetVariants(span, FontVariants.Superscript);
+            // TODO: 实现上标逻辑
         }
 
         public void ExtraModifyAcronym(CSpan span, HtmlNode node, ReplaceManager manager)
         {
-            // TODO implements Acronym
-            //var title = node.Attributes["title"]?.Value;
-            //if (title is not null)
-            //    span.ToolTip = title;
+            // TODO: 实现首字母缩写逻辑
         }
 
         public void ExtraModifyCenter(Border center, HtmlNode node, ReplaceManager manager)
         {
             center.HorizontalAlignment = HorizontalAlignment.Center;
-
             foreach (var child in ((StackPanel)center.Child!).Children)
             {
                 if (child is CTextBlock cbox)
@@ -339,7 +343,6 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             while (reader.ReadLine() is string line)
             {
                 if (line.StartsWith("#")) continue;
-
                 var elements = line.Split('|').Select(t => t.Trim()).ToArray();
                 yield return new TypicalParseInfo(elements);
             }

@@ -38,7 +38,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             var expander = new Expander()
             {
                 Header = header,
-                Content = Create(manager.Engine, manager.Grouping(manager.ParseChildrenJagigng(content))),
+                Content = Create(manager.Engine, manager.Grouping(manager.ParseChildrenJagging(content))),
             };
 
             if (node.Attributes["open"] is HtmlAttribute openAttr
