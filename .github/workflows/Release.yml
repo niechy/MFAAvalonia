@@ -128,7 +128,7 @@ jobs:
           
       - name: Set NuGet Source
         run: |
-          dotnet nuget add source "https://api.nuget.org/v3/index.json" --name "nuget.org" 
+          dotnet nuget add source "https://api.nuget.org/v3/index.json" --name "nuget" 
 
       - name: Restore Dependencies
         run: dotnet restore
