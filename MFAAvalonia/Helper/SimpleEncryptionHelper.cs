@@ -6,6 +6,8 @@ using System.Linq;
 using System.Management;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 
 
@@ -151,9 +153,24 @@ public static class SimpleEncryptionHelper
     {
         if (string.IsNullOrWhiteSpace(plainText))
             return string.Empty;
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var data = Encoding.UTF8.GetBytes(plainText);
+                var wEncryptedData = ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
+                return Convert.ToBase64String(wEncryptedData);
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warn("Windows专属数据加密失败: " + e.Message);
+            }
+        }
+
         var key = GetDeviceKeys(Generate());
         var encryptedData = EncryptProvider.AESEncrypt(plainText, key);
         return encryptedData;
+
     }
 
     // 解密（仅当前设备可用）
@@ -161,12 +178,32 @@ public static class SimpleEncryptionHelper
     {
         if (string.IsNullOrWhiteSpace(encryptedBase64))
             return string.Empty;
+        string result;
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var data = Convert.FromBase64String(encryptedBase64);
+                var decryptedData = ProtectedData.Unprotect(data, null, DataProtectionScope.CurrentUser);
+                result = Encoding.UTF8.GetString(decryptedData);
+                if (string.IsNullOrWhiteSpace(result))
+                    throw new Exception("result is null");
+                return result;
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warn("Windows专属数据解密失败: " + e.Message);
+            }
+        }
 
         try
         {
             // 1. 尝试用新机器码解密（稳定版本）
             var newKey = GetDeviceKeys(Generate()); // 基于Generate()的新机器码
-            return EncryptProvider.AESDecrypt(encryptedBase64, newKey);
+            result = EncryptProvider.AESDecrypt(encryptedBase64, newKey);
+            if (string.IsNullOrWhiteSpace(result))
+                throw new Exception("result is null");
+            return result;
         }
         catch (Exception)
         {
@@ -174,7 +211,10 @@ public static class SimpleEncryptionHelper
             {
                 // 2. 尝试用旧机器码解密（包含完整版本号，兼容历史数据）
                 var legacyKey = GetDeviceKeys(GenerateLegacy());
-                return EncryptProvider.AESDecrypt(encryptedBase64, legacyKey);
+                result = EncryptProvider.AESDecrypt(encryptedBase64, legacyKey);
+                if (string.IsNullOrWhiteSpace(result))
+                    throw new Exception("result is null");
+                return result;
             }
             catch (Exception)
             {
