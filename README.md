@@ -13,7 +13,7 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
 <!-- prettier-ignore-end -->
 
   <img alt="license" src="https://img.shields.io/github/license/SweetSmellFox/MFAAvalonia">
-  <img alt=".NET" src="https://img.shields.io/badge/.NET-≥%208-512BD4?logo=csharp">
+  <img alt=".NET" src="https://img.shields.io/badge/.NET-%E2%89%A5%2010-512BD4?logo=csharp">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blueviolet">
   <img alt="commit" src="https://img.shields.io/github/commit-activity/m/SweetSmellFox/MFAAvalonia">
   <img alt="stars" src="https://img.shields.io/github/stars/SweetSmellFox/MFAAvalonia?style=social">
