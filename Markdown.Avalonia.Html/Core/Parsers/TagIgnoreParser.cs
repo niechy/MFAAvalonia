@@ -9,7 +9,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class TagIgnoreParser : IBlockTagParser, IInlineTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "title", "meta", "link", "script", "style", "datalist" };
+        public IEnumerable<string> SupportTag => ["title", "meta", "link", "script", "style", "datalist"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {

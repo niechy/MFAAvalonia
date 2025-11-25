@@ -14,15 +14,9 @@ using System.Linq;
 
 namespace Markdown.Avalonia.Html.Core.Parsers
 {
-    public class ImageParser : IInlineTagParser
+    public class ImageParser(SetupInfo setupInfo) : IInlineTagParser
     {
-        private SetupInfo _setupInfo;
-
-        public ImageParser(SetupInfo info)
-        {
-            _setupInfo = info;
-        }
-
+        
         public IEnumerable<string> SupportTag => new[]
         {
             "img",
@@ -50,7 +44,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             var heightTxt = node.Attributes["height"]?.Value;
 
 
-            CImage image = _setupInfo.LoadImage(link);
+            CImage image = setupInfo.LoadImage(link);
             
             image.ClickCommand = new ImageOpenCommand();
             image.ClickCommandParameter = link;
@@ -115,15 +109,8 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             return true;
         }
 
-        class MultiplyConverter : IValueConverter
+        class MultiplyConverter(double Value) : IValueConverter
         {
-            public double Value { get; }
-
-            public MultiplyConverter(double v)
-            {
-                Value = v;
-            }
-
             public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
             {
                 return value is null ? 0d : Value * (Double)value;

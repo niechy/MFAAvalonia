@@ -9,7 +9,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class ButtonParser : IInlineTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "button" };
+        public IEnumerable<string> SupportTag => ["button"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -20,7 +20,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
         public bool TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<CInline> generated)
         {
-            var doc = new StackPanel() { Orientation = Orientation.Vertical };
+            var doc = new StackPanel()
+            {
+                Orientation = Orientation.Vertical
+            };
             doc.Children.AddRange(manager.ParseChildrenAndGroup(node));
 
             doc.Loaded += (s, e) =>
@@ -71,7 +74,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 IsEnabled = false,
             };
 
-            generated = new[] { new CInlineUIContainer(btn) };
+            generated = new[]
+            {
+                new CInlineUIContainer(btn)
+            };
             return true;
         }
     }

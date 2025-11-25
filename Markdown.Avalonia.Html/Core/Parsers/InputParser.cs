@@ -9,7 +9,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class InputParser : IInlineTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "input" };
+        public IEnumerable<string> SupportTag => ["input"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -129,7 +129,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                     break;
             }
 
-            generated = new[] { inline };
+            generated = [inline];
             return true;
         }
     }

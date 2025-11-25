@@ -32,7 +32,7 @@ namespace Markdown.Avalonia.Html.Core
             _bindParsers = new();
 
             UnknownTags = UnknownTagsOption.PassThrough;
-            
+
             Register(new CommentParser());
             Register(new TagIgnoreParser());
             Register(new ImageParser(info));
@@ -49,7 +49,7 @@ namespace Markdown.Avalonia.Html.Core
             Register(new TextAreaParser());
             Register(new ProgressParser());
             Register(new DetailsParser());
-
+            Register(new FontParser());
             foreach (var parser in TypicalBlockParser.Load())
                 Register(parser);
 
@@ -178,14 +178,18 @@ namespace Markdown.Avalonia.Html.Core
         public IEnumerable<StyledElement> ParseChildrenJagging(IEnumerable<HtmlNode> nodes)
         {
             // search empty line
-            var empNd = nodes.Select((nd, idx) => new { Node = nd, Index = idx })
-                             .Where(tpl => tpl.Node is HtmlTextNode)
-                             .Select(tpl => new
-                             {
-                                 NodeIndex = tpl.Index,
-                                 TextIndex = tpl.Node.InnerText.IndexOf("\n\n")
-                             })
-                             .FirstOrDefault(tpl => tpl.TextIndex != -1);
+            var empNd = nodes.Select((nd, idx) => new
+                {
+                    Node = nd,
+                    Index = idx
+                })
+                .Where(tpl => tpl.Node is HtmlTextNode)
+                .Select(tpl => new
+                {
+                    NodeIndex = tpl.Index,
+                    TextIndex = tpl.Node.InnerText.IndexOf("\n\n")
+                })
+                .FirstOrDefault(tpl => tpl.TextIndex != -1);
 
             if (empNd is null)
             {
@@ -234,7 +238,11 @@ namespace Markdown.Avalonia.Html.Core
             var textBuf = new StringBuilder();
             var mdTextBuf = new StringBuilder();
 
-            foreach (var tpl in nodes.Select((value, i) => new { Node = value, Index = i }))
+            foreach (var tpl in nodes.Select((value, i) => new
+                     {
+                         Node = value,
+                         Index = i
+                     }))
             {
                 if (tpl.Index < nodeIdx)
                 {
@@ -285,9 +293,21 @@ namespace Markdown.Avalonia.Html.Core
             return UnknownTags switch
             {
                 UnknownTagsOption.PassThrough
-                    => HtmlUtils.IsBlockTag(node.Name) ?
-                        new[] { new CTextBlock(new CRun() { Text = node.OuterHtml }) } :
-                        new[] { new CRun() { Text = node.OuterHtml } },
+                    => HtmlUtils.IsBlockTag(node.Name)
+                        ? new[]
+                        {
+                            new CTextBlock(new CRun()
+                            {
+                                Text = node.OuterHtml
+                            })
+                        }
+                        : new[]
+                        {
+                            new CRun()
+                            {
+                                Text = node.OuterHtml
+                            }
+                        },
 
                 UnknownTagsOption.Drop
                     => EnumerableExt.Empty<StyledElement>(),
@@ -305,8 +325,8 @@ namespace Markdown.Avalonia.Html.Core
             doc.LoadHtml(html);
 
             foreach (var node in doc.DocumentNode.ChildNodes)
-                foreach (var block in ParseBlock(node))
-                    yield return block;
+            foreach (var block in ParseBlock(node))
+                yield return block;
         }
 
         public IEnumerable<CInline> ParseInline(string html)
@@ -315,8 +335,8 @@ namespace Markdown.Avalonia.Html.Core
             doc.LoadHtml(html);
 
             foreach (var node in doc.DocumentNode.ChildNodes)
-                foreach (var inline in ParseInline(node))
-                    yield return inline;
+            foreach (var inline in ParseInline(node))
+                yield return inline;
         }
 
         public IEnumerable<Control> ParseBlock(HtmlNode node)
@@ -335,8 +355,12 @@ namespace Markdown.Avalonia.Html.Core
             return UnknownTags switch
             {
                 UnknownTagsOption.PassThrough
-                    => new[] {
-                        new CTextBlock(new CRun() { Text = node.OuterHtml })
+                    => new[]
+                    {
+                        new CTextBlock(new CRun()
+                        {
+                            Text = node.OuterHtml
+                        })
                     },
 
                 UnknownTagsOption.Drop
@@ -344,8 +368,8 @@ namespace Markdown.Avalonia.Html.Core
 
                 UnknownTagsOption.Bypass
                     => node.ChildNodes
-                           .SkipComment()
-                           .SelectMany(nd => ParseBlock(nd)),
+                        .SkipComment()
+                        .SelectMany(nd => ParseBlock(nd)),
 
                 _ => throw new UnknownTagException(node)
             };
@@ -367,15 +391,21 @@ namespace Markdown.Avalonia.Html.Core
             return UnknownTags switch
             {
                 UnknownTagsOption.PassThrough
-                    => new[] { new CRun() { Text = node.OuterHtml } },
+                    => new[]
+                    {
+                        new CRun()
+                        {
+                            Text = node.OuterHtml
+                        }
+                    },
 
                 UnknownTagsOption.Drop
                     => EnumerableExt.Empty<CInline>(),
 
                 UnknownTagsOption.Bypass
                     => node.ChildNodes
-                           .SkipComment()
-                           .SelectMany(nd => ParseInline(nd)),
+                        .SkipComment()
+                        .SelectMany(nd => ParseInline(nd)),
 
                 _ => throw new UnknownTagException(node)
             };

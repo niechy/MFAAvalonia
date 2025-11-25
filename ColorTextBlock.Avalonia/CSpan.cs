@@ -67,20 +67,19 @@ namespace ColorTextBlock.Avalonia
 
         static CSpan()
         {
-            ContentProperty.Changed.AddClassHandler<CSpan>(
-                (x, e) =>
+            ContentProperty.Changed.AddClassHandler<CSpan>((x, e) =>
+            {
+                if (e.OldValue is IEnumerable<CInline> oldlines)
                 {
-                    if (e.OldValue is IEnumerable<CInline> oldlines)
-                    {
-                        foreach (var child in oldlines)
-                            x.LogicalChildren.Remove(child);
-                    }
-                    if (e.NewValue is IEnumerable<CInline> newlines)
-                    {
-                        foreach (var child in newlines)
-                            x.LogicalChildren.Add(child);
-                    }
-                });
+                    foreach (var child in oldlines)
+                        x.LogicalChildren.Remove(child);
+                }
+                if (e.NewValue is IEnumerable<CInline> newlines)
+                {
+                    foreach (var child in newlines)
+                        x.LogicalChildren.Add(child);
+                }
+            });
         }
 
         private Border? _border;
@@ -145,8 +144,8 @@ namespace ColorTextBlock.Avalonia
         [Content]
         public IEnumerable<CInline> Content
         {
-            get { return GetValue(ContentProperty); }
-            set { SetValue(ContentProperty, value); }
+            get => GetValue(ContentProperty);
+            set => SetValue(ContentProperty, value);
         }
 
         public CSpan()
@@ -195,11 +194,7 @@ namespace ColorTextBlock.Avalonia
         private void OnBorderPropertyChanged(bool requestMeasure)
         {
             bool borderEnabled =
-                BorderThickness != default ||
-                Padding != default ||
-                CornerRadius != default ||
-                Margin != default ||
-                !BoxShadow.Equals(default);
+                BorderThickness != default || Padding != default || CornerRadius != default || Margin != default || !BoxShadow.Equals(default);
 
             if (borderEnabled)
             {

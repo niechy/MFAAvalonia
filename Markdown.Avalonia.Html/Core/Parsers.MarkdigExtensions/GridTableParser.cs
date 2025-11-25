@@ -15,7 +15,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers.MarkdigExtensions
     {
         public int Priority => HasPriority.DefaultPriority + 1000;
 
-        public IEnumerable<string> SupportTag => new[] { "table" };
+        public IEnumerable<string> SupportTag => ["table"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -115,7 +115,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers.MarkdigExtensions
             var captions = node.SelectNodes("./caption");
             if (captions is not null)
             {
-                var section = new DockPanel() { LastChildFill = true };
+                var section = new DockPanel()
+                {
+                    LastChildFill = true
+                };
 
                 foreach (var captionNode in captions)
                 {
@@ -129,11 +132,11 @@ namespace Markdown.Avalonia.Html.Core.Parsers.MarkdigExtensions
 
                 section.Children.Add(border);
 
-                generated = new[] { section };
+                generated = [section];
             }
             else
             {
-                generated = new[] { border };
+                generated = [border];
             }
 
             return true;
@@ -142,8 +145,8 @@ namespace Markdown.Avalonia.Html.Core.Parsers.MarkdigExtensions
         private static void SetupClass(List<List<TableCell>> group, string cls)
         {
             foreach (var row in group)
-                foreach (var cell in row)
-                    cell.Content.Classes.Add(cls);
+            foreach (var cell in row)
+                cell.Content.Classes.Add(cls);
         }
 
 

@@ -13,7 +13,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
     /// </summary>
     public class CommentParser : IBlockTagParser, IInlineTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { HtmlNode.HtmlNodeTypeNameComment };
+        public IEnumerable<string> SupportTag => [HtmlNode.HtmlNodeTypeNameComment];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {

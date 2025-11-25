@@ -1,4 +1,4 @@
-﻿﻿using Avalonia;
+﻿using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -8,9 +8,12 @@ using HtmlAgilityPack;
 using Markdown.Avalonia.Html.Core.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using FStyle = Avalonia.Media.FontStyle;
+using FWeight = Avalonia.Media.FontWeight;
 
 namespace Markdown.Avalonia.Html.Core.Parsers
 {
@@ -34,10 +37,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             else
             {
                 Type? elementType = AppDomain.CurrentDomain
-                                             .GetAssemblies()
-                                             .Select(asm => asm.GetType(FlowDocumentTagText))
-                                             .OfType<Type>()
-                                             .FirstOrDefault();
+                    .GetAssemblies()
+                    .Select(asm => asm.GetType(FlowDocumentTagText))
+                    .OfType<Type>()
+                    .FirstOrDefault();
 
                 if (elementType is null)
                     throw new ArgumentException($"Failed to load type '{line[1]}'");
@@ -90,13 +93,22 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 switch (FlowDocumentTagText)
                 {
                     case "#border":
-                        var pnl = new StackPanel { Orientation = Orientation.Vertical };
+                        var pnl = new StackPanel
+                        {
+                            Orientation = Orientation.Vertical
+                        };
                         var parseResult = manager.ParseChildrenAndGroup(node).ToArray();
                         foreach (var ctrl in parseResult)
                             pnl.Children.Add(ctrl);
 
-                        var bdr = new Border { Child = pnl };
-                        generated = new[] { bdr };
+                        var bdr = new Border
+                        {
+                            Child = pnl
+                        };
+                        generated = new[]
+                        {
+                            bdr
+                        };
                         break;
 
                     case "#blocks":
@@ -152,8 +164,39 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                         return false;
                     }
                 }
+                else if (tag is CBold bold)
+                {
+                    if (!SetupCSpan(bold))
+                    {
+                        generated = EnumerableExt.Empty<StyledElement>();
+                        return false;
+                    }
+                    // 显式确保加粗样式不被覆盖
+                    bold.FontWeight = FWeight.Bold;
+                }
+                else if (tag is CUnderline underline)
+                {
+                    if (!SetupCSpan(underline))
+                    {
+                        generated = EnumerableExt.Empty<StyledElement>();
+                        return false;
+                    }
+                    // 显式确保下划线样式不被覆盖
+                    underline.IsUnderline = true;
+                }
+                else if (tag is CItalic italic)
+                {
+                    if (!SetupCSpan(italic))
+                    {
+                        generated = EnumerableExt.Empty<StyledElement>();
+                        return false;
+                    }
+                    // 显式确保斜体样式不被覆盖
+                    italic.FontStyle = FStyle.Italic;
+                }
                 else if (tag is CSpan span)
                 {
+
                     if (!SetupCSpan(span))
                     {
                         generated = EnumerableExt.Empty<StyledElement>();
@@ -177,7 +220,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                     throw new InvalidOperationException();
                 }
 
-                generated = new[] { tag };
+                generated = [tag];
 
                 bool SetupCSpan(CSpan span)
                 {
@@ -191,8 +234,8 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                     else if (tag is CSpan && manager.Grouping(parseResult).TryCast<CTextBlock>(out var paragraphs))
                     {
                         foreach (var para in paragraphs)
-                            foreach (var inline in para.Content.ToArray())
-                                content.Add(inline);
+                        foreach (var inline in para.Content.ToArray())
+                            content.Add(inline);
                     }
                     else return false;
 
@@ -232,6 +275,16 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                             borderChild.HorizontalAlignment = alignment.Value;
                         }
                     }
+                }
+            }
+
+            var foregroundBrush = DocUtils.GetForegroundColor(node);
+            if (foregroundBrush != null)
+            {
+                foreach (var element in generated)
+                {
+                    // 为文本控件设置前景色
+                    ApplyForegroundToTextElements(element, foregroundBrush);
                 }
             }
 
@@ -280,6 +333,38 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             }
 
             return true;
+        }
+
+        private void ApplyForegroundToTextElements(StyledElement element, Brush brush)
+        {
+            // 直接设置文本控件的前景色
+            if (element is CTextBlock textBlock)
+            {
+                textBlock.Foreground = brush;
+            }
+            else if (element is CSpan span)
+            {
+                span.Foreground = brush;
+            }
+            else if (element is CCode code)
+            {
+                code.Foreground = brush;
+            }
+            // 递归处理容器控件的子元素
+            else if (element is Panel panel)
+            {
+                foreach (var child in panel.Children)
+                {
+                    if (child is StyledElement styledChild)
+                    {
+                        ApplyForegroundToTextElements(styledChild, brush);
+                    }
+                }
+            }
+            else if (element is Border border && border.Child is StyledElement borderChild)
+            {
+                ApplyForegroundToTextElements(borderChild, brush);
+            }
         }
 
         public void ExtraModifyHyperlink(CHyperlink link, HtmlNode node, ReplaceManager manager)

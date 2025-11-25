@@ -13,7 +13,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class DetailsParser : IBlockTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "details" };
+        public IEnumerable<string> SupportTag => ["details"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -47,13 +47,16 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 expander.IsExpanded = isOpened;
             }
 
-            generated = new[] { expander };
+            generated = [expander];
             return true;
         }
 
         private static StackPanel Create(IMarkdownEngine engine, IEnumerable<Control> blocks)
         {
-            var doc = new StackPanel() { Orientation = Orientation.Vertical };
+            var doc = new StackPanel()
+            {
+                Orientation = Orientation.Vertical
+            };
             doc.Children.AddRange(blocks);
 
             return doc;

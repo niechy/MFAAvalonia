@@ -11,7 +11,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class TextAreaParser : IInlineTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "textarea" };
+        public IEnumerable<string> SupportTag => ["textarea"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -49,7 +49,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             if (rows.HasValue) area.Height = rows.Value;
             if (cols.HasValue) area.Width = cols.Value;
 
-            generated = new[] { new CInlineUIContainer(area) };
+            generated = [new CInlineUIContainer(area)];
             return true;
         }
     }

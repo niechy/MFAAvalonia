@@ -11,7 +11,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers.MarkdigExtensions
 {
     public class FigureParser : IBlockTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "figure" };
+        public IEnumerable<string> SupportTag => ["figure"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -34,7 +34,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers.MarkdigExtensions
             var captionBlock = captionList.SelectMany(c => manager.Grouping(manager.ParseBlockAndInline(c)));
             var contentBlock = contentList.SelectMany(c => manager.Grouping(manager.ParseChildrenJagging(c)));
 
-            var section = new DockPanel() { LastChildFill = true };
+            var section = new DockPanel
+            {
+                LastChildFill = true
+            };
             section.Tag = Tags.TagFigure.GetClass();
 
             foreach (var caption in captionBlock)
@@ -43,14 +46,17 @@ namespace Markdown.Avalonia.Html.Core.Parsers.MarkdigExtensions
                 section.Children.Add(caption);
             }
 
-            var contentPanel = new StackPanel() { Orientation = Orientation.Vertical };
+            var contentPanel = new StackPanel()
+            {
+                Orientation = Orientation.Vertical
+            };
             foreach (var content in contentBlock)
             {
                 contentPanel.Children.Add(content);
             }
             section.Children.Add(contentPanel);
 
-            generated = new[] { section };
+            generated = [section];
             return false;
         }
     }

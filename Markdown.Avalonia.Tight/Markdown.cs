@@ -479,6 +479,28 @@ namespace Markdown.Avalonia
 
         #region 核心：通用成对符号解析（可扩展、支持嵌套）
 
+        private List<(int Start, int End)> FindAllHtmlTags(string text)
+        {
+            var htmlRanges = new List<(int Start, int End)>();
+            int index = 0;
+            while (index < text.Length)
+            {
+                // 查找HTML标签起始符`<`
+                int tagStart = text.IndexOf('<', index);
+                if (tagStart == -1) break;
+
+                // 查找HTML标签结束符`>`（处理自闭合标签和普通标签）
+                int tagEnd = text.IndexOf('>', tagStart);
+                if (tagEnd == -1) break; // 不完整标签，忽略
+
+                // 添加标签范围（包含`<`和`>`）
+                htmlRanges.Add((tagStart, tagEnd));
+
+                // 继续查找下一个标签
+                index = tagEnd + 1;
+            }
+            return htmlRanges;
+        }
         /// <summary>
         /// 可扩展的成对符号配置（支持任意成对符号，按优先级排序：长符号优先，避免短符号截断长符号）
         /// 格式：(开始符号, 结束符号, 生成对应Inline元素的工厂方法)
@@ -495,7 +517,7 @@ namespace Markdown.Avalonia
             )>(
             // 优先级：长符号 > 短符号（避免 "**" 被 "*" 截断）
             ("**", "**", inlines => new CBold(inlines)), // 加粗
-            ("__", "__", inlines => new CUnderline(inlines)), // 下划线
+            ("__", "__", inlines => new CBold(inlines)), // 下划线
             ("~~", "~~", inlines => new CStrikethrough(inlines)), // 删除线
             ("*", "*", inlines => new CItalic(inlines)), // 斜体
             ("_", "_", inlines => new CItalic(inlines)) // 斜体（下划线版）
@@ -503,14 +525,27 @@ namespace Markdown.Avalonia
             // ("===", "===", inlines => new CHighlight(inlines)), // 高亮
             // ("::", "::", inlines => new CCustom(inlines))       // 自定义符号
         );
-        private bool IsRangeOverlapped(int targetStart, int targetEnd, List<(int Start, int End)> usedRanges)
+        private bool IsRangeOverlapped(
+            int targetStart,
+            int targetEnd,
+            List<(int Start, int End)> usedRanges,
+            List<(int Start, int End)> htmlRanges)
         {
+            // 检查与已有符号范围的重叠
             foreach (var (usedStart, usedEnd) in usedRanges)
             {
-                // 目标范围与已占用范围有重叠 → 返回true
                 if (targetStart < usedEnd && targetEnd > usedStart)
                     return true;
             }
+
+            // 检查与HTML标签范围的重叠（目标范围只要有部分在HTML标签内就视为重叠）
+            foreach (var (htmlStart, htmlEnd) in htmlRanges)
+            {
+                // HTML标签范围是 [htmlStart, htmlEnd]（包含`<`和`>`）
+                if (targetStart <= htmlEnd && targetEnd >= htmlStart)
+                    return true;
+            }
+
             return false;
         }
         /// <summary>
@@ -571,88 +606,106 @@ namespace Markdown.Avalonia
         /// <returns>是否找到、开始符号、结束符号、元素工厂、开始索引、结束索引</returns>
         private (bool Found, string StartSym, string EndSym, Func<IEnumerable<CInline>, CInline> ElementFactory, int StartIdx, int EndIdx) FindInnermostPair(string text, int level)
         {
-            // 拆分：长符号组（长度≥2）、短符号组（长度=1），长符号优先处理
+            // 步骤0：先提取所有HTML标签范围，后续匹配需跳过这些范围
+            var htmlRanges = FindAllHtmlTags(text);
+
+            // 拆分长符号组和短符号组（原有逻辑）
             var longPairs = _pairSymbols.Where(p => p.Start.Length >= 2).ToList();
             var shortPairs = _pairSymbols.Where(p => p.Start.Length == 1).ToList();
 
             var allValidPairs = new List<(string Start, string End, Func<IEnumerable<CInline>, CInline> Factory, int StartIdx, int EndIdx, int NestLevel)>();
 
-            // 步骤1：先收集长符号的“完整有效匹配”（优先处理，不被短符号干扰）
+            // 步骤1：收集长符号的有效匹配（跳过HTML标签）
             foreach (var (start, end, factory) in longPairs)
             {
                 int currentStartIdx = 0;
                 while (true)
                 {
-                    // 查找长符号起始标记（非转义）
                     currentStartIdx = FindNonEscaped(text, start, currentStartIdx);
                     if (currentStartIdx == -1) break;
 
-                    // 关键：只找长符号对应的结束标记（不找短符号）
                     int currentEndIdx = FindNonEscaped(text, end, currentStartIdx + start.Length);
                     if (currentEndIdx == -1)
                     {
-                        // 找不到长符号结束标记 → 跳过当前起始标记，继续找下一个
                         currentStartIdx += start.Length;
                         continue;
                     }
 
-                    // 计算嵌套层级
+                    // 检查当前长符号范围是否与HTML标签重叠 → 重叠则跳过
+                    bool isOverlapWithHtml = IsRangeOverlapped(
+                        currentStartIdx,
+                        currentEndIdx + end.Length, // 结束符号的完整范围
+                        new List<(int, int)>(), // 暂不检查已有符号（长符号优先）
+                        htmlRanges
+                    );
+                    if (isOverlapWithHtml)
+                    {
+                        currentStartIdx = currentEndIdx + end.Length;
+                        continue;
+                    }
+
+                    // 计算嵌套层级（原有逻辑）
                     int nestLevel = CalculateNestLevel(text, currentStartIdx + start.Length, currentEndIdx, level);
-                    // 添加长符号有效匹配
                     allValidPairs.Add((start, end, factory, currentStartIdx, currentEndIdx, nestLevel));
 
-                    // 跳过当前长符号的范围，避免重复匹配
                     currentStartIdx = currentEndIdx + end.Length;
                 }
             }
 
-            // 步骤2：收集短符号的有效匹配（跳过长符号已经占用的位置）
+            // 步骤2：收集短符号的有效匹配（跳过长符号和HTML标签）
             var longUsedRanges = allValidPairs.Select(p => (Start: p.StartIdx, End: p.EndIdx + p.End.Length)).ToList();
             foreach (var (start, end, factory) in shortPairs)
             {
                 int currentStartIdx = 0;
                 while (true)
                 {
-                    // 查找短符号起始标记（非转义）
                     currentStartIdx = FindNonEscaped(text, start, currentStartIdx);
                     if (currentStartIdx == -1) break;
 
-                    // 检查当前位置是否被长符号占用 → 占用则跳过
-                    if (IsRangeOverlapped(currentStartIdx, currentStartIdx + start.Length, longUsedRanges))
+                    // 检查是否与长符号或HTML标签重叠
+                    bool isOverlap = IsRangeOverlapped(
+                        currentStartIdx,
+                        currentStartIdx + start.Length,
+                        longUsedRanges,
+                        htmlRanges
+                    );
+                    if (isOverlap)
                     {
                         currentStartIdx += start.Length;
                         continue;
                     }
 
-                    // 查找短符号结束标记（非转义，且不被长符号占用）
                     int currentEndIdx = FindNonEscaped(text, end, currentStartIdx + start.Length);
                     if (currentEndIdx == -1) break;
 
-                    // 检查结束位置是否被长符号占用 → 占用则跳过
-                    if (IsRangeOverlapped(currentEndIdx, currentEndIdx + end.Length, longUsedRanges))
+                    // 检查结束符号是否与长符号或HTML标签重叠
+                    bool isEndOverlap = IsRangeOverlapped(
+                        currentEndIdx,
+                        currentEndIdx + end.Length,
+                        longUsedRanges,
+                        htmlRanges
+                    );
+                    if (isEndOverlap)
                     {
                         currentStartIdx = currentEndIdx + end.Length;
                         continue;
                     }
 
-                    // 计算嵌套层级
                     int nestLevel = CalculateNestLevel(text, currentStartIdx + start.Length, currentEndIdx, level);
-                    // 添加短符号有效匹配
                     allValidPairs.Add((start, end, factory, currentStartIdx, currentEndIdx, nestLevel));
 
-                    // 跳过当前短符号的范围
                     currentStartIdx = currentEndIdx + end.Length;
                 }
             }
 
+            // 原有逻辑：筛选最佳匹配
             if (allValidPairs.Count == 0)
                 return (false, "", "", null, -1, -1);
 
-            // 保持原排序规则：最内层→结束位置靠前→符号长度长
             var bestPair = allValidPairs
-                .OrderByDescending(p => p.NestLevel) // 最内层优先
-                .ThenBy(p => p.EndIdx) // 结束位置靠前优先
-                .ThenByDescending(p => p.Start.Length) // 长符号优先（兜底，避免短符号截断）
+                .OrderByDescending(p => p.NestLevel)
+                .ThenBy(p => p.EndIdx)
+                .ThenByDescending(p => p.Start.Length)
                 .First();
 
             return (true, bestPair.Start, bestPair.End, bestPair.Factory, bestPair.StartIdx, bestPair.EndIdx);
@@ -664,9 +717,11 @@ namespace Markdown.Avalonia
         private int FindNonEscaped(string text, string target, int startFrom)
         {
             int index = text.IndexOf(target, startFrom);
+            var htmlRanges = FindAllHtmlTags(text); // 获取HTML标签范围
+
             while (index != -1)
             {
-                // 检查是否被转义（前面不是 \，或前面是 \\ 双重转义）
+                // 检查是否被转义（原有逻辑）
                 bool isEscaped = index > 0 && text[index - 1] == '\\';
                 if (isEscaped)
                 {
@@ -674,13 +729,22 @@ namespace Markdown.Avalonia
                     continue;
                 }
 
-                // 优化：如果目标是长符号（≥2字符），检查是否被短符号“截断”（比如 ** 中间夹了 *）
+                // 检查是否在HTML标签范围内 → 若是则跳过
+                bool isInHtmlTag = htmlRanges.Any(range =>
+                    index >= range.Start && index <= range.End
+                );
+                if (isInHtmlTag)
+                {
+                    index = text.IndexOf(target, index + target.Length);
+                    continue;
+                }
+
+                // 长符号截断检查（原有逻辑）
                 if (target.Length >= 2)
                 {
                     bool isTruncated = false;
-                    // 检查长符号内部是否包含对应的短符号（比如 ** 内部有 * → 不视为完整长符号）
                     string innerText = text.Substring(index, target.Length);
-                    var shortSymbol = target.Substring(0, 1); // 长符号对应的短符号（如 **→*）
+                    var shortSymbol = target.Substring(0, 1);
                     if (innerText.Count(c => c.ToString() == shortSymbol) != target.Length)
                     {
                         isTruncated = true;
@@ -697,7 +761,7 @@ namespace Markdown.Avalonia
             }
             return -1;
         }
-
+        
         /// <summary>
         /// 计算文本片段的嵌套层级（用于判断最内层成对符号）
         /// </summary>

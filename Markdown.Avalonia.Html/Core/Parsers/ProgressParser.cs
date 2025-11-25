@@ -8,7 +8,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class ProgressParser : IInlineTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "progress", "meter" };
+        public IEnumerable<string> SupportTag => ["progress", "meter"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -27,7 +27,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 Width = 50,
                 Height = 12,
             };
-            generated = new[] { new CInlineUIContainer(bar) };
+            generated = [new CInlineUIContainer(bar)];
             return true;
         }
 

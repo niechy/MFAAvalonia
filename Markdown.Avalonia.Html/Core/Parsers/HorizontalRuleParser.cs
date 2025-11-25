@@ -8,7 +8,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class HorizontalRuleParser : IBlockTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "hr" };
+        public IEnumerable<string> SupportTag => ["hr"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -22,7 +22,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             var rule = new Rule(RuleType.Single);
             rule.Classes.Add(Tags.TagRuleSingle.GetClass());
 
-            generated = new[] { rule };
+            generated = [rule];
             return true;
         }
     }

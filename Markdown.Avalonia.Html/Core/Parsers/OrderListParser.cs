@@ -15,7 +15,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class OrderListParser : IBlockTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { "ol" };
+        public IEnumerable<string> SupportTag => ["ol"];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -64,13 +64,19 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 ++order;
             }
 
-            generated = new[] { list };
+            generated = new[]
+            {
+                list
+            };
             return true;
         }
 
         private StackPanel CreateItem(IEnumerable<Control> children)
         {
-            var panel = new StackPanel() { Orientation = Orientation.Vertical };
+            var panel = new StackPanel()
+            {
+                Orientation = Orientation.Vertical
+            };
             foreach (var child in children)
                 panel.Children.Add(child);
 

@@ -9,7 +9,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 {
     public class TextNodeParser : IInlineTagParser
     {
-        public IEnumerable<string> SupportTag => new[] { HtmlNode.HtmlNodeTypeNameText };
+        public IEnumerable<string> SupportTag => [HtmlNode.HtmlNodeTypeNameText];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -31,8 +31,14 @@ namespace Markdown.Avalonia.Html.Core.Parsers
         }
 
         public IEnumerable<CInline> Replace(string text, ReplaceManager manager)
-            => text.StartsWith("\n") ?
-                    new[] { new CRun() { Text = text.Replace('\n', ' ') } } :
-                    manager.Engine.RunSpanGamut(text.Replace('\n', ' '));
+            => text.StartsWith("\n")
+                ?
+                [
+                    new CRun()
+                    {
+                        Text = text.Replace('\n', ' ')
+                    }
+                ]
+                : manager.Engine.RunSpanGamut(text.Replace('\n', ' '));
     }
 }

@@ -123,6 +123,32 @@ namespace Markdown.Avalonia.Utils
 
             for (int i = 0; i < text.Length; i++)
             {
+                if (text[i] == '\\')
+                {
+                    // 检查下一个字符是否为换行符（\n 或 \r）
+                    if (i + 1 < text.Length)
+                    {
+                        char nextChar = text[i + 1];
+                        if (nextChar == '\n' || nextChar == '\r')
+                        {
+                            // 输出当前行并添加换行
+                            if (valid)
+                                output.Append(line);
+                            output.Append('\n');
+                            line.Length = 0;
+                            valid = false;
+                            // 跳过下一个换行符（已处理）
+                            i++;
+                            continue;
+                        }
+                    }
+                    // 若不是换行符，按普通字符处理反斜杠
+                    line.Append(text[i]);
+                    if (!valid)
+                        valid = true;
+                    continue;
+                }
+                
                 switch (text[i])
                 {
                     case '\n':

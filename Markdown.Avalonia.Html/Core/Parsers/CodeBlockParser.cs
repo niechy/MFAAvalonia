@@ -10,17 +10,15 @@ using System.Text;
 
 namespace Markdown.Avalonia.Html.Core.Parsers
 {
-    public class CodeBlockParser : IBlockTagParser
+    public class CodeBlockParser(SyntaxHighlight syntax) : IBlockTagParser
     {
-        SyntaxHighlightProvider _provider;
-
-        public CodeBlockParser(SyntaxHighlight syntax)
-        {
-            _provider = new SyntaxHighlightProvider(syntax.Aliases);
-        }
+        readonly SyntaxHighlightProvider _provider = new(syntax.Aliases);
 
 
-        public IEnumerable<string> SupportTag => new[] { "pre" };
+        public IEnumerable<string> SupportTag =>
+        [
+            "pre"
+        ];
 
         bool ITagParser.TryReplace(HtmlNode node, ReplaceManager manager, out IEnumerable<StyledElement> generated)
         {
@@ -56,7 +54,10 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 foreach (var textNode in textNodes)
                     buff.Append(textNode.InnerText);
 
-                generated = new[] { DocUtils.CreateCodeBlock(null, buff.ToString(), manager, _provider) };
+                generated =
+                [
+                    DocUtils.CreateCodeBlock(null, buff.ToString(), manager, _provider)
+                ];
                 return true;
             }
             else return false;
@@ -68,8 +69,8 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
             // "language-**", "lang-**", "**" or "sourceCode **"
             var indics = Enumerable.Range(0, classVal.Length)
-                                   .Reverse()
-                                   .Where(i => !Char.IsLetterOrDigit(classVal[i]));
+                .Reverse()
+                .Where(i => !Char.IsLetterOrDigit(classVal[i]));
 
             return classVal.Substring(indics.Any() ? indics.First() + 1 : 0);
         }
