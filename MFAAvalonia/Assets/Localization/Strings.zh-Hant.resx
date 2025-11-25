@@ -1238,4 +1238,7 @@
     <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
         <value>偵測到資源更新: {0}</value>
     </data>
+    <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
+        <value>飛書 webhook</value>
+    </data>
 </root>

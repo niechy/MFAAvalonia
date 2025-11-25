@@ -1238,4 +1238,7 @@
     <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
         <value>Resource update {0} detected</value>
     </data>
+    <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
+        <value>Lark webhook</value>
+    </data>
 </root>

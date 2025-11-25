@@ -94,6 +94,7 @@ public static class ConfigurationKeys
     public const string ExternalNotificationDingTalkSecret = "ExternalNotificationDingTalkSecret";
     public const string ExternalNotificationEmailAccount = "ExternalNotificationEmailAccount";
     public const string ExternalNotificationEmailSecret = "ExternalNotificationEmailSecret";
+    public const string ExternalNotificationLarkWebhookUrl = "ExternalNotificationLarkWebhookUrl";
     public const string ExternalNotificationLarkID = "ExternalNotificationLarkID";
     public const string ExternalNotificationLarkToken = "ExternalNotificationLarkToken";
     public const string ExternalNotificationWxPusherToken = "ExternalNotificationWxPusherToken";

@@ -1246,4 +1246,7 @@
     <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
         <value>检测到资源更新: {0}</value>
     </data>
+    <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
+        <value>飞书 webhook</value>
+    </data>
 </root>

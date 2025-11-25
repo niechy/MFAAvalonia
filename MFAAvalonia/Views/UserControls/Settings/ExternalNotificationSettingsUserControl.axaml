@@ -193,6 +193,19 @@
                         <TextBox
                             DockPanel.Dock="Right"
                             HorizontalAlignment="Center"
+                            Text="{Binding LarkWebhookUrl}"
+                            Width="215" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="16"
+                                Text="{markup:I18n {x:Static helper:LangKeys.ExternalNotificationLarkWebhookUrl}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <TextBox
+                            DockPanel.Dock="Right"
+                            HorizontalAlignment="Center"
                             Text="{Binding LarkId}"
                             Width="215" />
                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -683,11 +696,11 @@
                 </DockPanel>
                 <StackPanel Spacing="8" IsVisible="{Binding ServerChanEnabled}">
                     <DockPanel>
-                        <TextBox
-                            DockPanel.Dock="Right"
-                            HorizontalAlignment="Center"
-                            Text="{Binding ServerChanSendKey}"
-                            Width="215" />
+                        <suki:PasswordBox Height="33"
+                                          DockPanel.Dock="Right"
+                                          HorizontalAlignment="Center"
+                                          Password="{Binding ServerChanSendKey}"
+                                          Width="215" />
                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
                             <TextBlock
                                 FontSize="16"
