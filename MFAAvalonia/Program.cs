@@ -46,16 +46,16 @@ sealed class Program
     public static bool IsNewInstance = true;
     public static void ReleaseMutex()
     {
-        // try
-        // {
-        //     _mutex?.ReleaseMutex();
-        //     _mutex?.Close();
-        //     _mutex = null;
-        // }
-        // catch (Exception e)
-        // {
-        //     LoggerHelper.Error(e);
-        // }
+        try
+        {
+            _mutex?.ReleaseMutex();
+            _mutex?.Close();
+            _mutex = null;
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Error(e);
+        }
     }
 
     [STAThread]
