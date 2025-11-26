@@ -42,9 +42,7 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
 
 #### 自动安装
 
-- 下载项目中workflows/install.yml并修改```项目名称```,```作者名```,```项目名```,```MAAxxx```
-- 将修改后的install.yml替换MAA项目模板.github/workflows/install.yml
-- 推送新版本
+- MaaFramework项目模板中自带
 
 #### 手动安装
 

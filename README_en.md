@@ -43,10 +43,7 @@ on **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** ✨_
 
 #### Automatic Installation
 
-- Download workflows/install.yml from the project and modify the following:
-  ```project name```, ```author name```, ```project title```, ```MAAxxx```
-- Replace MAA project template .github/workflows/install.yml with the modified install.yml.
-- Push the new version.
+- It comes with the MaaFramework project template
 
 #### Manual Installation
 
