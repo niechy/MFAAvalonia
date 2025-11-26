@@ -235,7 +235,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         // });
     }
 
-    
+
     public readonly string INFO = "info:";
     public readonly string[] ERROR = ["err:", "error:"];
     public readonly string[] WARNING = ["warn:", "warning:"];
@@ -270,12 +270,12 @@ public partial class TaskQueueViewModel : ViewModelBase
 
         if (content.StartsWith(INFO, comparison))
         {
-            var color = MFAExtensions.FindSukiUiResource<Color>(
+            var color = DispatcherHelper.RunOnMainThread(() => MFAExtensions.FindSukiUiResource<Color>(
                 "SukiMuteText"
-            );
+            ));
 
             if (color != null)
-                brush = new SolidColorBrush(color.Value);
+                brush = DispatcherHelper.RunOnMainThread(() => new SolidColorBrush(color.Value));
             else
                 brush = Brushes.Black;
             content = content.Substring(INFO.Length);
@@ -301,14 +301,14 @@ public partial class TaskQueueViewModel : ViewModelBase
             content = content.Substring(errorPrefix.Length);
             changeColor = false;
         }
-        
+
         if (content.StartsWith(CRITICAL, comparison))
         {
-            var color = MFAExtensions.FindSukiUiResource<Color>(
+            var color = DispatcherHelper.RunOnMainThread(() => MFAExtensions.FindSukiUiResource<Color>(
                 "SukiLightBorderBrush"
-            );
+            ));
             if (color != null)
-                brush = new SolidColorBrush(color.Value);
+                brush = DispatcherHelper.RunOnMainThread(() => new SolidColorBrush(color.Value));
             else
                 brush = Brushes.White;
             backGroundBrush = Brushes.OrangeRed;
