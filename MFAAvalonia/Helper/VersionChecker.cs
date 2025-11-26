@@ -637,6 +637,7 @@ public static class VersionChecker
             Dismiss(sukiToast);
         shouldShowToast = true;
         action?.Invoke();
+        Program.ReleaseMutex();
         await RestartApplicationAsync(exeName);
     }
  /// <summary>
