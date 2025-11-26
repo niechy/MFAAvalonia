@@ -124,7 +124,7 @@ install_dotnet() {
     install_args=(
         --channel "${DOTNET_CHANNEL}"
         --install-dir "${DOTNET_INSTALL_PATH}"
-        --quiet  # 静默安装，只显示关键结果
+        #--quiet 不能静默 # 静默安装，只显示关键结果
     )
     # 区分运行时和 SDK（默认运行时）
     if [ "${INSTALL_TYPE}" = "运行时" ]; then
