@@ -299,7 +299,7 @@ public static partial class Instances
     }
 
 
-    private static string GetExecutablePath()
+    public static string GetExecutablePath()
     {
         // 兼容.NET 5+环境
         return Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? AppContext.BaseDirectory;

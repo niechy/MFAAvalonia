@@ -442,7 +442,7 @@ public static class VersionChecker
             interfacePath = Path.Combine(tempExtractDir, "assets", "interface.json");
             resourceDirPath = Path.Combine(tempExtractDir, "assets", "resource");
         }
-
+        var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
         var file = new FileInfo(interfacePath);
 
 
@@ -620,7 +620,7 @@ public static class VersionChecker
             {
                 Instances.DialogManager.CreateDialog().WithContent(LangKeys.GameResourceUpdated.ToLocalization()).WithActionButton(LangKeys.Yes.ToLocalization(), _ =>
                     {
-                        Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
+                        Process.Start(exeName);
                         Instances.ShutdownApplication();
                     }, dismissOnClick: true, "Flat", "Accent")
                     .WithActionButton(LangKeys.No.ToLocalization(), _ =>
