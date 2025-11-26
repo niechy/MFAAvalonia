@@ -288,6 +288,65 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 }
             }
 
+
+            var fontSize = DocUtils.GetFontSize(node);
+            if (fontSize.HasValue)
+            {
+                foreach (var element in generated)
+                {
+                    // 为文本控件设置字体大小
+                    ApplyFontSizeToTextElements(element, fontSize.Value);
+                }
+            }
+
+            // 新增：应用字体粗细
+            var fontWeight = DocUtils.GetFontWeight(node);
+            if (fontWeight.HasValue)
+            {
+                foreach (var element in generated)
+                {
+                    ApplyFontWeightToTextElements(element, fontWeight.Value);
+                }
+            }
+
+            // 新增：应用字体样式（斜体）
+            var fontStyle = DocUtils.GetFontStyle(node);
+            if (fontStyle.HasValue)
+            {
+                foreach (var element in generated)
+                {
+                    ApplyFontStyleToTextElements(element, fontStyle.Value);
+                }
+            }
+
+            // 新增：应用文本装饰（删除线/下划线）
+            var (isStrikethrough, isUnderline) = DocUtils.GetTextDecoration(node);
+            if (isStrikethrough || isUnderline)
+            {
+                foreach (var element in generated)
+                {
+                    ApplyTextDecorationToTextElements(element, isStrikethrough, isUnderline);
+                }
+            }
+// 新增：应用字体家族（font-family）
+            var fontFamily = DocUtils.GetFontFamily(node);
+            if (fontFamily != null)
+            {
+                foreach (var element in generated)
+                {
+                    ApplyFontFamilyToTextElements(element, fontFamily);
+                }
+            }
+
+// 新增：应用背景色（background-color）
+            var backgroundColor = DocUtils.GetBackgroundColor(node);
+            if (backgroundColor != null)
+            {
+                foreach (var element in generated)
+                {
+                    ApplyBackgroundColorToTextElements(element, backgroundColor);
+                }
+            }
             // 应用标签样式
             if (TagNameReference is not null)
             {
@@ -334,6 +393,49 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
             return true;
         }
+        private void ApplyFontSizeToTextElements(StyledElement element, double fontSize)
+        {
+            // 直接设置文本控件的字体大小
+            if (element is CTextBlock textBlock)
+            {
+                textBlock.FontSize = fontSize;
+            }
+            else if (element is CSpan span)
+            {
+                span.FontSize = fontSize;
+            }
+            else if (element is CCode code)
+            {
+                code.FontSize = fontSize;
+            }
+            else if (element is CBold bold)
+            {
+                bold.FontSize = fontSize;
+            }
+            else if (element is CItalic italic)
+            {
+                italic.FontSize = fontSize;
+            }
+            else if (element is CUnderline underline)
+            {
+                underline.FontSize = fontSize;
+            }
+            // 递归处理容器控件的子元素
+            else if (element is Panel panel)
+            {
+                foreach (var child in panel.Children)
+                {
+                    if (child is StyledElement styledChild)
+                    {
+                        ApplyFontSizeToTextElements(styledChild, fontSize);
+                    }
+                }
+            }
+            else if (element is Border { Child: StyledElement borderChild })
+            {
+                ApplyFontSizeToTextElements(borderChild, fontSize);
+            }
+        }
 
         private void ApplyForegroundToTextElements(StyledElement element, Brush brush)
         {
@@ -361,11 +463,253 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                     }
                 }
             }
-            else if (element is Border border && border.Child is StyledElement borderChild)
+            else if (element is Border { Child: StyledElement borderChild })
             {
                 ApplyForegroundToTextElements(borderChild, brush);
             }
         }
+        /// <summary>
+        /// 为文本元素应用字体粗细样式
+        /// </summary>
+        private void ApplyFontWeightToTextElements(StyledElement element, FWeight fontWeight)
+        {
+            if (element is CTextBlock textBlock)
+            {
+                textBlock.FontWeight = fontWeight;
+            }
+            else if (element is CSpan span)
+            {
+                span.FontWeight = fontWeight;
+            }
+            else if (element is CCode code)
+            {
+                code.FontWeight = fontWeight;
+            }
+            else if (element is CBold bold)
+            {
+                // 保留显式加粗，但允许通过样式覆盖
+                bold.FontWeight = fontWeight;
+            }
+            else if (element is CItalic italic)
+            {
+                italic.FontWeight = fontWeight;
+            }
+            else if (element is CUnderline underline)
+            {
+                underline.FontWeight = fontWeight;
+            }
+            // 递归处理容器子元素
+            else if (element is Panel panel)
+            {
+                foreach (var child in panel.Children)
+                {
+                    if (child is StyledElement styledChild)
+                    {
+                        ApplyFontWeightToTextElements(styledChild, fontWeight);
+                    }
+                }
+            }
+            else if (element is Border { Child: StyledElement borderChild })
+            {
+                ApplyFontWeightToTextElements(borderChild, fontWeight);
+            }
+        }
+
+        /// <summary>
+        /// 为文本元素应用字体样式（斜体）
+        /// </summary>
+        private void ApplyFontStyleToTextElements(StyledElement element, FStyle fontStyle)
+        {
+            if (element is CTextBlock textBlock)
+            {
+                textBlock.FontStyle = fontStyle;
+            }
+            else if (element is CSpan span)
+            {
+                span.FontStyle = fontStyle;
+            }
+            else if (element is CCode code)
+            {
+                code.FontStyle = fontStyle;
+            }
+            else if (element is CBold bold)
+            {
+                bold.FontStyle = fontStyle;
+            }
+            else if (element is CItalic italic)
+            {
+                // 保留显式斜体，但允许通过样式覆盖
+                italic.FontStyle = fontStyle;
+            }
+            else if (element is CUnderline underline)
+            {
+                underline.FontStyle = fontStyle;
+            }
+            // 递归处理容器子元素
+            else if (element is Panel panel)
+            {
+                foreach (var child in panel.Children)
+                {
+                    if (child is StyledElement styledChild)
+                    {
+                        ApplyFontStyleToTextElements(styledChild, fontStyle);
+                    }
+                }
+            }
+            else if (element is Border { Child: StyledElement borderChild })
+            {
+                ApplyFontStyleToTextElements(borderChild, fontStyle);
+            }
+        }
+
+        /// <summary>
+        /// 为文本元素应用文本装饰（删除线/下划线）
+        /// </summary>
+        private void ApplyTextDecorationToTextElements(StyledElement element, bool isStrikethrough, bool isUnderline)
+        {
+            if (element is CTextBlock textBlock)
+            {
+                foreach (var cInline in textBlock.Content)
+                {
+                    if (isStrikethrough) cInline.IsStrikethrough = true;
+                    if (isUnderline) cInline.IsUnderline = true;
+                }
+            }
+            else if (element is CSpan span)
+            {
+                if (isStrikethrough) span.IsStrikethrough = true;
+                if (isUnderline) span.IsUnderline = true;
+            }
+            else if (element is CCode code)
+            {
+                if (isStrikethrough) code.IsStrikethrough = true;
+                if (isUnderline) code.IsUnderline = true;
+            }
+            else if (element is CBold bold)
+            {
+                if (isStrikethrough) bold.IsStrikethrough = true;
+                if (isUnderline) bold.IsUnderline = true;
+            }
+            else if (element is CItalic italic)
+            {
+                if (isStrikethrough) italic.IsStrikethrough = true;
+                if (isUnderline) italic.IsUnderline = true;
+            }
+            else if (element is CUnderline underline)
+            {
+                if (isStrikethrough) underline.IsStrikethrough = true;
+                // 保留显式下划线，但允许通过样式增强
+                if (isUnderline) underline.IsUnderline = true;
+            }
+            // 递归处理容器子元素
+            else if (element is Panel panel)
+            {
+                foreach (var child in panel.Children)
+                {
+                    if (child is StyledElement styledChild)
+                    {
+                        ApplyTextDecorationToTextElements(styledChild, isStrikethrough, isUnderline);
+                    }
+                }
+            }
+            else if (element is Border { Child: StyledElement borderChild })
+            {
+                ApplyTextDecorationToTextElements(borderChild, isStrikethrough, isUnderline);
+            }
+        }
+
+        /// <summary>
+        /// 为文本元素应用字体家族（font-family）
+        /// </summary>
+        private void ApplyFontFamilyToTextElements(StyledElement element, FontFamily fontFamily)
+        {
+            if (element is CTextBlock textBlock)
+            {
+                textBlock.FontFamily = fontFamily;
+            }
+            else if (element is CSpan span)
+            {
+                span.FontFamily = fontFamily;
+            }
+            else if (element is CCode code)
+            {
+                code.FontFamily = fontFamily;
+            }
+            else if (element is CBold bold)
+            {
+                bold.FontFamily = fontFamily;
+            }
+            else if (element is CItalic italic)
+            {
+                italic.FontFamily = fontFamily;
+            }
+            else if (element is CUnderline underline)
+            {
+                underline.FontFamily = fontFamily;
+            }
+            // 递归处理容器子元素
+            else if (element is Panel panel)
+            {
+                foreach (var child in panel.Children)
+                {
+                    if (child is StyledElement styledChild)
+                    {
+                        ApplyFontFamilyToTextElements(styledChild, fontFamily);
+                    }
+                }
+            }
+            else if (element is Border { Child: StyledElement borderChild })
+            {
+                ApplyFontFamilyToTextElements(borderChild, fontFamily);
+            }
+        }
+
+        /// <summary>
+        /// 为文本元素应用背景色（background-color）
+        /// </summary>
+        private void ApplyBackgroundColorToTextElements(StyledElement element, Brush brush)
+        {
+            if (element is CTextBlock textBlock)
+            {
+                textBlock.Background = brush;
+            }
+            else if (element is CSpan span)
+            {
+                span.Background = brush;
+            }
+            else if (element is CCode code)
+            {
+                code.Background = brush;
+            }
+            else if (element is CBold bold)
+            {
+                bold.Background = brush;
+            }
+            else if (element is CItalic italic)
+            {
+                italic.Background = brush;
+            }
+            else if (element is CUnderline underline)
+            {
+                underline.Background = brush;
+            }
+            // 递归处理容器子元素
+            else if (element is Panel panel)
+            {
+                foreach (var child in panel.Children)
+                {
+                    if (child is StyledElement styledChild)
+                    {
+                        ApplyBackgroundColorToTextElements(styledChild, brush);
+                    }
+                }
+            }
+            else if (element is Border { Child: StyledElement borderChild })
+            {
+                ApplyBackgroundColorToTextElements(borderChild, brush);
+            }
+        }
+
 
         public void ExtraModifyHyperlink(CHyperlink link, HtmlNode node, ReplaceManager manager)
         {

@@ -476,7 +476,167 @@ namespace Markdown.Avalonia
 
             return rtn;
         }
+        #region html辅助
 
+        /// <summary>
+        /// 识别文本中所有HTML标签块（包括嵌套标签、自闭合标签），返回标签块的范围和内容
+        /// </summary>
+        /// <param name="text">待解析文本</param>
+        /// <returns>HTML标签块的列表（起始索引、结束索引、标签内容）</returns>
+        private List<(int StartIdx, int EndIdx, string Content)> ExtractHtmlBlocks(string text)
+        {
+            var htmlBlocks = new List<(int, int, string)>();
+            int index = 0;
+            var tagStack = new Stack<string>(); // 处理嵌套HTML标签的栈
+
+            while (index < text.Length)
+            {
+                // 查找HTML标签起始符`<`
+                int tagStart = text.IndexOf('<', index);
+                if (tagStart == -1) break;
+
+                // 查找HTML标签结束符`>`
+                int tagEnd = text.IndexOf('>', tagStart);
+                if (tagEnd == -1) break; // 不完整标签，忽略
+
+                // 提取标签名（如div、span、img）
+                string tagContent = text.Substring(tagStart, tagEnd - tagStart + 1);
+                string tagName = GetHtmlTagName(tagContent);
+
+                if (string.IsNullOrEmpty(tagName))
+                {
+                    // 非标签（如<!--注释-->、<!DOCTYPE>），直接作为HTML块
+                    htmlBlocks.Add((tagStart, tagEnd, tagContent));
+                    index = tagEnd + 1;
+                    continue;
+                }
+
+                // 处理自闭合标签（如<img/>、<br/>）
+                if (tagContent.EndsWith("/>") || IsSelfClosingTag(tagName))
+                {
+                    htmlBlocks.Add((tagStart, tagEnd, tagContent));
+                    index = tagEnd + 1;
+                    continue;
+                }
+
+                // 处理开始标签（如<div>），入栈并查找对应的结束标签
+                if (!tagContent.StartsWith("</"))
+                {
+                    tagStack.Push(tagName);
+                    // 递归查找匹配的结束标签（处理嵌套）
+                    int closeTagEnd = FindMatchingCloseTag(text, tagEnd + 1, tagName);
+                    if (closeTagEnd == -1)
+                    {
+                        // 无匹配结束标签，视为不完整标签，作为HTML块
+                        htmlBlocks.Add((tagStart, tagEnd, tagContent));
+                        index = tagEnd + 1;
+                        tagStack.Pop();
+                    }
+                    else
+                    {
+                        // 完整的嵌套HTML块
+                        string fullHtml = text.Substring(tagStart, closeTagEnd - tagStart + 1);
+                        htmlBlocks.Add((tagStart, closeTagEnd, fullHtml));
+                        index = closeTagEnd + 1;
+                        tagStack.Pop();
+                    }
+                }
+                else
+                {
+                    // 孤立的结束标签，直接作为HTML块
+                    htmlBlocks.Add((tagStart, tagEnd, tagContent));
+                    index = tagEnd + 1;
+                    if (tagStack.Count > 0 && tagStack.Peek() == tagName)
+                        tagStack.Pop();
+                }
+            }
+
+            return htmlBlocks;
+        }
+
+        /// <summary>
+        /// 提取HTML标签的标签名（如&lt;div class="a"&gt; → div）
+        /// </summary>
+        private string GetHtmlTagName(string tag)
+        {
+            var match = Regex.Match(tag, @"^<\/?([a-zA-Z0-9]+)", RegexOptions.Compiled);
+            return match.Success ? match.Groups[1].Value.ToLower() : string.Empty;
+        }
+
+        /// <summary>
+        /// 判断是否为HTML自闭合标签
+        /// </summary>
+        private bool IsSelfClosingTag(string tagName)
+        {
+            var selfClosingTags = new HashSet<string>
+            {
+                "img",
+                "br",
+                "hr",
+                "input",
+                "meta",
+                "link",
+                "area",
+                "base",
+                "col",
+                "embed",
+                "param",
+                "source",
+                "track",
+                "wbr"
+            };
+            return selfClosingTags.Contains(tagName.ToLower());
+        }
+
+        /// <summary>
+        /// 查找匹配的HTML结束标签（处理嵌套）
+        /// </summary>
+        private int FindMatchingCloseTag(string text, int startIndex, string tagName)
+        {
+            int index = startIndex;
+            var stack = new Stack<string>();
+            stack.Push(tagName);
+
+            while (index < text.Length && stack.Count > 0)
+            {
+                int tagStart = text.IndexOf('<', index);
+                if (tagStart == -1) break;
+
+                int tagEnd = text.IndexOf('>', tagStart);
+                if (tagEnd == -1) break;
+
+                string tagContent = text.Substring(tagStart, tagEnd - tagStart + 1);
+                string currentTag = GetHtmlTagName(tagContent);
+
+                if (currentTag == tagName)
+                {
+                    if (tagContent.StartsWith("</"))
+                    {
+                        stack.Pop();
+                        if (stack.Count == 0)
+                            return tagEnd;
+                    }
+                    else
+                    {
+                        stack.Push(tagName); // 嵌套的同标签，入栈
+                    }
+                }
+
+                index = tagEnd + 1;
+            }
+
+            return -1; // 未找到匹配的结束标签
+        }
+
+        /// <summary>
+        /// 检查指定位置是否在HTML标签块内
+        /// </summary>
+        private bool IsInHtmlBlock(int position, List<(int StartIdx, int EndIdx, string Content)> htmlBlocks)
+        {
+            return htmlBlocks.Any(block => position >= block.StartIdx && position <= block.EndIdx);
+        }
+
+        #endregion
         #region 核心：通用成对符号解析（可扩展、支持嵌套）
 
         private List<(int Start, int End)> FindAllHtmlTags(string text)
@@ -501,6 +661,7 @@ namespace Markdown.Avalonia
             }
             return htmlRanges;
         }
+
         /// <summary>
         /// 可扩展的成对符号配置（支持任意成对符号，按优先级排序：长符号优先，避免短符号截断长符号）
         /// 格式：(开始符号, 结束符号, 生成对应Inline元素的工厂方法)
@@ -525,27 +686,68 @@ namespace Markdown.Avalonia
             // ("===", "===", inlines => new CHighlight(inlines)), // 高亮
             // ("::", "::", inlines => new CCustom(inlines))       // 自定义符号
         );
-        private bool IsRangeOverlapped(
-            int targetStart,
-            int targetEnd,
-            List<(int Start, int End)> usedRanges,
-            List<(int Start, int End)> htmlRanges)
+        /// <summary>
+        /// 判断字符是否为单词字符（字母、数字、下划线）
+        /// </summary>
+        private bool IsWordChar(char c)
         {
-            // 检查与已有符号范围的重叠
+            return char.IsLetterOrDigit(c) || c == '_';
+        }
+
+        /// <summary>
+        /// 校验_/__符号的边界是否合法（仅前后为非单词字符/行首行尾/空白符时有效）
+        /// </summary>
+        /// <param name="text">原文本</param>
+        /// <param name="startIdx">起始符号的索引</param>
+        /// <param name="startSym">起始符号（_/__）</param>
+        /// <param name="endIdx">结束符号的起始索引</param>
+        /// <param name="endSym">结束符号（_/__）</param>
+        /// <returns>边界是否合法</returns>
+        private bool IsValidUnderscoreBoundary(string text, int startIdx, string startSym, int endIdx, string endSym)
+        {
+            // 仅对_/__生效，其他符号（如*//**）不校验
+            if (startSym != "_" && startSym != "__") return true;
+
+            // 1. 校验起始符号的前边界
+            bool validStart = true;
+            if (startIdx > 0)
+            {
+                char prevChar = text[startIdx - 1];
+                // 前边界必须是：非单词字符（排除字母、数字、_） OR 空白符（空格、换行、制表符等）
+                validStart = !char.IsLetterOrDigit(prevChar) && prevChar != '_' || char.IsWhiteSpace(prevChar);
+            }
+            // 行首则直接合法
+
+            // 2. 校验结束符号的后边界
+            bool validEnd = true;
+            int endSymTotalIdx = endIdx + endSym.Length; // 结束符号的最后一个字符索引
+            if (endSymTotalIdx < text.Length)
+            {
+                char nextChar = text[endSymTotalIdx];
+                // 后边界必须是：非单词字符（排除字母、数字、_） OR 空白符 OR 换行
+                validEnd = !char.IsLetterOrDigit(nextChar) && nextChar != '_' || char.IsWhiteSpace(nextChar);
+            }
+            // 行尾则直接合法
+
+            // 3. 额外校验：_/__的内容不能为空（避免空标记如__、_）
+            int contentStart = startIdx + startSym.Length;
+            int contentLength = endIdx - contentStart;
+            if (contentLength <= 0)
+            {
+                return false;
+            }
+
+            return validStart && validEnd;
+        }
+
+        private bool IsRangeOverlapped(int targetStart, int targetEnd, List<(int Start, int End)> usedRanges)
+        {
             foreach (var (usedStart, usedEnd) in usedRanges)
             {
+                // 目标范围与已占用范围有重叠 → 返回true
                 if (targetStart < usedEnd && targetEnd > usedStart)
                     return true;
             }
-
-            // 检查与HTML标签范围的重叠（目标范围只要有部分在HTML标签内就视为重叠）
-            foreach (var (htmlStart, htmlEnd) in htmlRanges)
-            {
-                // HTML标签范围是 [htmlStart, htmlEnd]（包含`<`和`>`）
-                if (targetStart <= htmlEnd && targetEnd >= htmlStart)
-                    return true;
-            }
-
             return false;
         }
         /// <summary>
@@ -561,61 +763,116 @@ namespace Markdown.Avalonia
             {
                 return result;
             }
-            // 步骤1：找到当前文本中最内层的成对符号（避免外层符号截断内层）
+
+            // 第一步：提取所有HTML标签块，按位置排序
+            var htmlBlocks = ExtractHtmlBlocks(text)
+                .OrderBy(b => b.StartIdx)
+                .ToList();
+
+            if (htmlBlocks.Count == 0)
+            {
+                // 无HTML块，按原逻辑处理成对符号
+                return ParsePureMarkdownPairs(text, level);
+            }
+
+            // 第二步：将文本拆分为「HTML块」和「Markdown文本块」，分段处理
+            int lastPosition = 0;
+            foreach (var htmlBlock in htmlBlocks)
+            {
+                int htmlStart = htmlBlock.StartIdx;
+                int htmlEnd = htmlBlock.EndIdx;
+
+                // 1. 处理HTML块之前的Markdown文本
+                if (htmlStart > lastPosition)
+                {
+                    string markdownText = text.Substring(lastPosition, htmlStart - lastPosition);
+                    var markdownInlines = ParsePureMarkdownPairs(markdownText, level + 1);
+                    result.AddRange(markdownInlines);
+                }
+
+                // 2. 处理HTML块（纯行级解析上下文，允许块级解析）
+                string htmlContent = htmlBlock.Content;
+                var htmlInlines = ProcessWithHTMLParsers(htmlContent, level + 1, isBlockContext: false);
+                result.AddRange(htmlInlines);
+
+                // 更新最后处理位置
+                lastPosition = htmlEnd + 1;
+            }
+
+            // 3. 处理最后一个HTML块之后的Markdown文本
+            if (lastPosition < text.Length)
+            {
+                string remainingMarkdown = text.Substring(lastPosition);
+                var remainingInlines = ParsePureMarkdownPairs(remainingMarkdown, level + 1);
+                result.AddRange(remainingInlines);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 处理纯Markdown文本（无HTML块）的成对符号，复用原有的成对解析逻辑
+        /// </summary>
+        /// <summary>
+        /// 处理纯Markdown文本（无HTML块）的成对符号，复用原有的成对解析逻辑
+        /// </summary>
+        private List<CInline> ParsePureMarkdownPairs(string text, int level)
+        {
+            var result = new List<CInline>();
             var (found, startSym, endSym, elementFactory, startIdx, endIdx) = FindInnermostPair(text, level);
 
             if (!found)
             {
-                var parserResult = ProcessWithOriginalParsers(text, level);
+                // 无成对符号，执行HTML解析（传递isBlockContext=true，避免循环）
+                var parserResult = ProcessWithHTMLParsers(text, level, isBlockContext: true);
                 result.AddRange(parserResult);
                 return result;
             }
 
-            // 步骤3：有成对符号 → 拆分前/中/后三段处理
-            string preText = text.Substring(0, startIdx); // 成对符号之前的文本
-            string middleText = text.Substring(
-                startIdx + startSym.Length,
-                endIdx - (startIdx + startSym.Length) // 成对符号之间的文本（要递归解析）
-            );
-            string postText = text.Substring(endIdx + endSym.Length); // 成对符号之后的文本
+            // 拆分前/中/后文本，递归解析
+            string preText = text.Substring(0, startIdx);
+            string middleText = text.Substring(startIdx + startSym.Length, endIdx - (startIdx + startSym.Length));
+            string postText = text.Substring(endIdx + endSym.Length);
 
-            // ① 处理“成对符号之前”的文本（递归解析，确保前面的成对符号也被处理）
+            // 处理前缀
             if (!string.IsNullOrEmpty(preText))
             {
-                var preResult = ParseAllNestedPairs(preText, level + 1);
+                var preResult = ParseAllNestedPairs(preText, level + 1); // 递归：前缀可能包含HTML
                 result.AddRange(preResult);
             }
-            var middleResult = ParseAllNestedPairs(middleText, level + 1);
 
-            // ③ 生成当前成对符号对应的Inline元素（如CBold、CItalic）
+            // 处理中间内容（递归：中间可能包含HTML）
+            var middleResult = ParseAllNestedPairs(middleText, level + 1);
             var pairElement = elementFactory(middleResult);
             result.Add(pairElement);
 
-            // ④ 处理“成对符号之后”的文本（递归解析，确保后面的成对符号也被处理）
+            // 处理后缀
             if (!string.IsNullOrEmpty(postText))
             {
-                var postResult = ParseAllNestedPairs(postText, level + 1);
+                var postResult = ParseAllNestedPairs(postText, level + 1); // 递归：后缀可能包含HTML
                 result.AddRange(postResult);
             }
+
             return result;
         }
-
+        private const int _maxNestDepth = 20;
         /// <summary>
         /// 查找文本中最内层的成对符号（核心：避免外层符号截断内层）
         /// </summary>
         /// <returns>是否找到、开始符号、结束符号、元素工厂、开始索引、结束索引</returns>
         private (bool Found, string StartSym, string EndSym, Func<IEnumerable<CInline>, CInline> ElementFactory, int StartIdx, int EndIdx) FindInnermostPair(string text, int level)
         {
-            // 步骤0：先提取所有HTML标签范围，后续匹配需跳过这些范围
-            var htmlRanges = FindAllHtmlTags(text);
-
-            // 拆分长符号组和短符号组（原有逻辑）
+            if (level > _maxNestDepth)
+            {
+                return (false, "", "", null, -1, -1);
+            }
             var longPairs = _pairSymbols.Where(p => p.Start.Length >= 2).ToList();
             var shortPairs = _pairSymbols.Where(p => p.Start.Length == 1).ToList();
 
             var allValidPairs = new List<(string Start, string End, Func<IEnumerable<CInline>, CInline> Factory, int StartIdx, int EndIdx, int NestLevel)>();
+            var longSymbolPositions = new List<(int Start, int End)>(); // 记录所有__的位置（无论是否有效），用于隔离_
 
-            // 步骤1：收集长符号的有效匹配（跳过HTML标签）
+            // 步骤1：处理长符号__（优先收集，强制隔离_）
             foreach (var (start, end, factory) in longPairs)
             {
                 int currentStartIdx = 0;
@@ -631,29 +888,22 @@ namespace Markdown.Avalonia
                         continue;
                     }
 
-                    // 检查当前长符号范围是否与HTML标签重叠 → 重叠则跳过
-                    bool isOverlapWithHtml = IsRangeOverlapped(
-                        currentStartIdx,
-                        currentEndIdx + end.Length, // 结束符号的完整范围
-                        new List<(int, int)>(), // 暂不检查已有符号（长符号优先）
-                        htmlRanges
-                    );
-                    if (isOverlapWithHtml)
+                    // 关键1：记录所有__的位置（即使边界无效），不让_拆分匹配
+                    int longSymEnd = currentEndIdx + end.Length;
+                    longSymbolPositions.Add((currentStartIdx, longSymEnd));
+
+                    // 关键2：仅当边界有效时，才视为粗体匹配
+                    if (IsValidUnderscoreBoundary(text, currentStartIdx, start, currentEndIdx, end))
                     {
-                        currentStartIdx = currentEndIdx + end.Length;
-                        continue;
+                        int nestLevel = CalculateNestLevel(text, currentStartIdx + start.Length, currentEndIdx, level);
+                        allValidPairs.Add((start, end, factory, currentStartIdx, currentEndIdx, nestLevel));
                     }
 
-                    // 计算嵌套层级（原有逻辑）
-                    int nestLevel = CalculateNestLevel(text, currentStartIdx + start.Length, currentEndIdx, level);
-                    allValidPairs.Add((start, end, factory, currentStartIdx, currentEndIdx, nestLevel));
-
-                    currentStartIdx = currentEndIdx + end.Length;
+                    currentStartIdx = longSymEnd;
                 }
             }
 
-            // 步骤2：收集短符号的有效匹配（跳过长符号和HTML标签）
-            var longUsedRanges = allValidPairs.Select(p => (Start: p.StartIdx, End: p.EndIdx + p.End.Length)).ToList();
+            // 步骤2：处理短符号_（严格跳过长符号__的所有位置）
             foreach (var (start, end, factory) in shortPairs)
             {
                 int currentStartIdx = 0;
@@ -662,50 +912,50 @@ namespace Markdown.Avalonia
                     currentStartIdx = FindNonEscaped(text, start, currentStartIdx);
                     if (currentStartIdx == -1) break;
 
-                    // 检查是否与长符号或HTML标签重叠
-                    bool isOverlap = IsRangeOverlapped(
-                        currentStartIdx,
-                        currentStartIdx + start.Length,
-                        longUsedRanges,
-                        htmlRanges
-                    );
-                    if (isOverlap)
+                    int shortSymStart = currentStartIdx;
+                    int shortSymEnd = currentStartIdx + start.Length;
+
+                    // 关键3：如果_的位置与任何__的位置重叠，直接跳过（不拆分__）
+                    bool isOverlapWithLongSym = longSymbolPositions.Any(l =>
+                        shortSymStart < l.End && shortSymEnd > l.Start);
+                    if (isOverlapWithLongSym)
                     {
-                        currentStartIdx += start.Length;
+                        currentStartIdx = shortSymEnd;
                         continue;
                     }
 
-                    int currentEndIdx = FindNonEscaped(text, end, currentStartIdx + start.Length);
+                    int currentEndIdx = FindNonEscaped(text, end, shortSymEnd);
                     if (currentEndIdx == -1) break;
 
-                    // 检查结束符号是否与长符号或HTML标签重叠
-                    bool isEndOverlap = IsRangeOverlapped(
-                        currentEndIdx,
-                        currentEndIdx + end.Length,
-                        longUsedRanges,
-                        htmlRanges
-                    );
+                    int shortEndTotal = currentEndIdx + end.Length;
+                    // 结束符号也不能与__重叠
+                    bool isEndOverlap = longSymbolPositions.Any(l =>
+                        currentEndIdx < l.End && shortEndTotal > l.Start);
                     if (isEndOverlap)
                     {
-                        currentStartIdx = currentEndIdx + end.Length;
+                        currentStartIdx = shortEndTotal;
                         continue;
                     }
 
-                    int nestLevel = CalculateNestLevel(text, currentStartIdx + start.Length, currentEndIdx, level);
-                    allValidPairs.Add((start, end, factory, currentStartIdx, currentEndIdx, nestLevel));
+                    // 边界校验：_必须符合规则才视为斜体
+                    if (IsValidUnderscoreBoundary(text, shortSymStart, start, currentEndIdx, end))
+                    {
+                        int nestLevel = CalculateNestLevel(text, shortSymEnd, currentEndIdx, level);
+                        allValidPairs.Add((start, end, factory, shortSymStart, currentEndIdx, nestLevel));
+                    }
 
-                    currentStartIdx = currentEndIdx + end.Length;
+                    currentStartIdx = shortEndTotal;
                 }
             }
 
-            // 原有逻辑：筛选最佳匹配
             if (allValidPairs.Count == 0)
                 return (false, "", "", null, -1, -1);
 
+            // 排序规则：长符号优先 → 最内层优先 → 结束位置靠前
             var bestPair = allValidPairs
-                .OrderByDescending(p => p.NestLevel)
+                .OrderByDescending(p => p.Start.Length) // 长符号（__）优先级 > 短符号（_）
+                .ThenByDescending(p => p.NestLevel)
                 .ThenBy(p => p.EndIdx)
-                .ThenByDescending(p => p.Start.Length)
                 .First();
 
             return (true, bestPair.Start, bestPair.End, bestPair.Factory, bestPair.StartIdx, bestPair.EndIdx);
@@ -717,11 +967,9 @@ namespace Markdown.Avalonia
         private int FindNonEscaped(string text, string target, int startFrom)
         {
             int index = text.IndexOf(target, startFrom);
-            var htmlRanges = FindAllHtmlTags(text); // 获取HTML标签范围
-
             while (index != -1)
             {
-                // 检查是否被转义（原有逻辑）
+                // 检查是否被转义（前面不是 \，或前面是 \\ 双重转义）
                 bool isEscaped = index > 0 && text[index - 1] == '\\';
                 if (isEscaped)
                 {
@@ -729,22 +977,13 @@ namespace Markdown.Avalonia
                     continue;
                 }
 
-                // 检查是否在HTML标签范围内 → 若是则跳过
-                bool isInHtmlTag = htmlRanges.Any(range =>
-                    index >= range.Start && index <= range.End
-                );
-                if (isInHtmlTag)
-                {
-                    index = text.IndexOf(target, index + target.Length);
-                    continue;
-                }
-
-                // 长符号截断检查（原有逻辑）
+                // 优化：如果目标是长符号（≥2字符），检查是否被短符号“截断”（比如 ** 中间夹了 *）
                 if (target.Length >= 2)
                 {
                     bool isTruncated = false;
+                    // 检查长符号内部是否包含对应的短符号（比如 ** 内部有 * → 不视为完整长符号）
                     string innerText = text.Substring(index, target.Length);
-                    var shortSymbol = target.Substring(0, 1);
+                    var shortSymbol = target.Substring(0, 1); // 长符号对应的短符号（如 **→*）
                     if (innerText.Count(c => c.ToString() == shortSymbol) != target.Length)
                     {
                         isTruncated = true;
@@ -761,7 +1000,7 @@ namespace Markdown.Avalonia
             }
             return -1;
         }
-        
+
         /// <summary>
         /// 计算文本片段的嵌套层级（用于判断最内层成对符号）
         /// </summary>
@@ -801,62 +1040,223 @@ namespace Markdown.Avalonia
         /// <summary>
         /// 对非成对符号的文本，执行原有的InlineParser Pattern判断（保持原逻辑不变）
         /// </summary>
-        private List<CInline> ProcessWithOriginalParsers(string text, int level)
+        /// <summary>
+        /// 处理HTML解析（行级+块级），通过isBlockContext避免循环递归
+        /// </summary>
+        /// <param name="text">待解析文本</param>
+        /// <param name="level">递归层级</param>
+        /// <param name="isBlockContext">是否为块级解析上下文（若是则跳过块级解析）</param>
+        private List<CInline> ProcessWithHTMLParsers(string text, int level, bool isBlockContext = false)
         {
             var rtn = new List<CInline>();
-
-            void OriginalRunSpanRest(
-                string txt,
-                int index,
-                int length,
-                int parserStart)
+            if (!isBlockContext)
             {
-                for (; parserStart < _inlines.Length; ++parserStart)
+                var parseStatus = new ParseStatus(_supportTextAlignment);
+                var blockElements = new List<DocumentElement>();
+                int blockParseIndex = 0;
+                int textLength = text.Length;
+
+                ProcessBlockGamut(text, ref blockParseIndex, textLength, parseStatus, blockElements);
+
+                foreach (var blockElement in blockElements)
                 {
-                    var parser = _inlines[parserStart];
+                    // 1. 调整内部控件的布局：清除默认边距，使用基线对齐
+                    var innerControl = blockElement.Control;
+                    innerControl.VerticalAlignment = VerticalAlignment.Top; // 改为基线对齐
+                    innerControl.Margin = new Thickness(0); // 清除默认边距
 
-                    for (;;)
+                    if (innerControl is Panel panel)
                     {
-                        var match = parser.Pattern.Match(txt, index, length);
-                        if (!match.Success)
+                        // 强制面板内所有子元素基线对齐，清除边距
+                        foreach (var child in panel.Children)
                         {
-                            break;
-                        }
-
-                        var rslt = parser.Convert(txt, match, this, out int parseBegin, out int parserEnd);
-                        if (rslt is null)
-                        {
-                            break;
-                        }
-
-                        if (parseBegin > index)
-                        {
-                            OriginalRunSpanRest(txt, index, parseBegin - index, parserStart + 1);
-                        }
-
-                        rtn.AddRange(rslt);
-
-                        length -= parserEnd - index;
-                        index = parserEnd;
-
-                        if (length == 0)
-                        {
-                            break;
+                            child.VerticalAlignment = VerticalAlignment.Top;
+                            child.Margin = new Thickness(0);
                         }
                     }
 
-                    if (length == 0) break;
+                    // 2. 容器使用基线对齐，与文本流保持一致
+                    var inlineUIContainer = new CInlineUIContainer(innerControl)
+                    {
+                        TextVerticalAlignment = TextVerticalAlignment.Center, // 关键：文本基线对齐
+                    };
+                    rtn.Add(inlineUIContainer);
                 }
 
-                if (length != 0)
+                if (blockParseIndex < textLength)
                 {
-                    var subtext = text.Substring(index, length);
-                    rtn.AddRange(StrictBoldItalic ? DoText(subtext) : DoTextDecorations(subtext, s => DoText(s)));
+                    string remainingText = text.Substring(blockParseIndex);
+                    OriginalRunSpanRest(remainingText, 0, remainingText.Length, 0, rtn);
                 }
             }
+            else
+            {
+                OriginalRunSpanRest(text, 0, text.Length, 0, rtn);
+            }
 
-            OriginalRunSpanRest(text, 0, text.Length, 0);
             return rtn;
+        }
+        /// <summary>
+        /// 复用原 PrivateRunBlockGamut 的块级解析逻辑，提取为独立方法
+        /// 处理 _topBlockParsers + _blockParsers，将结果存入 blockElements
+        /// </summary>
+        private void ProcessBlockGamut(string text, ref int index, int length, ParseStatus status, List<DocumentElement> blockElements)
+        {
+            var candidates = new List<Candidate<BlockParser2>>();
+
+            // 第一步：处理顶级块解析器 _topBlockParsers
+            for (;;)
+            {
+                candidates.Clear();
+                foreach (var parser in _topBlockParsers)
+                {
+                    var match = parser.Pattern.Match(text, index, length);
+                    if (match.Success)
+                        candidates.Add(new Candidate<BlockParser2>(match, parser));
+                }
+
+                if (candidates.Count == 0)
+                    break;
+
+                candidates.Sort(); // 按匹配位置排序
+
+                IEnumerable<DocumentElement>? result = null;
+                int bestBegin = 0;
+                int bestEnd = 0;
+
+                foreach (var c in candidates)
+                {
+                    result = c.Parser.Convert2(text, c.Match, status, this, out bestBegin, out bestEnd);
+                    if (result is not null)
+                        break;
+                }
+
+                if (result is null)
+                    break;
+
+                // 处理顶级块之前的文本（交给次级块解析器）
+                if (bestBegin > index)
+                {
+                    ProcessSubBlockGamut(text, index, bestBegin - index, status, blockElements);
+                }
+
+                blockElements.AddRange(result);
+
+                // 更新索引和剩余长度
+                length -= bestEnd - index;
+                index = bestEnd;
+            }
+
+            // 第二步：处理剩余文本的次级块解析器 _blockParsers
+            if (index < text.Length)
+            {
+                ProcessSubBlockGamut(text, index, text.Length - index, status, blockElements);
+            }
+        }
+
+        /// <summary>
+        /// 处理次级块解析器 _blockParsers（复用原 RunBlockRest 逻辑）
+        /// </summary>
+        private void ProcessSubBlockGamut(string text, int index, int length, ParseStatus status, List<DocumentElement> blockElements)
+        {
+            for (int parserStart = 0; parserStart < _blockParsers.Length; ++parserStart)
+            {
+                var parser = _blockParsers[parserStart];
+
+                for (;;)
+                {
+                    var match = parser.Pattern.Match(text, index, length);
+                    if (!match.Success)
+                        break;
+
+                    var rslt = parser.Convert2(text, match, status, this, out int parseBegin, out int parserEnd);
+                    if (rslt is null)
+                        break;
+
+                    // 处理当前块之前的文本（递归交给下一个次级解析器）
+                    if (parseBegin > index)
+                    {
+                        ProcessSubBlockGamut(text, index, parseBegin - index, status, blockElements);
+                    }
+
+                    blockElements.AddRange(rslt);
+
+                    // 更新索引和剩余长度
+                    length -= parserEnd - index;
+                    index = parserEnd;
+
+                    if (length == 0)
+                        break;
+                }
+
+                if (length == 0)
+                    break;
+            }
+
+            // 最后：未被块解析器处理的文本，转为段落（复用原 FormParagraphs 逻辑）
+            if (length != 0)
+            {
+                string remainingText = text.Substring(index, length);
+                var paragraphs = FormParagraphs(remainingText, status);
+                blockElements.AddRange(paragraphs);
+            }
+        }
+
+        /// <summary>
+        /// 原有行级解析逻辑（_inlines），提取为独立方法，直接操作结果列表
+        /// </summary>
+        private void OriginalRunSpanRest(
+            string txt,
+            int index,
+            int length,
+            int parserStart,
+            List<CInline> result)
+        {
+            for (; parserStart < _inlines.Length; ++parserStart)
+            {
+                var parser = _inlines[parserStart];
+
+                for (;;)
+                {
+                    var match = parser.Pattern.Match(txt, index, length);
+                    if (!match.Success)
+                    {
+                        break;
+                    }
+
+                    var rslt = parser.Convert(txt, match, this, out int parseBegin, out int parserEnd);
+                    if (rslt is null)
+                    {
+                        break;
+                    }
+
+                    if (parseBegin > index)
+                    {
+                        OriginalRunSpanRest(txt, index, parseBegin - index, parserStart + 1, result);
+                    }
+
+                    result.AddRange(rslt);
+
+                    length -= parserEnd - index;
+                    index = parserEnd;
+
+                    if (length == 0)
+                    {
+                        break;
+                    }
+                }
+
+                if (length == 0)
+                    break;
+            }
+
+            // 未被行级解析器处理的文本，转为普通文本
+            if (length != 0)
+            {
+                var subtext = txt.Substring(index, length);
+                var textInlines = StrictBoldItalic ? DoText(subtext) : DoTextDecorations(subtext, DoText);
+                result.AddRange(textInlines);
+            }
         }
 
         #endregion
@@ -1016,7 +1416,7 @@ namespace Markdown.Avalonia
                 {
                     cimg.ClickCommand = new ImageOpenCommand();
                     // 命令参数为图片的原始路径/URL（urlTxt）
-                    cimg.ClickCommandParameter = urlTxt;
+                    cimg.ClickCommandParameter = cimg;
 
                     if (!String.IsNullOrEmpty(title)
                         && title.All(Char.IsLetterOrDigit))
@@ -1029,7 +1429,7 @@ namespace Markdown.Avalonia
 
             CImage image = _setupInfo.LoadImage(urlTxt);
             image.ClickCommand = new ImageOpenCommand();
-            image.ClickCommandParameter = urlTxt; // 传递图片路径/URL
+            image.ClickCommandParameter = image; // 传递图片路径/URL
 
             if (!String.IsNullOrEmpty(title)
                 && title.All(char.IsLetterOrDigit))
@@ -1198,21 +1598,21 @@ namespace Markdown.Avalonia
                         break;
                     }
 
-                    case '_': // underline?
-                    {
-                        var oldI = i;
-                        var inline = ParseAsUnderline(text, ref i);
-                        if (inline == null)
-                        {
-                            buff.Append(text, oldI, i - oldI + 1);
-                        }
-                        else
-                        {
-                            HandleBefore();
-                            rtn.Add(inline);
-                        }
-                        break;
-                    }
+                    // case '_': // underline?
+                    // {
+                    //     var oldI = i;
+                    //     var inline = ParseAsUnderline(text, ref i);
+                    //     if (inline == null)
+                    //     {
+                    //         buff.Append(text, oldI, i - oldI + 1);
+                    //     }
+                    //     else
+                    //     {
+                    //         HandleBefore();
+                    //         rtn.Add(inline);
+                    //     }
+                    //     break;
+                    // }
 
                     case '%': // color?
                     {

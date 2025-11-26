@@ -1,15 +1,11 @@
 ﻿using HtmlAgilityPack;
-using System;
 using System.Collections.Generic;
 using Markdown.Avalonia.Html.Core.Utils;
-using System.Windows;
-using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using System.Reflection;
-using ColorTextBlock.Avalonia;
 using Avalonia.Media;
+using ColorTextBlock.Avalonia;
 
 namespace Markdown.Avalonia.Html.Core.Parsers
 {
@@ -32,12 +28,6 @@ namespace Markdown.Avalonia.Html.Core.Parsers
 
             int index = 0;
             int order = 1;
-
-            var startAttr = node.Attributes["start"];
-            if (startAttr is not null && Int32.TryParse(startAttr.Value, out var start))
-            {
-                order = start;
-            }
 
             foreach (var listItemTag in node.ChildNodes.CollectTag("li"))
             {
@@ -64,10 +54,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
                 ++order;
             }
 
-            generated = new[]
-            {
-                list
-            };
+            generated = [list];
             return true;
         }
 

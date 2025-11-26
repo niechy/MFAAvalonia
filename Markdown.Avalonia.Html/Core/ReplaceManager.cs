@@ -76,7 +76,6 @@ namespace Markdown.Avalonia.Html.Core
 
         public void Register(ITagParser parser)
         {
-
             if (parser is IInlineTagParser inlineParser)
             {
                 PrivateRegister(inlineParser, _inlineBindParsers);

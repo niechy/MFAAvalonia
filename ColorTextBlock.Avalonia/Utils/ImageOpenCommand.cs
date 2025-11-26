@@ -1,4 +1,7 @@
-﻿using Avalonia.Platform;
+﻿using Avalonia;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,22 +18,27 @@ public class ImageOpenCommand : ICommand
     public event EventHandler? CanExecuteChanged;
 
     // 存储生成的临时文件路径，用于后续清理
-    private readonly List<string> _tempFiles = new List<string>();
+    private readonly List<string> _tempFiles = [];
 
+    // 支持 CImage 或字符串路径作为参数
     public bool CanExecute(object? parameter)
     {
-        return parameter is string; // 参数为图片路径/URL
+        return parameter is string or CImage;
     }
 
     public void Execute(object? parameter)
     {
-        if (parameter is string source)
+        if (parameter is CImage cImage)
         {
-            // 异步执行，避免阻塞UI
+            // 从 CImage 中获取已加载的 IImage
+            _ = OpenImageFromCImage(cImage);
+        }
+        else if (parameter is string source)
+        {
+            // 兼容原有字符串路径/URL逻辑
             _ = OpenImage(source);
         }
     }
-
     async private Task OpenImage(string source)
     {
         if (Uri.TryCreate(source, UriKind.Absolute, out var uri))
@@ -63,6 +71,73 @@ public class ImageOpenCommand : ICommand
                 OpenLocalFile(source);
         }
     }
+    // 从 CImage 提取图片并打开
+    async private Task OpenImageFromCImage(CImage cImage)
+    {
+        if (cImage.Image == null)
+        {
+            Debug.WriteLine("CImage 中未加载图片");
+            return;
+        }
+
+        // 将 IImage 保存到临时文件
+        var tempFile = await SaveImageToTempFile(cImage.Image);
+        if (tempFile != null)
+        {
+            await OpenLocalFileAndCleanup(tempFile);
+        }
+    }
+
+    // 保存 IImage 到临时文件
+    async private Task<string?> SaveImageToTempFile(IImage image)
+    {
+        try
+        {
+            // 生成临时文件路径（根据图片类型自动添加扩展名）
+            var tempPath = Path.GetTempFileName();
+            string extension = image is Bitmap ? ".png" : ".png"; // 默认为PNG
+            tempPath = Path.ChangeExtension(tempPath, extension);
+
+            // 处理 Bitmap 类型（直接保存）
+            if (image is Bitmap bitmap)
+            {
+                await using var stream = File.OpenWrite(tempPath);
+                bitmap.Save(stream); // 保存 Bitmap 到流
+                await stream.FlushAsync();
+            }
+            // 处理其他 IImage 类型（如 SvgImage，通过渲染到 Bitmap 保存）
+            else
+            {
+                // 创建与图片尺寸一致的 Bitmap
+                var pixelSize = new PixelSize((int)image.Size.Width, (int)image.Size.Height);
+                var renderTarget = new RenderTargetBitmap(pixelSize, new Vector(96, 96));
+
+                // 渲染 IImage 到 Bitmap
+                using (var context = renderTarget.CreateDrawingContext())
+                {
+                    context.DrawImage(image, new Rect(image.Size), new Rect(0, 0, pixelSize.Width, pixelSize.Height));
+                }
+
+                // 保存渲染结果
+                await using var stream = File.OpenWrite(tempPath);
+                renderTarget.Save(stream);
+                await stream.FlushAsync();
+            }
+
+            // 记录临时文件路径（兜底清理）
+            lock (_tempFiles)
+            {
+                _tempFiles.Add(tempPath);
+            }
+            return tempPath;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"保存图片到临时文件失败：{ex.Message}");
+            return null;
+        }
+    }
+
 
     /// <summary>
     /// 打开本地文件并在进程退出后清理临时文件

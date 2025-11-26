@@ -5,6 +5,7 @@ aside      | #border                            | TagAside             |
 blockquote | #border                            | TagBlockquote        |
 center     | #border                            | TagCenter            | Center
 div        | #blocks                            |                      |
+span       | #blocks                            |                      |
 footer     | #border                            | TagFooter            |
 h1         | #blocks                            | TagHeading1          |
 h2         | #blocks                            | TagHeading2          |

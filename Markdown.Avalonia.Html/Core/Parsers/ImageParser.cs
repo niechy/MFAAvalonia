@@ -47,7 +47,7 @@ namespace Markdown.Avalonia.Html.Core.Parsers
             CImage image = setupInfo.LoadImage(link);
             
             image.ClickCommand = new ImageOpenCommand();
-            image.ClickCommandParameter = link;
+            image.ClickCommandParameter = image;
             
             if (!String.IsNullOrEmpty(title)
                 && title.All(char.IsLetterOrDigit))
