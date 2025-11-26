@@ -72,14 +72,14 @@ public static class VersionChecker
             AddResourceCheckTask();
         }
 
-        if (config.AutoUpdateMFA)
-        {
-            AddMFAUpdateTask();
-        }
-        else if (config.CheckVersion)
-        {
-            AddMFACheckTask();
-        }
+        // if (config.AutoUpdateMFA)
+        // {
+        //     AddMFAUpdateTask();
+        // }
+        // else if (config.CheckVersion)
+        // {
+        //     AddMFACheckTask();
+        // }
 
         TaskManager.RunTaskAsync(async () => await ExecuteTasksAsync(),
             () => ToastNotification.Show("自动更新时发生错误！"), "启动检测");
@@ -435,7 +435,7 @@ public static class VersionChecker
 
         var wpfDir = AppContext.BaseDirectory;
         var resourcePath = Path.Combine(wpfDir, "resource");
-
+        var agentPath = Path.Combine(wpfDir, "agent");
         if (!File.Exists(interfacePath))
         {
             originPath = Path.Combine(tempExtractDir, "assets");
@@ -476,15 +476,29 @@ public static class VersionChecker
 
                     try
                     {
-                        if (!Path.GetFileName(rfile).Contains("MFAUpdater")
-                            && !Path.GetFileName(rfile).Contains("MFAAvalonia")
-                            && !Path.GetFileName(rfile).Contains("interface.json", StringComparison.OrdinalIgnoreCase)
-                            && !Path.GetFileName(rfile).Contains(Process.GetCurrentProcess().MainModule?.ModuleName ?? string.Empty))
-                        {
-                            File.SetAttributes(rfile, FileAttributes.Normal);
-                            LoggerHelper.Info("Deleting file: " + rfile);
-                            File.Delete(rfile);
-                        }
+                        File.SetAttributes(rfile, FileAttributes.Normal);
+                        LoggerHelper.Info("Deleting file: " + rfile);
+                        DeleteFileWithBackup(rfile);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Error($"文件删除失败: {rfile}", ex);
+                    }
+                }
+            }
+            if (Directory.Exists(agentPath))
+            {
+                foreach (var rfile in Directory.EnumerateFiles(agentPath, "*", SearchOption.AllDirectories))
+                {
+                    var fileName = Path.GetFileName(rfile);
+                    if (fileName.Equals(ChangelogViewModel.ChangelogFileName, StringComparison.OrdinalIgnoreCase) || fileName.Contains("interface.json", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    try
+                    {
+                        File.SetAttributes(rfile, FileAttributes.Normal);
+                        LoggerHelper.Info("Deleting file: " + rfile);
+                        DeleteFileWithBackup(rfile);
                     }
                     catch (Exception ex)
                     {
@@ -523,25 +537,10 @@ public static class VersionChecker
                         {
                             try
                             {
-                                if (!Path.GetFileName(delPath).Contains("MFAUpdater")
-                                    && !Path.GetFileName(delPath).Contains("MFAAvalonia")
-                                    && !Path.GetFileName(delPath).Contains("interface.json", StringComparison.OrdinalIgnoreCase)
-                                    && !Path.GetFileName(delPath).Contains(Process.GetCurrentProcess().MainModule?.ModuleName ?? string.Empty))
-                                {
-                                    if (Path.GetExtension(delPath).Equals(".md", StringComparison.OrdinalIgnoreCase) && delPath.Contains(AnnouncementViewModel.AnnouncementFolder))
-                                    {
-                                        GlobalConfiguration.SetValue(ConfigurationKeys.DoNotShowAnnouncementAgain, bool.FalseString);
-                                    }
-                                    if (Path.GetExtension(delPath).Equals(".dll", StringComparison.OrdinalIgnoreCase) && OperatingSystem.IsWindows()
-                                        || !Path.GetFileName(tempPath).Contains("minicap.so", StringComparison.OrdinalIgnoreCase) && Path.GetExtension(delPath).Equals(".so", StringComparison.OrdinalIgnoreCase) && OperatingSystem.IsLinux()
-                                        || Path.GetExtension(delPath).Equals(".dylib", StringComparison.OrdinalIgnoreCase) && (OperatingSystem.IsMacOS() || OperatingSystem.IsIOS()))
-                                    {
-                                        LoggerHelper.Info("Skip file: " + delPath);
-                                        continue;
-                                    }
-                                    LoggerHelper.Info("Deleting Deleted file: " + delPath);
-                                    File.Delete(delPath);
-                                }
+
+                                LoggerHelper.Info("Deleting Deleted file: " + delPath);
+                                DeleteFileWithBackup(delPath);
+
                             }
                             catch (Exception e)
                             {
@@ -559,21 +558,8 @@ public static class VersionChecker
                         {
                             try
                             {
-                                if (!Path.GetFileName(delPath).Contains("MFAUpdater")
-                                    && !Path.GetFileName(delPath).Contains("MFAAvalonia")
-                                    && !Path.GetFileName(delPath).Contains("interface.json", StringComparison.OrdinalIgnoreCase)
-                                    && !Path.GetFileName(delPath).Contains(Process.GetCurrentProcess().MainModule?.ModuleName ?? string.Empty))
-                                {
-                                    if (Path.GetExtension(delPath).Equals(".dll", StringComparison.OrdinalIgnoreCase) && OperatingSystem.IsWindows()
-                                        || !Path.GetFileName(tempPath).Contains("minicap.so", StringComparison.OrdinalIgnoreCase) && Path.GetExtension(delPath).Equals(".so", StringComparison.OrdinalIgnoreCase) && OperatingSystem.IsLinux()
-                                        || Path.GetExtension(delPath).Equals(".dylib", StringComparison.OrdinalIgnoreCase) && (OperatingSystem.IsMacOS() || OperatingSystem.IsIOS()))
-                                    {
-                                        LoggerHelper.Info("Skip file: " + delPath);
-                                        continue;
-                                    }
-                                    LoggerHelper.Info("Deleting Modified file: " + delPath);
-                                    File.Delete(delPath);
-                                }
+                                LoggerHelper.Info("Deleting Modified file: " + delPath);
+                                DeleteFileWithBackup(delPath);
                             }
                             catch (Exception e)
                             {
@@ -600,14 +586,12 @@ public static class VersionChecker
         var di = new DirectoryInfo(originPath);
         if (di.Exists)
         {
-            await DirectoryMerger.DirectoryMergeAsync(originPath, wpfDir, progress, false, true);
+            await CopyAndDelete(originPath, wpfDir, progress, true);
+
         }
-
-
+        
         // File.Delete(tempZipFilePath);
         // Directory.Delete(tempExtractDir, true);
-
-
         var newInterfacePath = Path.Combine(wpfDir, "interface.json");
         if (File.Exists(newInterfacePath))
         {
@@ -652,6 +636,200 @@ public static class VersionChecker
             Dismiss(sukiToast);
         shouldShowToast = true;
         action?.Invoke();
+    }
+
+    /// <summary>
+    /// 将源目录（newPath）的所有内容复制到目标目录（oldPath）
+    /// 1. 缺失的目标目录自动创建
+    /// 2. 目标文件已存在时，先调用 DeleteFileWithBackup 备份删除
+    /// 3. 复制后设置目标文件为普通属性（Normal）
+    /// 4. 支持进度显示、公告文件特殊处理、取消操作
+    /// </summary>
+    /// <param name="newPath">源目录路径（要复制的目录）</param>
+    /// <param name="oldPath">目标目录路径（复制到的目录）</param>
+    /// <param name="progressBar">进度条控件（用于显示复制进度）</param>
+    /// <param name="saveAnnouncement">是否启用公告文件特殊处理</param>
+    /// <param name="cancellationToken">取消令牌（用于中断复制操作）</param>
+    public async static Task CopyAndDelete(
+        string newPath,
+        string oldPath,
+        ProgressBar? progressBar = null,
+        bool saveAnnouncement = false,
+        CancellationToken cancellationToken = default)
+    {
+        // 1. 参数合法性验证（保持原有逻辑，空路径/源目录不存在直接返回）
+        if (string.IsNullOrWhiteSpace(newPath) || string.IsNullOrWhiteSpace(oldPath) || !Directory.Exists(newPath))
+            return;
+
+        // 2. 统计源目录总文件数（用于进度条初始化）
+        int totalFileCount = Directory.EnumerateFiles(newPath, "*", SearchOption.AllDirectories).Count();
+
+        // 3. 初始化进度条（UI操作需通过 Invoke 确保线程安全）
+        DispatcherHelper.RunOnMainThread(() =>
+        {
+            progressBar?.Maximum = totalFileCount;
+            progressBar?.Value = 0;
+            progressBar?.IsVisible = true;
+        });
+
+        // 4. 进度计数器（递归中共享进度状态，避免线程安全问题）
+        var progressCounter = new ProgressCounter();
+
+        try
+        {
+            // 5. 递归复制目录（核心逻辑，异步支持）
+            await CopyDirectoryRecursively(
+                newPath, oldPath, progressBar, saveAnnouncement, cancellationToken, progressCounter);
+        }
+        catch (OperationCanceledException)
+        {
+            // 取消操作时可添加日志或后续处理
+            DispatcherHelper.RunOnMainThread(() => progressBar?.IsVisible = false);
+            throw; // 如需上层处理取消异常，可抛出；否则直接捕获忽略
+        }
+
+        // 6. 复制完成隐藏进度条
+        DispatcherHelper.RunOnMainThread(() => progressBar?.IsVisible = false);
+    }
+
+    /// <summary>
+    /// 递归复制目录内容（核心异步逻辑）
+    /// </summary>
+    async private static Task CopyDirectoryRecursively(
+        string sourceDir,
+        string targetDir,
+        ProgressBar? progressBar,
+        bool saveAnnouncement,
+        CancellationToken cancellationToken,
+        ProgressCounter progressCounter)
+    {
+        // 响应取消请求
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // 7. 自动创建目标目录（含所有父目录）
+        if (!Directory.Exists(targetDir))
+        {
+            Directory.CreateDirectory(targetDir);
+        }
+
+        // 8. 遍历并复制当前目录下的所有文件
+        foreach (string sourceFile in Directory.GetFiles(sourceDir))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string fileName = Path.GetFileName(sourceFile);
+            string targetFile = Path.Combine(targetDir, fileName);
+
+            // 9. 公告文件特殊处理（仅当 saveAnnouncement 为 true 时执行）
+            if (saveAnnouncement
+                && targetFile.Contains(AnnouncementViewModel.AnnouncementFolder, StringComparison.OrdinalIgnoreCase)
+                && Path.GetExtension(fileName).Equals(".md", StringComparison.OrdinalIgnoreCase))
+            {
+                await HandleAnnouncementFile(sourceFile, targetFile, cancellationToken);
+            }
+
+            // 10. 目标文件已存在：先备份删除
+            if (File.Exists(targetFile))
+            {
+                DeleteFileWithBackup(targetFile);
+            }
+
+            // 11. 异步复制文件（包装同步方法为异步，避免阻塞调用线程）
+            await Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                File.Copy(sourceFile, targetFile, overwrite: true);
+            }, cancellationToken);
+
+            // 12. 设置目标文件为普通属性（清除只读/隐藏等限制）
+            File.SetAttributes(targetFile, FileAttributes.Normal);
+
+            // 13. 更新进度条（线程安全）
+            progressCounter.Current++;
+            DispatcherHelper.RunOnMainThread(() =>
+            {
+                if (progressCounter.Current <= progressBar?.Maximum)
+                    progressBar.Value = progressCounter.Current;
+            });
+        }
+
+        // 14. 递归处理所有子目录
+        foreach (string sourceSubDir in Directory.GetDirectories(sourceDir))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string subDirName = Path.GetFileName(sourceSubDir);
+            string targetSubDir = Path.Combine(targetDir, subDirName);
+
+            await CopyDirectoryRecursively(
+                sourceSubDir, targetSubDir, progressBar, saveAnnouncement, cancellationToken, progressCounter);
+        }
+    }
+
+    /// <summary>
+    /// 公告文件特殊处理（内容对比 + 配置更新）
+    /// </summary>
+    async private static Task HandleAnnouncementFile(
+        string sourceFile,
+        string targetFile,
+        CancellationToken cancellationToken)
+    {
+        if (File.Exists(targetFile))
+        {
+            // 异步读取文件内容（避免IO阻塞）
+            string sourceContent = await File.ReadAllTextAsync(sourceFile, cancellationToken);
+            string destContent = await File.ReadAllTextAsync(targetFile, cancellationToken);
+
+            // 内容不一致时，重置公告不显示配置
+            if (!string.Equals(sourceContent, destContent, StringComparison.Ordinal))
+            {
+                GlobalConfiguration.SetValue(ConfigurationKeys.DoNotShowAnnouncementAgain, bool.FalseString);
+            }
+        }
+        else
+        {
+            // 目标文件不存在，直接重置配置
+            GlobalConfiguration.SetValue(ConfigurationKeys.DoNotShowAnnouncementAgain, bool.FalseString);
+        }
+    }
+
+    /// <summary>
+    /// 进度计数器（用于递归中共享进度状态）
+    /// </summary>
+    private class ProgressCounter
+    {
+        public int Current { get; set; } = 0;
+    }
+
+    static void DeleteFileWithBackup(string filePath)
+    {
+        try
+        {
+            File.Delete(filePath);
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Error($"delete file error, filePath: {filePath}, error: {e.Message}, try to backup.");
+            int index = 0;
+            string currentDate = DateTime.Now.ToString("yyyyMMddHHmm");
+            string backupFilePath = Path.Combine($"{filePath}.{index}.backupMFA");
+
+            while (File.Exists(backupFilePath))
+            {
+                index++;
+                backupFilePath = $"{filePath}.{currentDate}.{index}";
+            }
+
+            try
+            {
+                File.Move(filePath, backupFilePath);
+            }
+            catch (Exception e1)
+            {
+                LoggerHelper.Error($"move file error, path: {filePath}, moveTo: {backupFilePath}, error: {e1.Message}");
+                throw;
+            }
+        }
     }
 
     public async static Task UpdateMFA(bool isGithub, bool noDialog = false)

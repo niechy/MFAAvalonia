@@ -208,14 +208,28 @@ public partial class RootView : SukiWindow
     {
         if (Program.IsNewInstance)
         {
+            foreach (var rfile in Directory.EnumerateFiles(AppContext.BaseDirectory, "*.backupMFA", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(rfile, FileAttributes.Normal);
+                    LoggerHelper.Info("Deleting file: " + rfile);
+                    File.Delete(rfile);
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Error($"文件删除失败: {rfile}", ex);
+                }
+            }
+
             if (!MaaProcessor.Instance.IsV2)
             {
                 DispatcherHelper.RunOnMainThread(
                     (Action)(async () =>
                     {
                         await Task.Delay(300);
-                       if (!ConfigurationManager.Current.ContainsKey(ConfigurationKeys.CurrentController))
-                           Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
+                        if (!ConfigurationManager.Current.ContainsKey(ConfigurationKeys.CurrentController))
+                            Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
                         if (!Convert.ToBoolean(GlobalConfiguration.GetValue(ConfigurationKeys.NoAutoStart, bool.FalseString))
                             && ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("Startup", StringComparison.OrdinalIgnoreCase))
                         {
@@ -285,7 +299,7 @@ public partial class RootView : SukiWindow
                             Hide();
                         }
                     });
-   
+
                 }, name: "公告和最新版本检测");
             }
             else
