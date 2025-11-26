@@ -2,6 +2,7 @@
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using SukiUI.Controls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,7 +21,32 @@ public class ImageOpenCommand : ICommand
     // 存储生成的临时文件路径，用于后续清理
     private readonly List<string> _tempFiles = [];
 
-    // 支持 CImage 或字符串路径作为参数
+    // 新的临时文件夹路径：AppContext.BaseDirectory/temp
+    private readonly string _appTempDir;
+
+    public ImageOpenCommand()
+    {
+        // 初始化应用内临时目录
+        _appTempDir = Path.Combine(AppContext.BaseDirectory, "temp");
+        // 确保临时目录存在（不存在则创建）
+        EnsureTempDirectoryExists();
+    }
+
+    // 确保应用内临时目录存在，同时设置全平台权限
+    private void EnsureTempDirectoryExists()
+    {
+        if (!Directory.Exists(_appTempDir))
+        {
+            Directory.CreateDirectory(_appTempDir);
+            // 非Windows系统设置目录权限（确保读写）
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(_appTempDir,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute);
+            }
+        }
+    }
+
     public bool CanExecute(object? parameter)
     {
         return parameter is string or CImage;
@@ -30,15 +56,14 @@ public class ImageOpenCommand : ICommand
     {
         if (parameter is CImage cImage)
         {
-            // 从 CImage 中获取已加载的 IImage
-            _ = OpenImageFromCImage(cImage);
+            OpenImageFromCImage(cImage);
         }
-        else if (parameter is string source)
-        {
-            // 兼容原有字符串路径/URL逻辑
-            _ = OpenImage(source);
-        }
+        // else if (parameter is string source)
+        // {
+        //     _ = OpenImage(source);
+        // }
     }
+
     async private Task OpenImage(string source)
     {
         if (Uri.TryCreate(source, UriKind.Absolute, out var uri))
@@ -47,17 +72,14 @@ public class ImageOpenCommand : ICommand
             {
                 case "http":
                 case "https":
-                    // 网络图片：下载到临时文件后打开
                     var tempFile = await DownloadToTempFile(uri);
                     if (tempFile != null)
                         await OpenLocalFileAndCleanup(tempFile);
                     break;
                 case "file":
-                    // 本地文件：直接打开（无需清理）
                     OpenLocalFile(uri.LocalPath);
                     break;
                 case "avares":
-                    // 资源图片：提取到临时文件后打开
                     var resFile = await ExtractResourceToTempFile(uri);
                     if (resFile != null)
                         await OpenLocalFileAndCleanup(resFile);
@@ -66,65 +88,74 @@ public class ImageOpenCommand : ICommand
         }
         else
         {
-            // 相对路径视为本地文件（无需清理）
             if (File.Exists(source))
                 OpenLocalFile(source);
         }
     }
-    // 从 CImage 提取图片并打开
-    async private Task OpenImageFromCImage(CImage cImage)
+
+    private void OpenImageFromCImage(CImage cImage)
     {
         if (cImage.Image == null)
         {
             Debug.WriteLine("CImage 中未加载图片");
             return;
         }
+        var image = cImage.Image;
+        var pixelSize = new PixelSize((int)image.Size.Width, (int)image.Size.Height);
+        var renderTarget = new RenderTargetBitmap(pixelSize, new Vector(96, 96));
 
-        // 将 IImage 保存到临时文件
-        var tempFile = await SaveImageToTempFile(cImage.Image);
-        if (tempFile != null)
+        using (var context = renderTarget.CreateDrawingContext())
         {
-            await OpenLocalFileAndCleanup(tempFile);
+            context.DrawImage(image, new Rect(image.Size), new Rect(0, 0, pixelSize.Width, pixelSize.Height));
         }
+
+        var view = new SukiImageBrowser();
+        view.SetImage(renderTarget);
+        view.Show();
     }
 
-    // 保存 IImage 到临时文件
+    // 保存图片到应用内临时目录（修改后）
     async private Task<string?> SaveImageToTempFile(IImage image)
     {
         try
         {
-            // 生成临时文件路径（根据图片类型自动添加扩展名）
-            var tempPath = Path.GetTempFileName();
-            string extension = image is Bitmap ? ".png" : ".png"; // 默认为PNG
-            tempPath = Path.ChangeExtension(tempPath, extension);
+            // 确保临时目录存在（双重保险）
+            EnsureTempDirectoryExists();
 
-            // 处理 Bitmap 类型（直接保存）
+            // 生成唯一临时文件名（Guid+PNG扩展名）
+            var fileName = $"{Guid.NewGuid()}.png";
+            var tempPath = Path.Combine(_appTempDir, fileName);
+
             if (image is Bitmap bitmap)
             {
-                await using var stream = File.OpenWrite(tempPath);
-                bitmap.Save(stream); // 保存 Bitmap 到流
-                await stream.FlushAsync();
+                using (var stream = File.Create(tempPath))
+                {
+                    bitmap.Save(stream);
+                    stream.Flush();
+                    stream.Position = 0;
+                }
             }
-            // 处理其他 IImage 类型（如 SvgImage，通过渲染到 Bitmap 保存）
             else
             {
-                // 创建与图片尺寸一致的 Bitmap
                 var pixelSize = new PixelSize((int)image.Size.Width, (int)image.Size.Height);
                 var renderTarget = new RenderTargetBitmap(pixelSize, new Vector(96, 96));
 
-                // 渲染 IImage 到 Bitmap
                 using (var context = renderTarget.CreateDrawingContext())
                 {
                     context.DrawImage(image, new Rect(image.Size), new Rect(0, 0, pixelSize.Width, pixelSize.Height));
                 }
 
-                // 保存渲染结果
-                await using var stream = File.OpenWrite(tempPath);
+                await using var stream = File.Create(tempPath);
                 renderTarget.Save(stream);
-                await stream.FlushAsync();
+                stream.Flush();
             }
 
-            // 记录临时文件路径（兜底清理）
+            // 非Windows系统设置文件权限（可读）
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.OtherRead);
+            }
+
             lock (_tempFiles)
             {
                 _tempFiles.Add(tempPath);
@@ -138,17 +169,17 @@ public class ImageOpenCommand : ICommand
         }
     }
 
-
-    /// <summary>
-    /// 打开本地文件并在进程退出后清理临时文件
-    /// </summary>
-    /// <param name="path">文件路径（临时文件）</param>
     async private Task OpenLocalFileAndCleanup(string path)
     {
         Process? process = null;
         try
         {
-            // 启动系统图片浏览器进程
+            // 非Windows系统增加延迟，确保文件写入完成
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                await Task.Delay(200);
+            }
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 process = Process.Start(new ProcessStartInfo(path)
@@ -158,18 +189,24 @@ public class ImageOpenCommand : ICommand
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                process = Process.Start("xdg-open", path);
+                process = Process.Start(new ProcessStartInfo("xdg-open")
+                {
+                    Arguments = $"\"{path}\"",
+                    UseShellExecute = false
+                });
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                process = Process.Start("open", path);
+                process = Process.Start(new ProcessStartInfo("open")
+                {
+                    Arguments = $"\"{path}\"",
+                    UseShellExecute = false
+                });
             }
 
             if (process != null)
             {
-                // 等待进程退出（图片浏览器关闭）
                 await process.WaitForExitAsync();
-                // 确保进程完全退出后再删除文件
                 await Task.Delay(100);
                 DeleteTempFile(path);
             }
@@ -177,12 +214,10 @@ public class ImageOpenCommand : ICommand
         catch (Exception ex)
         {
             Debug.WriteLine($"打开/清理临时文件失败：{ex.Message}");
-            // 即使出错，也尝试删除临时文件
             DeleteTempFile(path);
         }
     }
 
-    // 打开本地文件（非临时文件，无需等待清理）
     private void OpenLocalFile(string path)
     {
         try
@@ -196,11 +231,19 @@ public class ImageOpenCommand : ICommand
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                Process.Start("xdg-open", path);
+                Process.Start(new ProcessStartInfo("xdg-open")
+                {
+                    Arguments = $"\"{path}\"",
+                    UseShellExecute = false
+                });
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                Process.Start("open", path);
+                Process.Start(new ProcessStartInfo("open")
+                {
+                    Arguments = $"\"{path}\"",
+                    UseShellExecute = false
+                });
             }
         }
         catch (Exception ex)
@@ -209,16 +252,26 @@ public class ImageOpenCommand : ICommand
         }
     }
 
-    // 下载网络图片到临时文件
+    // 下载网络图片到应用内临时目录（修改后）
     async private Task<string?> DownloadToTempFile(Uri uri)
     {
         try
         {
+            EnsureTempDirectoryExists();
+
             using var httpClient = new HttpClient();
             var bytes = await httpClient.GetByteArrayAsync(uri);
-            var tempPath = Path.GetTempFileName() + Path.GetExtension(uri.LocalPath);
+            var ext = Path.GetExtension(uri.LocalPath) ?? ".png";
+            var fileName = $"{Guid.NewGuid()}{ext}";
+            var tempPath = Path.Combine(_appTempDir, fileName);
+
             await File.WriteAllBytesAsync(tempPath, bytes);
-            // 记录临时文件路径（兜底清理）
+
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.OtherRead);
+            }
+
             lock (_tempFiles)
             {
                 _tempFiles.Add(tempPath);
@@ -232,16 +285,25 @@ public class ImageOpenCommand : ICommand
         }
     }
 
-    // 提取资源图片到临时文件
+    // 提取资源图片到应用内临时目录（修改后）
     async private Task<string?> ExtractResourceToTempFile(Uri uri)
     {
         try
         {
+            EnsureTempDirectoryExists();
+
             await using var stream = AssetLoader.Open(uri);
-            var tempPath = Path.GetTempFileName() + ".png"; // 假设资源为图片格式
-            await using var fileStream = File.OpenWrite(tempPath);
+            var fileName = $"{Guid.NewGuid()}.png";
+            var tempPath = Path.Combine(_appTempDir, fileName);
+
+            await using var fileStream = File.Create(tempPath);
             await stream.CopyToAsync(fileStream);
-            // 记录临时文件路径（兜底清理）
+
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.OtherRead);
+            }
+
             lock (_tempFiles)
             {
                 _tempFiles.Add(tempPath);
@@ -255,10 +317,6 @@ public class ImageOpenCommand : ICommand
         }
     }
 
-    /// <summary>
-    /// 删除临时文件
-    /// </summary>
-    /// <param name="path">临时文件路径</param>
     private void DeleteTempFile(string path)
     {
         try
@@ -268,7 +326,6 @@ public class ImageOpenCommand : ICommand
                 File.Delete(path);
                 Debug.WriteLine($"临时文件已删除：{path}");
             }
-            // 从记录中移除
             lock (_tempFiles)
             {
                 _tempFiles.Remove(path);
@@ -280,9 +337,7 @@ public class ImageOpenCommand : ICommand
         }
     }
 
-    /// <summary>
-    /// 析构函数：兜底清理剩余的临时文件
-    /// </summary>
+    // 析构函数：清理剩余临时文件（适配新目录）
     ~ImageOpenCommand()
     {
         lock (_tempFiles)
@@ -299,10 +354,34 @@ public class ImageOpenCommand : ICommand
                 }
                 catch
                 {
-                    // 忽略删除失败的情况（如文件已被占用）
+                    // 忽略删除失败
                 }
             }
             _tempFiles.Clear();
         }
+
+        // 尝试删除空的临时目录（可选）
+        try
+        {
+            if (Directory.Exists(_appTempDir) && Directory.GetFiles(_appTempDir).Length == 0)
+            {
+                Directory.Delete(_appTempDir);
+                Debug.WriteLine($"析构函数清理临时目录：{_appTempDir}");
+            }
+        }
+        catch
+        {
+            // 忽略目录删除失败（如被占用）
+        }
     }
+}
+
+// 【独立的临时文件夹清理方法】- 可提取至任意位置使用
+public static class TempCleanupHelper
+{
+    /// <summary>
+    /// 清理应用内临时文件夹（AppContext.BaseDirectory/temp）
+    /// 适配全平台，跳过被占用的文件，无异常抛出
+    /// </summary>
+    /// <returns>清理结果：成功/失败</returns>
 }

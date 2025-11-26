@@ -3,6 +3,7 @@
   <component name="AvaloniaProject">
     <option name="projectPerEditor">
       <map>
+        <entry key="ColorTextBlock.Avalonia/Views/TempImageView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/App.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Assets/Style/Geometry.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Assets/Style/MdXaml.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
@@ -45,6 +46,7 @@
         <entry key="MFAAvalonia/Views/Windows/ScreenshotView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/Windows/ToastNotificationView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="Markdown.Avalonia.SyntaxHigh/StyleCollections/AppendixOfFluentTheme.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="Markdown.Avalonia.Tight/StyleCollections/MarkdownStyleDefaultTheme.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="Markdown.Avalonia.Tight/StyleCollections/MarkdownStyleFluentTheme.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/ColorTheme/Dark.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/ColorTheme/Light.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
@@ -61,6 +63,7 @@
         <entry key="SukiUI/Controls/PropertyGrid/PropertyGridWindow.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/Settings/SettingsLayout.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiDialog.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="SukiUI/Controls/SukiImageBrowser.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiMainHost.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiSideMenu.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiSideMenuItem.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />

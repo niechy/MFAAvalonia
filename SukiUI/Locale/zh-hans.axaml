@@ -26,4 +26,6 @@
     <x:String x:Key="STRING_PROMPT_ABORT">中止</x:String>
     <x:String x:Key="STRING_PROMPT_CONTINUE">继续</x:String>
     <x:String x:Key="STRING_PROMPT_CLOSE">关闭</x:String>
+    
+    <x:String x:Key="STRING_IMAGE_VIEWER">图片浏览器</x:String>
 </ResourceDictionary>
