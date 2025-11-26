@@ -15,12 +15,13 @@ namespace SukiUI.Controls;
 [TemplatePart(PART_Image, typeof(Image))]
 [TemplatePart(PART_Layer, typeof(VisualLayerManager))]
 [PseudoClasses(PC_Moving)]
-public class SukiImageViewer: TemplatedControl
+public class SukiImageViewer : TemplatedControl
 {
     public const string PART_Image = "PART_Image";
     public const string PART_Layer = "PART_Layer";
     public const string PC_Moving = ":moving";
-    
+
+    private VisualLayerManager? _visualLayerManager;
     private Image? _image;
     private Point? _lastClickPoint;
     private Point? _lastLocation;
@@ -36,16 +37,17 @@ public class SukiImageViewer: TemplatedControl
     }
 
     public static readonly StyledProperty<IImage?> SourceProperty = Image.SourceProperty.AddOwner<SukiImageViewer>();
+
     public IImage? Source
     {
         get => GetValue(SourceProperty);
         set => SetValue(SourceProperty, value);
     }
 
-    private double _scale  = 1;
+    private double _scale = 1;
 
     public static readonly DirectProperty<SukiImageViewer, double> ScaleProperty = AvaloniaProperty.RegisterDirect<SukiImageViewer, double>(
-        nameof(Scale), o => o.Scale, (o,v)=> o.Scale = v, unsetValue: 1);
+        nameof(Scale), o => o.Scale, (o, v) => o.Scale = v, unsetValue: 1);
 
     public double Scale
     {
@@ -59,14 +61,15 @@ public class SukiImageViewer: TemplatedControl
     public double MinScale
     {
         get => _minScale;
-        set => SetAndRaise(ScaleProperty, ref _minScale, value);
+        set => SetAndRaise(MinScaleProperty, ref _minScale, value);
     }
+
     private double _minScale = 1;
 
     private double _translateX;
 
     public static readonly DirectProperty<SukiImageViewer, double> TranslateXProperty = AvaloniaProperty.RegisterDirect<SukiImageViewer, double>(
-        nameof(TranslateX), o => o.TranslateX, (o,v)=>o.TranslateX = v, unsetValue: 0);
+        nameof(TranslateX), o => o.TranslateX, (o, v) => o.TranslateX = v, unsetValue: 0);
 
     public double TranslateX
     {
@@ -120,7 +123,7 @@ public class SukiImageViewer: TemplatedControl
         FocusableProperty.OverrideDefaultValue<SukiImageViewer>(true);
         OverlayerProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnOverlayerChanged(e));
         SourceProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnSourceChanged(e));
-        TranslateXProperty.Changed.AddClassHandler<SukiImageViewer>((o,e)=>o.OnTranslateXChanged(e));
+        TranslateXProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnTranslateXChanged(e));
         TranslateYProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnTranslateYChanged(e));
         StretchProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnStretchChanged(e));
         MinScaleProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnMinScaleChanged(e));
@@ -151,9 +154,9 @@ public class SukiImageViewer: TemplatedControl
 
     private void OnSourceChanged(AvaloniaPropertyChangedEventArgs args)
     {
-        if(!IsLoaded) return;
+        if (!IsLoaded) return;
         IImage image = args.GetNewValue<IImage>();
-        if(image is null)
+        if (image is null)
         {
             return;
         }
@@ -165,7 +168,7 @@ public class SukiImageViewer: TemplatedControl
             _image.Width = size.Width;
             _image.Height = size.Height;
         }
-        Scale = GetScaleRatio(width/size.Width, height/size.Height, this.Stretch);
+        Scale = GetScaleRatio(width / size.Width, height / size.Height, this.Stretch);
         _sourceMinScale = Math.Min(width * MinScale / size.Width, height * MinScale / size.Height);
     }
 
@@ -203,7 +206,7 @@ public class SukiImageViewer: TemplatedControl
     {
         base.OnApplyTemplate(e);
         _image = e.NameScope.Get<Image>(PART_Image);
-        e.NameScope.Get<VisualLayerManager>(PART_Layer);
+        _visualLayerManager = e.NameScope.Get<VisualLayerManager>(PART_Layer);
         if (Overlayer is { } c)
         {
             AdornerLayer.SetAdorner(this, c);
@@ -213,14 +216,14 @@ public class SukiImageViewer: TemplatedControl
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
-        if (Source is { } i && _image is { })    
+        if (Source is { } i && _image is { })
         {
             Size size = i.Size;
             double width = Bounds.Width;
             double height = Bounds.Height;
             _image.Width = size.Width;
             _image.Height = size.Height;
-            Scale = GetScaleRatio(width/size.Width, height/size.Height, this.Stretch);
+            Scale = GetScaleRatio(width / size.Width, height / size.Height, this.Stretch);
             _sourceMinScale = Math.Min(width * MinScale / size.Width, height * MinScale / size.Height);
         }
         else
@@ -229,24 +232,25 @@ public class SukiImageViewer: TemplatedControl
         }
     }
 
-
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
-        if(e.Delta.Y > 0)
-        {
-            Scale *= 1.1;
-        }
-        else
-        {
-            var scale = Scale;
-            scale /= 1.1;
-            if (scale < _sourceMinScale) scale = _sourceMinScale;
-            Scale = scale;
-        }
+        if (_image == null)
+            return;
+
+        var mousePos = e.GetPosition(this);
+        var oldScale = Scale;
+        double newScale = e.Delta.Y > 0 ? oldScale * 1.1 : oldScale / 1.1;
+        newScale = Math.Max(newScale, _sourceMinScale);
+        newScale = Math.Round(newScale, 6); // 精度修正
+        var imgP = e.GetPosition(_image);
+        Scale = newScale;
+        var imgPA = e.GetPosition(_image);
+        TranslateX += (imgPA.X - imgP.X) * Scale;
+        TranslateY += (imgPA.Y - imgP.Y) * Scale;
         e.Handled = true;
     }
-
+    
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
@@ -265,6 +269,8 @@ public class SukiImageViewer: TemplatedControl
     {
         base.OnPointerPressed(e);
         e.Pointer.Capture(this);
+        Point p = e.GetPosition(_image);
+        Console.WriteLine($"pointer:{p}");
         _lastClickPoint = e.GetPosition(this);
         _moving = true;
     }
@@ -277,6 +283,9 @@ public class SukiImageViewer: TemplatedControl
         PseudoClasses.Set(PC_Moving, false);
         _moving = false;
     }
+
+
+// 在 OnSourceChanged 末尾调用居中
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

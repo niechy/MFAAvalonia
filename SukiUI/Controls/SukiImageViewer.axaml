@@ -10,7 +10,7 @@
                     <Border Background="{TemplateBinding Background}" ClipToBounds="True">
                         <Image
                             Name="{x:Static u:SukiImageViewer.PART_Image}"
-                            Source="{TemplateBinding Source}"
+                            Source="{TemplateBinding Source}" VerticalAlignment="Center" HorizontalAlignment="Center"
                             Stretch="Uniform">
                             <Image.RenderTransform>
                                 <TransformGroup>
