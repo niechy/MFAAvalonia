@@ -71,11 +71,18 @@ public class MaaProcessor
                 Instances.RootViewModel.IsRunning = true;
         };
         CheckInterface(out _, out _, out _);
-        var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
-        var interfaceVersion = @interface["interface_version"]?.ToString();
-        if (int.TryParse(interfaceVersion, out var result) && result >= 2)
+        try
         {
-            IsV2 = true;
+            var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
+            var interfaceVersion = @interface["interface_version"]?.ToString();
+            if (int.TryParse(interfaceVersion, out var result) && result >= 2)
+            {
+                IsV2 = true;
+            }
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Error(e);
         }
     }
 
@@ -1331,22 +1338,24 @@ public class MaaProcessor
             JsonHelper.LoadJson(Path.Combine(AppContext.BaseDirectory, "interface.json"), defaultValue
                 , errorHandle: () =>
                 {
-                    var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
-                    if (@interface != null)
+                    try
                     {
-                        try
+                        var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
+                        if (@interface != null)
                         {
+
                             defaultValue.MFAMinVersion = @interface["mfa_min_version"]?.ToString();
                             defaultValue.MFAMaxVersion = @interface["mfa_max_version"]?.ToString();
                             defaultValue.CustomTitle = @interface["custom_title"]?.ToString();
                             defaultValue.Name = @interface["name"]?.ToString();
                             defaultValue.Url = @interface["url"]?.ToString();
+
+                            RootView.AddLog(LangKeys.FileLoadFailed.ToLocalizationFormatted(false, "interface.json"));
                         }
-                        catch (Exception e)
-                        {
-                            LoggerHelper.Warning(e);
-                        }
-                        RootView.AddLog(LangKeys.FileLoadFailed.ToLocalizationFormatted(false, "interface.json"));
+                    }
+                    catch (Exception e)
+                    {
+                        LoggerHelper.Error(e);
                     }
                 }, new MaaInterfaceSelectAdvancedConverter(false),
                 new MaaInterfaceSelectOptionConverter(false));
@@ -2413,7 +2422,7 @@ public class MaaProcessor
             NullValueHandling = NullValueHandling.Ignore,
             DefaultValueHandling = DefaultValueHandling.Ignore
         })).ToMaaToken();
-        
+
         UpdateTaskDictionary(ref taskModels, task.InterfaceItem?.Option, task.InterfaceItem?.Advanced);
 
         var taskParams = SerializeTaskParams(taskModels);
