@@ -270,7 +270,6 @@ public class SukiImageViewer : TemplatedControl
         base.OnPointerPressed(e);
         e.Pointer.Capture(this);
         Point p = e.GetPosition(_image);
-        Console.WriteLine($"pointer:{p}");
         _lastClickPoint = e.GetPosition(this);
         _moving = true;
     }

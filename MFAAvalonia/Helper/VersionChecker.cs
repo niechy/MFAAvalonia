@@ -589,7 +589,7 @@ public static class VersionChecker
             await CopyAndDelete(originPath, wpfDir, progress, true);
 
         }
-        
+
         // File.Delete(tempZipFilePath);
         // Directory.Delete(tempExtractDir, true);
         var newInterfacePath = Path.Combine(wpfDir, "interface.json");
@@ -614,30 +614,127 @@ public static class VersionChecker
 
         Instances.RootViewModel.SetUpdating(false);
 
-        DispatcherHelper.RunOnMainThread(() =>
-        {
-            if (!noDialog)
-            {
-                Instances.DialogManager.CreateDialog().WithContent(LangKeys.GameResourceUpdated.ToLocalization()).WithActionButton(LangKeys.Yes.ToLocalization(), _ =>
-                    {
-                        Process.Start(exeName);
-                        Instances.ShutdownApplication();
-                    }, dismissOnClick: true, "Flat", "Accent")
-                    .WithActionButton(LangKeys.No.ToLocalization(), _ =>
-                    {
-                        Dismiss(sukiToast);
-                    }, dismissOnClick: true).TryShow();
-                shouldShowToast = false;
-            }
-        });
+        // DispatcherHelper.RunOnMainThread(() =>
+        // {
+        //     if (!noDialog)
+        //     {
+        //         Instances.DialogManager.CreateDialog().WithContent(LangKeys.GameResourceUpdated.ToLocalization()).WithActionButton(LangKeys.Yes.ToLocalization(), _ =>
+        //             {
+        //                 Process.Start(exeName);
+        //                 Instances.ShutdownApplication();
+        //             }, dismissOnClick: true, "Flat", "Accent")
+        //             .WithActionButton(LangKeys.No.ToLocalization(), _ =>
+        //             {
+        //                 Dismiss(sukiToast);
+        //             }, dismissOnClick: true).TryShow();
+        //         shouldShowToast = false;
+        //     }
+        // });
         var tasks = Instances.TaskQueueViewModel.TaskItemViewModels;
         Instances.RootView.ClearTasks(() => MaaProcessor.Instance.InitializeData(dragItem: tasks));
+
         if (closeDialog)
             Dismiss(sukiToast);
         shouldShowToast = true;
         action?.Invoke();
+        await RestartApplicationAsync(exeName);
+    }
+ /// <summary>
+    /// 跨平台重启应用（仅 macOS 处理权限和启动逻辑，Windows/Linux 保留原有逻辑）
+    /// </summary>
+    /// <param name="exeName">应用可执行文件路径</param>
+    public async static Task RestartApplicationAsync(string exeName)
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            // ==== 仅 macOS 执行专属逻辑 ====
+            try
+            {
+                // 1. 自动赋予执行权限（解决 Permission denied）
+                await GrantMacOSExecutePermissionAsync(exeName);
+
+                // 2. macOS 专属启动方式
+                StartMacOSApplication(exeName);
+
+                // 3. 短暂延迟确保新进程启动，再关闭当前应用
+                await Task.Delay(1000);
+                Instances.ShutdownApplication();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"macOS 启动应用失败：{ex.Message}");
+                throw;
+            }
+        }
+        else
+        {
+            // ==== Windows/Linux 完全保留原有逻辑 ====
+            Process.Start(exeName);
+            Instances.ShutdownApplication();
+        }
     }
 
+    /// <summary>
+    /// macOS 专属：给文件赋予执行权限（chmod +x）
+    /// </summary>
+    async private static Task GrantMacOSExecutePermissionAsync(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            // 处理 .app 应用包（macOS 标准格式，无需赋予权限，直接用 open 启动）
+            if (Directory.Exists(filePath) && Path.GetExtension(filePath).Equals(".app", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+            throw new FileNotFoundException("macOS 目标可执行文件不存在", filePath);
+        }
+
+        // 执行 chmod +x 命令（转义路径中的单引号，避免空格/特殊字符报错）
+        string escapedPath = filePath.Replace("'", "\\'");
+        ProcessStartInfo chmodInfo = new ProcessStartInfo
+        {
+            FileName = "/bin/bash",
+            Arguments = $"-c \"chmod +x '{escapedPath}'\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardError = true
+        };
+
+        using Process chmodProcess = Process.Start(chmodInfo)!;
+        string error = await chmodProcess.StandardError.ReadToEndAsync();
+        await chmodProcess.WaitForExitAsync();
+
+        if (chmodProcess.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"赋予 macOS 执行权限失败：{error}");
+        }
+    }
+
+    /// <summary>
+    /// macOS 专属：启动应用（兼容二进制文件和 .app 包）
+    /// </summary>
+    private static void StartMacOSApplication(string exePath)
+    {
+        ProcessStartInfo startInfo = new ProcessStartInfo();
+
+        if (Directory.Exists(exePath) && Path.GetExtension(exePath).Equals(".app", StringComparison.OrdinalIgnoreCase))
+        {
+            // 启动 .app 应用包（使用系统 open 命令）
+            startInfo.FileName = "/usr/bin/open";
+            startInfo.Arguments = $"\"{exePath}\"";
+        }
+        else
+        {
+            // 启动普通二进制文件（已赋予执行权限，可直接启动）
+            startInfo.FileName = exePath;
+            startInfo.WorkingDirectory = Path.GetDirectoryName(exePath) ?? Environment.CurrentDirectory;
+        }
+
+        startInfo.UseShellExecute = false;
+        startInfo.CreateNoWindow = true;
+        Process.Start(startInfo);
+    }
+    
     /// <summary>
     /// 将源目录（newPath）的所有内容复制到目标目录（oldPath）
     /// 1. 缺失的目标目录自动创建
@@ -667,13 +764,16 @@ public static class VersionChecker
         // 3. 初始化进度条（UI操作需通过 Invoke 确保线程安全）
         DispatcherHelper.RunOnMainThread(() =>
         {
-            progressBar?.Maximum = totalFileCount;
+            progressBar?.Maximum = 100;
             progressBar?.Value = 0;
             progressBar?.IsVisible = true;
         });
 
         // 4. 进度计数器（递归中共享进度状态，避免线程安全问题）
-        var progressCounter = new ProgressCounter();
+        var progressCounter = new ProgressCounter()
+        {
+            Total = totalFileCount
+        };
 
         try
         {
@@ -748,8 +848,9 @@ public static class VersionChecker
             progressCounter.Current++;
             DispatcherHelper.RunOnMainThread(() =>
             {
-                if (progressCounter.Current <= progressBar?.Maximum)
-                    progressBar.Value = progressCounter.Current;
+                double percentage = Math.Round((progressCounter.Current * 100.0) / progressCounter.Total, 1);
+                // 确保百分比不超过100（防止极端情况下的计算误差）
+                progressBar.Value = Math.Min(percentage, 100);
             });
         }
 
@@ -799,6 +900,7 @@ public static class VersionChecker
     private class ProgressCounter
     {
         public int Current { get; set; } = 0;
+        public int Total { get; set; } = 0;
     }
 
     static void DeleteFileWithBackup(string filePath)
