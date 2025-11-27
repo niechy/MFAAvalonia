@@ -327,7 +327,7 @@ public partial class AnnouncementViewModel : ViewModelBase
                     {
                         Title = title,
                         FilePath = mdFile,
-                        Content = fileContent,
+                        Content = content,
                         LastModified = File.GetLastWriteTime(mdFile)
                     });
                 }
