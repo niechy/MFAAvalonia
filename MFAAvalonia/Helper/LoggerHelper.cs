@@ -15,7 +15,7 @@ public static class LoggerHelper
         if (_logger != null) return;
         _logger = new LoggerConfiguration()
             .WriteTo.File(
-                $"logs/log-.txt",
+                $"logs/log-.log",
                 rollingInterval: RollingInterval.Day,
                 shared: true,
                 outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff}][{Level:u3}] {Message:lj}{NewLine}{Exception}")

@@ -159,7 +159,7 @@ public static class FileLogExporter
 
         var logsDir = Path.Combine(baseDirectory, "logs");
         var txtFiles = Directory.Exists(logsDir)
-            ? Directory.GetFiles(logsDir, "*.txt", SearchOption.AllDirectories)
+            ? Directory.GetFiles(logsDir, "*.log", SearchOption.AllDirectories)
             : [];
 
         // 2. 获取 debug 目录下的图片文件（指定扩展名）
