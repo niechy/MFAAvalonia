@@ -524,16 +524,12 @@ public class MaaProcessor
     private bool IsPathLike(string? input)
     {
         if (string.IsNullOrEmpty(input)) return false;
-
-        // 判定规则（可根据实际场景调整）：
-        // 1. 包含路径分隔符（\ 或 /）
-        // 2. 是绝对路径（以盘符/根目录开头）或相对路径（以./、../开头，或包含目录名+文件名）
-        // 3. 包含文件扩展名（如 .py、.json、.txt 等）且不是命令行选项（不以 -/-- 开头）
+        
         bool hasPathSeparator = input.Contains(Path.DirectorySeparatorChar) || input.Contains(Path.AltDirectorySeparatorChar);
         bool isAbsolutePath = Path.IsPathRooted(input);
         bool isRelativePath = input.StartsWith("./") || input.StartsWith("../") || (hasPathSeparator && !input.StartsWith("-"));
         bool hasFileExtension = Path.HasExtension(input) && !input.StartsWith("-");
-
+        
         return hasPathSeparator || isAbsolutePath || isRelativePath || hasFileExtension;
     }
 
@@ -701,6 +697,7 @@ public class MaaProcessor
                             return arg;
                         })
                         .Select(ConvertPath).ToList();
+                    
                     var startInfo = new ProcessStartInfo
                     {
                         FileName = FindPythonPath(program),

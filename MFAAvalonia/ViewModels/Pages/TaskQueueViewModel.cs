@@ -425,7 +425,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         IsConnected = isConnected;
     }
-    
+
     [RelayCommand]
     public void CustomAdb()
     {
@@ -561,23 +561,23 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         Thread.Sleep(500);
         var windows = MaaProcessor.Toolkit.Desktop.Window.Find().Where(win => !string.IsNullOrWhiteSpace(win.Name)).ToList();
-        var index = CalculateWindowIndex(windows);
-        return (new(windows), index);
+        var (index, filtered) = CalculateWindowIndex(windows);
+        return (new(filtered), index);
     }
 
-    private int CalculateWindowIndex(List<DesktopWindowInfo> windows)
+    private (int index, List<DesktopWindowInfo> afterFiltered) CalculateWindowIndex(List<DesktopWindowInfo> windows)
     {
         var controller = MaaProcessor.Interface?.Controller?
             .FirstOrDefault(c => c.Type?.Equals("win32", StringComparison.OrdinalIgnoreCase) == true);
 
         if (controller?.Win32 == null)
-            return windows.FindIndex(win => !string.IsNullOrWhiteSpace(win.Name));
+            return (windows.FindIndex(win => !string.IsNullOrWhiteSpace(win.Name)), windows);
 
         var filtered = windows.Where(win =>
             !string.IsNullOrWhiteSpace(win.Name)).ToList();
 
         filtered = ApplyRegexFilters(filtered, controller.Win32);
-        return filtered.Count > 0 ? windows.IndexOf(filtered.First()) : 0;
+        return (filtered.Count > 0 ? windows.IndexOf(filtered.First()) : 0, filtered.ToList());
     }
 
 
