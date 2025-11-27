@@ -1198,6 +1198,7 @@ public class MaaProcessor
         ConnectToMAA();
         if (isAdb)
         {
+            LoggerHelper.Info($"Name: {Config.AdbDevice.Name}");
             LoggerHelper.Info($"AdbPath: {Config.AdbDevice.AdbPath}");
             LoggerHelper.Info($"AdbSerial: {Config.AdbDevice.AdbSerial}");
             LoggerHelper.Info($"ScreenCap: {Config.AdbDevice.ScreenCap}");
@@ -1206,6 +1207,7 @@ public class MaaProcessor
         }
         else
         {
+            LoggerHelper.Info($"Name: {Config.DesktopWindow.Name}");
             LoggerHelper.Info($"HWnd: {Config.DesktopWindow.HWnd}");
             LoggerHelper.Info($"ScreenCap: {Config.DesktopWindow.ScreenCap}");
             LoggerHelper.Info($"MouseInput: {Config.DesktopWindow.Mouse}");
