@@ -64,6 +64,7 @@
         <entry key="SukiUI/Controls/Settings/SettingsLayout.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiDialog.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiImageBrowser.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="SukiUI/Controls/SukiImageViewer.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiMainHost.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiSideMenu.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Controls/SukiSideMenuItem.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />

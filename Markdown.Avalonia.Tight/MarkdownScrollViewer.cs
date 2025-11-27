@@ -247,8 +247,8 @@ namespace Markdown.Avalonia
             var viewing = new List<Header>();
 
             tree[0] = _headerRects.Where(rct => rct.Header.Level == 1)
-                                  .Select(rct => CreateHeader(rct))
-                                  .FirstOrDefault();
+                .Select(rct => CreateHeader(rct))
+                .FirstOrDefault();
 
             foreach (var headerRect in _headerRects)
             {
@@ -285,8 +285,8 @@ namespace Markdown.Avalonia
 
         private void EditStyle(IStyle mdstyle)
         {
-            if (mdstyle is INamedStyle nameStyle && !nameStyle.IsEditted
-             && mdstyle is Styles styles)
+            if (mdstyle is INamedStyle { IsEditted: false } nameStyle
+                && mdstyle is Styles styles)
             {
                 foreach (var edit in _setup.StyleEdits)
                     edit.Edit(nameStyle.Name, styles);
@@ -336,6 +336,7 @@ namespace Markdown.Avalonia
         }
 
         private IMarkdownEngine2 _engine;
+
         public IMarkdownEngineBase Engine
         {
             set
@@ -361,6 +362,7 @@ namespace Markdown.Avalonia
         }
 
         private string? _AssetPathRoot;
+
         public string? AssetPathRoot
         {
             set
@@ -387,6 +389,7 @@ namespace Markdown.Avalonia
         }
 
         private bool _selectionEnabled;
+
         public bool SelectionEnabled
         {
             set
@@ -452,12 +455,13 @@ namespace Markdown.Avalonia
 
                                 return line.Substring(realIdx);
                             })
-                        );
+                    );
                 }
             }
         }
 
         private string? _markdown;
+
         public string? Markdown
         {
             get { return _markdown; }
@@ -471,6 +475,7 @@ namespace Markdown.Avalonia
         }
 
         private Uri? _source;
+
         public Uri? Source
         {
             get { return _source; }
@@ -518,13 +523,12 @@ namespace Markdown.Avalonia
                 }
 
                 AssetPathRoot =
-                    value.Scheme == "file" ?
-                    value.LocalPath :
-                    value.AbsoluteUri;
+                    value.Scheme == "file" ? value.LocalPath : value.AbsoluteUri;
             }
         }
 
         private IStyle _markdownStyle;
+
         public IStyle MarkdownStyle
         {
             get { return _markdownStyle; }
@@ -551,6 +555,7 @@ namespace Markdown.Avalonia
         }
 
         private string? _markdownStyleName;
+
         public string? MarkdownStyleName
         {
             get { return _markdownStyleName; }
@@ -586,6 +591,7 @@ namespace Markdown.Avalonia
         }
 
         private MdAvPlugins _plugins;
+
         public MdAvPlugins Plugins
         {
             get => _plugins;
@@ -600,6 +606,7 @@ namespace Markdown.Avalonia
         }
 
         private bool _useResource;
+
         public bool UseResource
         {
             get => _useResource;
@@ -619,6 +626,9 @@ namespace Markdown.Avalonia
 
         internal IBrush ComputedSelectionBrush => SelectionBrush ?? _selectionBrush ?? Brushes.Cyan;
 
+        
+        public ScrollViewer ScrollViewer => _viewer;
+        
         class HeaderRect
         {
             public Rect BaseBound { get; }
@@ -736,20 +746,20 @@ namespace Markdown.Avalonia
 
                 StyledElement? c;
                 for (c = control.Parent;
-                        c is not null
-                        && c is Layoutable layoutable
-                        && !ReferenceEquals(_document.Control, layoutable);
-                        c = c.Parent)
+                     c is not null
+                     && c is Layoutable layoutable
+                     && !ReferenceEquals(_document.Control, layoutable);
+                     c = c.Parent)
                 {
                     driftX += layoutable.Bounds.X;
                     driftY += layoutable.Bounds.Y;
                 }
 
                 return new Rect(
-                            control.Bounds.X + driftX,
-                            control.Bounds.Y + driftY,
-                            control.Bounds.Width,
-                            control.Bounds.Height);
+                    control.Bounds.X + driftX,
+                    control.Bounds.Y + driftY,
+                    control.Bounds.Width,
+                    control.Bounds.Height);
             }
         }
     }

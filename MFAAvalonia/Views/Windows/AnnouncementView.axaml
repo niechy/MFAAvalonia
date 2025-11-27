@@ -63,28 +63,21 @@
                 </ListBox>
             </Grid>
             <Grid Grid.Column="1">
-                <ScrollViewer
-                    Grid.Row="0"
-                    HorizontalScrollBarVisibility="Disabled"
-                    VerticalScrollBarVisibility="Auto">
-                    <full:MarkdownScrollViewer
-                        Focusable="True"
-                        Margin="10,0,10,0"
-                        Markdown="{Binding SelectedAnnouncement.Content, Mode=OneWay}">
-                        <full:MarkdownScrollViewer.Engine>
-                            <extensions:MarkdownExtension />
-                        </full:MarkdownScrollViewer.Engine>
-                        <full:MarkdownScrollViewer.Plugins>
-                            <StaticResource ResourceKey="MdXamlPlugin" />
-                        </full:MarkdownScrollViewer.Plugins>
-                        <full:MarkdownScrollViewer.Styles>
-                            <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
-                            <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
-                        </full:MarkdownScrollViewer.Styles>
-
-                    </full:MarkdownScrollViewer>
-                </ScrollViewer>
-
+                <full:MarkdownScrollViewer
+                    Focusable="True" x:Name="Viewer"
+                    Margin="10,0,10,0"
+                    Markdown="{Binding AnnouncementContent, Mode=OneWay}">
+                    <full:MarkdownScrollViewer.Engine>
+                        <extensions:MarkdownExtension />
+                    </full:MarkdownScrollViewer.Engine>
+                    <full:MarkdownScrollViewer.Plugins>
+                        <StaticResource ResourceKey="MdXamlPlugin" />
+                    </full:MarkdownScrollViewer.Plugins>
+                    <full:MarkdownScrollViewer.Styles>
+                        <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
+                        <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
+                    </full:MarkdownScrollViewer.Styles>
+                </full:MarkdownScrollViewer>
             </Grid>
         </Grid>
         <Grid Grid.Row="1">
