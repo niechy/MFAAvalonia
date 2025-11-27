@@ -425,8 +425,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         IsConnected = isConnected;
     }
-
-
+    
     [RelayCommand]
     public void CustomAdb()
     {
