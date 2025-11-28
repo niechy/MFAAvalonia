@@ -10,9 +10,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Resources;
-using System.Threading;
 
 namespace MFAAvalonia.Helper;
 
@@ -27,9 +24,7 @@ public static class LanguageHelper
         new("en-US", "English"),
     ];
 
-    public static Dictionary<string, CultureInfo> Cultures { get; } = new()
-    {
-    };
+    public static Dictionary<string, CultureInfo> Cultures { get; } = new();
 
     public static SupportedLanguage GetLanguage(string key)
     {
