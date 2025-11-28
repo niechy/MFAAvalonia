@@ -1252,4 +1252,7 @@
     <data name="ExternalNotificationLarkWebhookDescription" xml:space="preserve">
         <value>填写 Webhook 地址后，无需再填写飞书 ID 和 机器人令牌</value>
     </data>
+    <data name="Unnamed" xml:space="preserve">
+        <value>未命名</value>
+    </data>
 </root>

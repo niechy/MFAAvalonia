@@ -62,7 +62,7 @@ public class MaaProcessor
     //
     // public Dictionary<string, MaaNode> NodeDictionary = new();
     public ObservableQueue<MFATask> TaskQueue { get; } = new();
-    public bool IsV2 = false;
+    public bool IsV3 = false;
     public MaaProcessor()
     {
         TaskQueue.CountChanged += (_, args) =>
@@ -75,9 +75,9 @@ public class MaaProcessor
         {
             var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
             var interfaceVersion = @interface["interface_version"]?.ToString();
-            if (int.TryParse(interfaceVersion, out var result) && result >= 2)
+            if (int.TryParse(interfaceVersion, out var result) && result >= 3)
             {
-                IsV2 = true;
+                IsV3 = true;
             }
         }
         catch (Exception e)
@@ -100,16 +100,41 @@ public class MaaProcessor
 
                 value!.Resources[nameKey] = new MaaInterface.MaaInterfaceResource
                 {
-                    Name = LanguageHelper.GetLocalizedString(nameKey),
+                    Name = nameKey,
+                    Label = customResource.Label,
                     Path = paths
                 };
             }
 
+            // 为 Option 字典中的每个项设置 Name（因为 Name 是 JsonIgnore 的）
+            if (value?.Option != null)
+            {
+                foreach (var kvp in value.Option)
+                {
+                    kvp.Value.Name = kvp.Key;
+                }
+            }
+
+            // 为 Advanced 字典中的每个项设置 Name（因为 Name 是 JsonIgnore 的）
+            if (value?.Advanced != null)
+            {
+                foreach (var kvp in value.Advanced)
+                {
+                    kvp.Value.Name = kvp.Key;
+                }
+            }
+
             if (value != null)
             {
-                Instances.SettingsViewModel.ShowResourceIssues = !string.IsNullOrWhiteSpace(value.Url);
-                Instances.SettingsViewModel.ResourceGithub = value.Url;
-                Instances.SettingsViewModel.ResourceIssues = $"{value.Url}/issues";
+                Instances.SettingsViewModel.ShowResourceIssues = !string.IsNullOrWhiteSpace(value.Url) || !string.IsNullOrWhiteSpace(value.Github);
+                Instances.SettingsViewModel.ResourceGithub = !string.IsNullOrWhiteSpace(value.Github) ? value.Github : value.Url;
+                Instances.SettingsViewModel.ResourceIssues = $"{(!string.IsNullOrWhiteSpace(value.Github) ? value.Github : value.Url)}/issues";
+
+                // 加载多语言配置
+                if (value.Languages is { Count: > 0 })
+                {
+                    LanguageHelper.LoadLanguagesFromInterface(value.Languages, AppContext.BaseDirectory);
+                }
             }
 
         }
@@ -524,12 +549,12 @@ public class MaaProcessor
     private bool IsPathLike(string? input)
     {
         if (string.IsNullOrEmpty(input)) return false;
-        
+
         bool hasPathSeparator = input.Contains(Path.DirectorySeparatorChar) || input.Contains(Path.AltDirectorySeparatorChar);
         bool isAbsolutePath = Path.IsPathRooted(input);
         bool isRelativePath = input.StartsWith("./") || input.StartsWith("../") || (hasPathSeparator && !input.StartsWith("-"));
         bool hasFileExtension = Path.HasExtension(input) && !input.StartsWith("-");
-        
+
         return hasPathSeparator || isAbsolutePath || isRelativePath || hasFileExtension;
     }
 
@@ -646,7 +671,7 @@ public class MaaProcessor
             {
                 LoggerHelper.Error(e);
             }
-//            tasker.Resource.Register(new JieGardenAction());
+            //            tasker.Resource.Register(new JieGardenAction());
             // 获取代理配置（假设Interface在UI线程中访问）
             var agentConfig = Interface?.Agent;
             if (agentConfig is { ChildExec: not null } && !_agentStarted)
@@ -679,7 +704,7 @@ public class MaaProcessor
                     if (IsPathLike(program))
                         program = Path.GetFullPath(program, AppContext.BaseDirectory);
                     var rawArgs = agentConfig.ChildArgs ?? [];
-                    var replacedArgs = MaaInterface.ReplacePlaceholder(rawArgs, AppContext.BaseDirectory)
+                    var replacedArgs = MaaInterface.ReplacePlaceholder(rawArgs, AppContext.BaseDirectory, true)
                         .Select(arg =>
                         {
                             if (IsPathLike(arg))
@@ -697,7 +722,7 @@ public class MaaProcessor
                             return arg;
                         })
                         .Select(ConvertPath).ToList();
-                    
+
                     var startInfo = new ProcessStartInfo
                     {
                         FileName = FindPythonPath(program),
@@ -1029,7 +1054,7 @@ public class MaaProcessor
         }
     }
 
-// 辅助方法：替换模板中的占位符
+    // 辅助方法：替换模板中的占位符
     private string ReplacePlaceholders(string template, JObject? details)
     {
         if (details == null)
@@ -1042,7 +1067,7 @@ public class MaaProcessor
         }
         return result;
     }
-// private void DisplayFocus(MaaNode taskModel, string message)
+    // private void DisplayFocus(MaaNode taskModel, string message)
     // {
     //     switch (message)
     //     {
@@ -1662,17 +1687,24 @@ public class MaaProcessor
 
     private void InitializeResources()
     {
-        Instances.TaskQueueViewModel.CurrentResources =
-            Interface?.Resources.Values.Count > 0
-                ? new ObservableCollection<MaaInterface.MaaInterfaceResource>(Interface.Resources.Values.ToList())
-                :
-                [
-                    new MaaInterface.MaaInterfaceResource
-                    {
-                        Name = "Default",
-                        Path = [ResourceBase]
-                    }
-                ];
+        var resources = Interface?.Resources.Values.Count > 0
+            ? Interface.Resources.Values.ToList()
+            :
+            [
+                new MaaInterface.MaaInterfaceResource
+                {
+                    Name = "Default",
+                    Path = [ResourceBase]
+                }
+            ];
+
+        // 初始化每个资源的显示名称并注册语言变化监听
+        foreach (var resource in resources)
+        {
+            resource.InitializeDisplayName();
+        }
+
+        Instances.TaskQueueViewModel.CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(resources);
         Instances.TaskQueueViewModel.CurrentResource = ConfigurationManager.Current.GetValue(ConfigurationKeys.Resource, string.Empty);
         if (Instances.TaskQueueViewModel.CurrentResources.Count > 0 && Instances.TaskQueueViewModel.CurrentResources.All(r => r.Name != Instances.TaskQueueViewModel.CurrentResource))
             Instances.TaskQueueViewModel.CurrentResource = Instances.TaskQueueViewModel.CurrentResources[0].Name ?? "Default";
@@ -1703,7 +1735,8 @@ public class MaaProcessor
 
         foreach (var oldItem in drags)
         {
-            if (newDict.TryGetValue((oldItem.Name, oldItem.InterfaceItem?.Entry), out var newItem))
+            // 使用 InterfaceItem.Name 而不是 oldItem.Name，因为后者是本地化后的显示名称
+            if (newDict.TryGetValue((oldItem.InterfaceItem?.Name, oldItem.InterfaceItem?.Entry), out var newItem))
             {
                 UpdateExistingItem(oldItem, newItem);
                 updateList.Add(oldItem);
@@ -1751,7 +1784,9 @@ public class MaaProcessor
                 return;
         }
         oldItem.InterfaceItem.Entry = newItem.Entry;
+        oldItem.InterfaceItem.Label = newItem.Label;
         oldItem.InterfaceItem.PipelineOverride = newItem.PipelineOverride;
+        oldItem.InterfaceItem.Description = newItem.Description;
         oldItem.InterfaceItem.Document = newItem.Document;
         oldItem.InterfaceItem.Repeatable = newItem.Repeatable;
 
@@ -1781,8 +1816,21 @@ public class MaaProcessor
             {
                 if (tempDict.TryGetValue(opt.Name ?? string.Empty, out var existing))
                 {
+                    // 复制 Index（用于 select/switch 类型）
                     if ((Interface?.Option?.TryGetValue(opt.Name ?? string.Empty, out var interfaceOption) ?? false) && interfaceOption.Cases is { Count: > 0 })
                         opt.Index = Math.Min(existing.Index ?? 0, interfaceOption.Cases.Count - 1);
+
+                    // 复制 Data（用于 input 类型）
+                    if (existing.Data != null && existing.Data.Count > 0)
+                    {
+                        opt.Data = existing.Data;
+                    }
+
+                    // 复制 SubOptions（子选项）
+                    if (existing.SubOptions != null && existing.SubOptions.Count > 0)
+                    {
+                        opt.SubOptions = MergeSubOptions(existing.SubOptions);
+                    }
                 }
                 else
                 {
@@ -1797,14 +1845,61 @@ public class MaaProcessor
         }
     }
 
+    /// <summary>
+    /// 递归合并子选项
+    /// </summary>
+    private List<MaaInterface.MaaInterfaceSelectOption> MergeSubOptions(List<MaaInterface.MaaInterfaceSelectOption> existingSubOptions)
+    {
+        return existingSubOptions.Select(subOpt =>
+        {
+            var newSubOpt = new MaaInterface.MaaInterfaceSelectOption
+            {
+                Name = subOpt.Name,
+                Index = subOpt.Index,
+                Data = subOpt.Data != null && subOpt.Data.Count > 0
+                    ? new Dictionary<string, string?>(subOpt.Data)
+                    : null
+            };
+
+            // 验证并修正 Index
+            if ((Interface?.Option?.TryGetValue(subOpt.Name ?? string.Empty, out var subInterfaceOption) ?? false)
+                && subInterfaceOption.Cases is { Count: > 0 })
+            {
+                newSubOpt.Index = Math.Min(subOpt.Index ?? 0, subInterfaceOption.Cases.Count - 1);
+            }
+
+            // 递归处理嵌套子选项
+            if (subOpt.SubOptions != null && subOpt.SubOptions.Count > 0)
+            {
+                newSubOpt.SubOptions = MergeSubOptions(subOpt.SubOptions);
+            }
+
+            return newSubOpt;
+        }).ToList();
+    }
+
     public void SetDefaultOptionValue(MaaInterface.MaaInterfaceSelectOption option)
     {
         if (!(Interface?.Option?.TryGetValue(option.Name ?? string.Empty, out var interfaceOption) ?? false)) return;
 
+        // 设置 select/switch 类型的默认索引
         var defaultIndex = interfaceOption.Cases?
                 .FindIndex(c => c.Name == interfaceOption.DefaultCase)
             ?? -1;
         if (defaultIndex != -1) option.Index = defaultIndex;
+
+        // 初始化 input 类型的 Data 字典
+        if (interfaceOption.IsInput && interfaceOption.Inputs != null)
+        {
+            option.Data ??= new Dictionary<string, string?>();
+            foreach (var input in interfaceOption.Inputs)
+            {
+                if (!string.IsNullOrEmpty(input.Name) && !option.Data.ContainsKey(input.Name))
+                {
+                    option.Data[input.Name] = input.Default ?? string.Empty;
+                }
+            }
+        }
     }
 
     private void UpdateViewModels(IList<DragItemViewModel> drags, List<MaaInterface.MaaInterfaceTask> tasks)
@@ -2363,20 +2458,7 @@ public class MaaProcessor
         // Instance.NodeDictionary = Instance.NodeDictionary.MergeMaaNodes(taskModels);
         if (options != null)
         {
-            foreach (var selectOption in options)
-            {
-                if (Interface?.Option?.TryGetValue(selectOption.Name ?? string.Empty,
-                        out var interfaceOption)
-                    == true
-                    && selectOption.Index is int index
-                    && interfaceOption.Cases is { } cases
-                    && cases[index]?.PipelineOverride != null)
-                {
-                    var param = interfaceOption.Cases[selectOption.Index.Value].PipelineOverride;
-                    //       Instance.NodeDictionary = Instance.NodeDictionary.MergeMaaNodes(param);
-                    taskModels.Merge(param);
-                }
-            }
+            ProcessOptions(ref taskModels, options);
         }
 
         if (advanceds != null)
@@ -2388,6 +2470,111 @@ public class MaaProcessor
                     var param = JsonConvert.DeserializeObject<Dictionary<string, JToken>>(selectAdvanced.PipelineOverride);
                     //       Instance.NodeDictionary = Instance.NodeDictionary.MergeMaaNodes(param);
                     taskModels.Merge(param);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 处理 option 列表（支持 select/switch/input 类型及子配置项）
+    /// </summary>
+    /// <param name="taskModels">任务参数</param>
+    /// <param name="allOptions">任务的所有 option 列表</param>
+    /// <param name="optionNamesToProcess">要处理的 option 名称列表（null 表示处理所有直接引用的 options）</param>
+    /// <param name="processedOptions">已处理的 option 名称（避免重复处理）</param>
+    private void ProcessOptions(
+        ref MaaToken taskModels,
+        List<MaaInterface.MaaInterfaceSelectOption> allOptions,
+        List<string>? optionNamesToProcess = null,
+        HashSet<string>? processedOptions = null)
+    {
+        processedOptions ??= new HashSet<string>();
+
+        // 确定要处理的 options
+        IEnumerable<MaaInterface.MaaInterfaceSelectOption> optionsToProcess;
+
+        if (optionNamesToProcess == null)
+        {
+            // 根级调用：处理所有 options（按顺序）
+            optionsToProcess = allOptions;
+        }
+        else
+        {
+            // 递归调用：只处理指定名称的 options
+            optionsToProcess = allOptions.Where(o => optionNamesToProcess.Contains(o.Name ?? string.Empty));
+        }
+
+        foreach (var selectOption in optionsToProcess)
+        {
+            var optionName = selectOption.Name ?? string.Empty;
+
+            // 避免重复处理同一个 option
+            if (processedOptions.Contains(optionName))
+                continue;
+
+            processedOptions.Add(optionName);
+
+            if (Interface?.Option?.TryGetValue(optionName, out var interfaceOption) != true)
+                continue;
+
+            // 处理 input 类型
+            if (interfaceOption.IsInput)
+            {
+                // 从 Data 重新生成 PipelineOverride（因为 PipelineOverride 是 JsonIgnore 的）
+                string? pipelineOverride = selectOption.PipelineOverride;
+
+                if ((string.IsNullOrWhiteSpace(pipelineOverride) || pipelineOverride == "{}")
+                    && selectOption.Data != null
+                    && interfaceOption.PipelineOverride != null)
+                {
+                    // 从 Data 重新生成
+                    pipelineOverride = interfaceOption.GenerateProcessedPipeline(
+                        selectOption.Data.Where(kv => kv.Value != null)
+                            .ToDictionary(kv => kv.Key, kv => kv.Value!));
+                }
+
+                if (!string.IsNullOrWhiteSpace(pipelineOverride) && pipelineOverride != "{}")
+                {
+                    var param = JsonConvert.DeserializeObject<Dictionary<string, JToken>>(pipelineOverride);
+                    taskModels.Merge(param);
+                }
+            }
+            // 处理 select/switch 类型
+            else if (selectOption.Index is int index
+                     && interfaceOption.Cases is { } cases
+                     && index >= 0
+                     && index < cases.Count)
+            {
+                var selectedCase = cases[index];
+
+                // 合并当前 case 的 pipeline_override
+                if (selectedCase.PipelineOverride != null)
+                {
+                    taskModels.Merge(selectedCase.PipelineOverride);
+                }
+
+                // 只递归处理被选中 case 的子配置项（且未被处理过的）
+                if (selectedCase.Option != null && selectedCase.Option.Count > 0)
+                {
+                    // 过滤掉已处理的
+                    var unprocessedSubOptionNames = selectedCase.Option
+                        .Where(name => !processedOptions.Contains(name))
+                        .ToList();
+
+                    if (unprocessedSubOptionNames.Count > 0 && selectOption.SubOptions != null)
+                    {
+                        // 从 selectOption.SubOptions 中获取子选项（已保存的用户选择值）
+                        var subOptionsToProcess = selectOption.SubOptions
+                            .Where(s => unprocessedSubOptionNames.Contains(s.Name ?? string.Empty))
+                            .ToList();
+
+                        ProcessOptions(ref taskModels, subOptionsToProcess, unprocessedSubOptionNames, processedOptions);
+                    }
+                    else if (unprocessedSubOptionNames.Count > 0)
+                    {
+                        // 如果没有 SubOptions，使用默认值处理
+                        ProcessOptions(ref taskModels, allOptions, unprocessedSubOptionNames, processedOptions);
+                    }
                 }
             }
         }
@@ -2435,10 +2622,9 @@ public class MaaProcessor
         //
         // var tasks = JsonConvert.DeserializeObject<Dictionary<string, MaaNode>>(json, settings);
         // tasks = tasks.MergeMaaNodes(taskModels);
-        // Console.WriteLine(taskParams);
         return new NodeAndParam
         {
-            Name = task.InterfaceItem?.Name,
+            Name = task.InterfaceItem?.DisplayName,
             Entry = task.InterfaceItem?.Entry,
             Count = task.InterfaceItem?.Repeatable == true ? (task.InterfaceItem?.RepeatCount ?? 1) : 1,
             // Tasks = tasks,

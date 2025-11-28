@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:MFAAvalonia.Views.UserControls"
              xmlns:calcBinding="clr-namespace:CalcBinding;assembly=CalcBindingAva"
+             xmlns:full="https://github.com/whistyun/Markdown.Avalonia"
+             xmlns:extensions="clr-namespace:MFAAvalonia.Extensions"
              x:DataType="controls:TooltipBlock"
              mc:Ignorable="d" d:DesignWidth="40" d:DesignHeight="40"
              x:Class="MFAAvalonia.Views.UserControls.TooltipBlock">
@@ -17,9 +19,27 @@
             ToolTip.IsOpen="{calcBinding:Binding '!TooltipTextNotEmpty', Mode=OneWay}">
 
         <ToolTip.Tip>
-            <TextBlock MaxWidth="{Binding TooltipMaxWidth}"
-                       Text="{Binding TooltipText}"
-                       TextWrapping="Wrap" />
+            <Border MaxWidth="{Binding TooltipMaxWidth}"
+                    MaxHeight="400"
+                    Padding="4">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <full:MarkdownScrollViewer
+                        Markdown="{Binding TooltipText}"
+                        VerticalAlignment="Top">
+                        <full:MarkdownScrollViewer.Engine>
+                            <extensions:MarkdownExtension />
+                        </full:MarkdownScrollViewer.Engine>
+                        <full:MarkdownScrollViewer.Plugins>
+                            <StaticResource ResourceKey="MdXamlPlugin" />
+                        </full:MarkdownScrollViewer.Plugins>
+                        <full:MarkdownScrollViewer.Styles>
+                            <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
+                            <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
+                        </full:MarkdownScrollViewer.Styles>
+                    </full:MarkdownScrollViewer>
+                </ScrollViewer>
+            </Border>
         </ToolTip.Tip>
         <TextBlock HorizontalAlignment="Center"
                    VerticalAlignment="Center"  TextAlignment="Center"

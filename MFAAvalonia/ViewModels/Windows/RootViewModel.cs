@@ -70,7 +70,7 @@ public partial class RootViewModel : ViewModelBase
 
     public void CheckDebug()
     {
-        if (IsDebugMode && _shouldTip && !MaaProcessor.Instance.IsV2)
+        if (IsDebugMode && _shouldTip && !MaaProcessor.Instance.IsV3)
         {
             DispatcherHelper.PostOnMainThread(() =>
             {

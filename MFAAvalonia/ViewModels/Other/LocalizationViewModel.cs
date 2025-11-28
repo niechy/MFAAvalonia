@@ -96,6 +96,24 @@ public partial class LocalizationViewModel : ViewModelBase
         LanguageHelper.LanguageChanged += OnLanguageChanged;
     }
 
+    /// <summary>
+    /// 创建带 DisplayName 和 FallbackName 的 LocalizationViewModel（用于 LanguageHelper 本地化）
+    /// </summary>
+    /// <param name="displayName">显示名称（可能是 $xxx 形式的本地化 key）</param>
+    /// <param name="fallbackName">回退名称（当本地化失败时使用）</param>
+    public LocalizationViewModel(string? displayName, string? fallbackName)
+    {
+        _displayName = displayName;
+        _fallbackName = fallbackName;
+        _useLanguageHelper = true;
+        UpdateName();
+        LanguageHelper.LanguageChanged += OnLanguageChanged;
+    }
+
+    private readonly string? _displayName;
+    private readonly string? _fallbackName;
+    private readonly bool _useLanguageHelper;
+
     private void OnLanguageChanged(object sender, EventArgs e)
     {
         UpdateName();
@@ -122,6 +140,13 @@ public partial class LocalizationViewModel : ViewModelBase
 
     private void UpdateName()
     {
+        if (_useLanguageHelper)
+        {
+            // 使用 LanguageHelper 进行本地化（带 fallback）
+            Name = LanguageHelper.GetLocalizedDisplayName(_displayName, _fallbackName);
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(ResourceKey))
             return;
         if (_formatArgsKeys != null && _formatArgsKeys.Length != 0)

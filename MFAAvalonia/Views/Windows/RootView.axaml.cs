@@ -222,7 +222,7 @@ public partial class RootView : SukiWindow
                 }
             }
 
-            if (!MaaProcessor.Instance.IsV2)
+            if (!MaaProcessor.Instance.IsV3)
             {
                 DispatcherHelper.RunOnMainThread(
                     (Action)(async () =>
@@ -265,7 +265,7 @@ public partial class RootView : SukiWindow
                         DragItemViewModel tempTask = null;
                         foreach (var task in Instances.TaskQueueViewModel.TaskItemViewModels)
                         {
-                            if (task.InterfaceItem?.Advanced is { Count: > 0 } || task.InterfaceItem?.Option is { Count: > 0 } || task.InterfaceItem?.Document != null || task.InterfaceItem?.Repeatable == true)
+                            if (task.InterfaceItem?.Advanced is { Count: > 0 } || task.InterfaceItem?.Option is { Count: > 0 } || !string.IsNullOrWhiteSpace(task.InterfaceItem?.Description) || task.InterfaceItem?.Document != null || task.InterfaceItem?.Repeatable == true)
                             {
                                 tempTask ??= task;
                             }

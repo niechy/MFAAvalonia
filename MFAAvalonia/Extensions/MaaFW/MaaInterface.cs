@@ -1,22 +1,52 @@
-﻿using MFAAvalonia.Helper.Converters;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using MFAAvalonia.Helper;
+using MFAAvalonia.Helper.Converters;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MFAAvalonia.Extensions.MaaFW;
 
 public partial class MaaInterface
 {
+    /// <summary>
+    /// Option 配置项的选项（用于 select/switch 类型）
+    /// </summary>
     public class MaaInterfaceOptionCase
     {
+        /// <summary>选项唯一标识符</summary>
         [JsonProperty("name")]
         public string? Name { get; set; }
 
+        /// <summary>选项显示名称，支持国际化（以$开头）</summary>
+        [JsonProperty("label")]
+        public string? Label { get; set; }
+
+        // /// <summary>选项详细描述，支持 Markdown</summary>
+        // [JsonProperty("description")]
+        // public string? Description { get; set; }
+
+        /// <summary>选项图标文件路径</summary>
+        [JsonProperty("icon")]
+        public string? Icon { get; set; }
+
+        /// <summary>子配置项列表（选中时显示）</summary>
+        [JsonProperty("option")]
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        public List<string>? Option { get; set; }
+
+        /// <summary>选项激活时的管道覆盖配置</summary>
         [JsonProperty("pipeline_override")]
         public Dictionary<string, JToken>? PipelineOverride { get; set; }
+
+        /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
+        [JsonIgnore]
+        public string DisplayName => Label ?? Name ?? string.Empty;
 
         public override string? ToString()
         {
@@ -30,18 +60,307 @@ public partial class MaaInterface
         }
     }
 
+    /// <summary>
+    /// Option 配置项的输入字段（用于 input 类型）
+    /// </summary>
+    public class MaaInterfaceOptionInput
+    {
+        /// <summary>输入字段唯一标识符</summary>
+        [JsonProperty("name")]
+        public string? Name { get; set; }
+
+        /// <summary>输入字段显示名称，支持国际化（以$开头）</summary>
+        [JsonProperty("label")]
+        public string? Label { get; set; }
+
+        // /// <summary>输入字段详细描述，支持 Markdown</summary>
+        [JsonProperty("description")]
+        public string? Description { get; set; }
+
+        /// <summary>输入字段的默认值</summary>
+        [JsonProperty("default")]
+        public string? Default { get; set; }
+
+        /// <summary>pipeline_override 中的数据类型: "string", "int", "bool"</summary>
+        [JsonProperty("pipeline_type")]
+        public string? PipelineType { get; set; }
+
+        /// <summary>正则表达式，用于校验用户输入</summary>
+        [JsonProperty("verify")]
+        public string? Verify { get; set; }
+
+        /// <summary>正则校验错误时显示的信息，支持国际化</summary>
+        [JsonProperty("pattern_msg")]
+        public string? PatternMsg { get; set; }
+
+        /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
+        [JsonIgnore]
+        public string DisplayName => Label ?? Name ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Option 配置项定义
+    /// </summary>
     public class MaaInterfaceOption
     {
+        /// <summary>配置项唯一名称标识符</summary>
         [JsonIgnore]
         public string? Name { get; set; } = string.Empty;
+
+        /// <summary>配置项类型: "select"(默认), "input", "switch"</summary>
+        [JsonProperty("type")]
+        public string? Type { get; set; }
+
+        /// <summary>配置项显示标签，支持国际化（以$开头）</summary>
+        [JsonProperty("label")]
+        public string? Label { get; set; }
+
+        /// <summary>配置项详细描述，支持文件路径/URL/Markdown文本</summary>
+        [JsonProperty("description")]
+        public string? Description { get; set; }
+
+        /// <summary>配置项图标文件路径</summary>
+        [JsonProperty("icon")]
+        public string? Icon { get; set; }
+
+        /// <summary>可选项列表（用于 select/switch 类型）</summary>
         [JsonProperty("cases")]
         public List<MaaInterfaceOptionCase>? Cases { get; set; }
+
+        /// <summary>输入字段列表（用于 input 类型）</summary>
+        [JsonProperty("inputs")]
+        public List<MaaInterfaceOptionInput>? Inputs { get; set; }
+
+        /// <summary>input 类型的管道覆盖配置（支持 {名称} 变量替换）</summary>
+        [JsonProperty("pipeline_override")]
+        public Dictionary<string, Dictionary<string, JToken>>? PipelineOverride { get; set; }
+
+        /// <summary>默认选项名称（仅 select 类型使用）</summary>
         [JsonProperty("default_case")]
         public string? DefaultCase { get; set; }
 
+        /// <summary>文档说明（旧版兼容）</summary>
         [JsonProperty("doc")]
         [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
         public List<string>? Document { get; set; }
+
+        /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
+        [JsonIgnore]
+        public string DisplayName => Label ?? Name ?? string.Empty;
+
+        /// <summary>获取配置项类型（默认为 select）</summary>
+        [JsonIgnore]
+        public string OptionType => Type?.ToLower() ?? "select";
+
+        /// <summary>是否为 select 类型</summary>
+        [JsonIgnore]
+        public bool IsSelect => OptionType == "select";
+
+        /// <summary>是否为 input 类型</summary>
+        [JsonIgnore]
+        public bool IsInput => OptionType == "input";
+
+        /// <summary>是否为 switch 类型</summary>
+        [JsonIgnore]
+        public bool IsSwitch => OptionType == "switch";
+
+        /// <summary>
+        /// 根据用户输入生成处理后的 pipeline override（用于 input 类型）
+        /// </summary>
+        /// <param name="inputValues">用户输入的值字典（key: 输入字段名，value: 用户输入值）</param>
+        /// <returns>处理后的 JSON 字符串</returns>
+        public string GenerateProcessedPipeline(Dictionary<string, string> inputValues)
+        {
+            if (PipelineOverride == null || !IsInput) return "{}";
+
+            // 深拷贝原始数据
+            var cloned = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, JToken>>>(
+                JsonConvert.SerializeObject(PipelineOverride)
+            );
+
+            if (cloned == null) return "{}";
+
+            var typeMap = GetTypeMap();
+            var regex = new Regex(@"\{([^{}]+)\}", RegexOptions.Compiled);
+
+            foreach (var preset in cloned.Values)
+            {
+                foreach (var key in preset.Keys.ToList())
+                {
+                    var jToken = preset[key];
+                    var newToken = ProcessToken(jToken, regex, inputValues, typeMap);
+                    if (newToken != null)
+                    {
+                        preset[key] = newToken;
+                    }
+                }
+            }
+
+            return JsonConvert.SerializeObject(cloned, Formatting.Indented);
+        }
+
+        /// <summary>
+        /// 获取输入字段的类型映射
+        /// </summary>
+        private Dictionary<string, Type> GetTypeMap()
+        {
+            var typeMap = new Dictionary<string, Type>();
+            if (Inputs == null) return typeMap;
+
+            foreach (var input in Inputs)
+            {
+                if (string.IsNullOrEmpty(input.Name)) continue;
+                var typeName = (input.PipelineType ?? "string").ToLower();
+                typeMap[input.Name] = typeName switch
+                {
+                    "int" => typeof(long),
+                    "bool" => typeof(bool),
+                    _ => typeof(string)
+                };
+            }
+            return typeMap;
+        }
+
+        /// <summary>
+        /// 获取输入字段的默认值映射
+        /// </summary>
+        private Dictionary<string, string> GetDefaultValues()
+        {
+            var defaults = new Dictionary<string, string>();
+            if (Inputs == null) return defaults;
+
+            foreach (var input in Inputs)
+            {
+                if (!string.IsNullOrEmpty(input.Name) && !string.IsNullOrEmpty(input.Default))
+                {
+                    defaults[input.Name] = input.Default;
+                }
+            }
+            return defaults;
+        }
+
+        /// <summary>
+        /// 处理 JToken 进行变量替换
+        /// </summary>
+        private JToken? ProcessToken(JToken? token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
+        {
+            if (token == null) return null;
+
+            return token.Type switch
+            {
+                JTokenType.String => ProcessStringToken(token, regex, inputValues, typeMap),
+                JTokenType.Array => ProcessArrayToken(token, regex, inputValues, typeMap),
+                JTokenType.Object => ProcessObjectToken(token, regex, inputValues, typeMap),
+                _ => token
+            };
+        }
+
+        private JToken ProcessStringToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
+        {
+            var strVal = token.Value<string>();
+            if (string.IsNullOrEmpty(strVal)) return token;
+
+            string? currentPlaceholder = null;
+            var defaults = GetDefaultValues();
+
+            var newVal = regex.Replace(strVal, match =>
+            {
+                currentPlaceholder = match.Groups[1].Value;
+
+                // 首先尝试从输入值获取
+                if (inputValues.TryGetValue(currentPlaceholder, out var inputStr))
+                {
+                    return inputStr;
+                }
+
+                // 尝试从默认值获取
+                if (defaults.TryGetValue(currentPlaceholder, out var defaultStr))
+                {
+                    return defaultStr;
+                }
+
+                // 保持占位符
+                return match.Value;
+            });
+
+            if (newVal != strVal && currentPlaceholder != null && typeMap.TryGetValue(currentPlaceholder, out var targetType))
+            {
+                try
+                {
+                    if (targetType != typeof(string))
+                    {
+                        var convertedValue = Convert.ChangeType(newVal, targetType);
+                        return JToken.FromObject(convertedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Error($"Option 类型转换失败: {ex.Message}");
+                }
+            }
+
+            return newVal != strVal ? JToken.FromObject(newVal) : token;
+        }
+
+        private JToken ProcessArrayToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
+        {
+            var arr = (JArray)token;
+            var newArr = new JArray();
+            foreach (var item in arr)
+            {
+                var processedItem = ProcessToken(item, regex, inputValues, typeMap);
+                if (processedItem != null)
+                {
+                    newArr.Add(processedItem);
+                }
+            }
+            return newArr;
+        }
+
+        private JToken ProcessObjectToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
+        {
+            var obj = (JObject)token;
+            var newObj = new JObject();
+            foreach (var property in obj.Properties())
+            {
+                var processedValue = ProcessToken(property.Value, regex, inputValues, typeMap);
+                if (processedValue != null)
+                {
+                    newObj[property.Name] = processedValue;
+                }
+            }
+            return newObj;
+        }
+
+        /// <summary>
+        /// 验证用户输入是否合法
+        /// </summary>
+        /// <param name="inputName">输入字段名</param>
+        /// <param name="value">用户输入值</param>
+        /// <returns>验证结果和错误消息</returns>
+        public (bool IsValid, string? ErrorMessage) ValidateInput(string inputName, string value)
+        {
+            var input = Inputs?.FirstOrDefault(i => i.Name == inputName);
+            if (input == null) return (true, null);
+
+            if (string.IsNullOrEmpty(input.Verify)) return (true, null);
+
+            try
+            {
+                var regex = new Regex(input.Verify);
+                if (!regex.IsMatch(value))
+                {
+                    return (false, input.PatternMsg ?? $"输入格式不正确");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Error($"正则表达式验证失败: {ex.Message}");
+                return (true, null); // 正则出错时放行
+            }
+
+            return (true, null);
+        }
     }
 
     public class MaaInterfaceSelectAdvanced
@@ -64,8 +383,42 @@ public partial class MaaInterface
         [JsonProperty("name")]
         public string? Name { get; set; }
 
+        /// <summary>用于 select/switch 类型的选项索引</summary>
         [JsonProperty("index")]
         public int? Index { get; set; }
+
+        /// <summary>用于 input 类型的字段数据（key: 字段名, value: 用户输入值）</summary>
+        [JsonProperty("data")]
+        public Dictionary<string, string?>? Data { get; set; }
+
+        /// <summary>子配置项列表（当选中某个 case 时会展开的选项）</summary>
+        [JsonProperty("sub_options")]
+        public List<MaaInterfaceSelectOption>? SubOptions { get; set; }
+
+        /// <summary>input 类型生成的 pipeline override（运行时使用）</summary>
+        [JsonIgnore]
+        public string PipelineOverride { get; set; } = "{}";
+
+        /// <summary>
+        /// 获取显示名称（从对应的 MaaInterfaceOption 复制），用于 UI 显示
+        /// </summary>
+        [JsonIgnore]
+        public string DisplayName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Name))
+                    return string.Empty;
+
+                // 从 MaaProcessor.Interface.Option 中查找对应的 MaaInterfaceOption
+                if (MaaProcessor.Interface?.Option?.TryGetValue(Name, out var interfaceOption) == true)
+                {
+                    return interfaceOption.DisplayName;
+                }
+
+                return Name;
+            }
+        }
 
         public override string? ToString()
         {
@@ -75,11 +428,24 @@ public partial class MaaInterface
 
     public class MaaInterfaceTask
     {
+        /// <summary>任务唯一标识符</summary>
         [JsonProperty("name")] public string? Name;
+
+        /// <summary>任务显示名称，支持国际化（以$开头）。如果未设置，则显示 Name 字段的值。</summary>
+        [JsonProperty("label")] public string? Label;
+
+        /// <summary>任务入口</summary>
         [JsonProperty("entry")] public string? Entry;
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("doc")]
+
+        /// <summary>任务详细描述信息，支持文件路径、URL或直接文本，内容支持Markdown格式。优先于 Document。</summary>
+        [JsonProperty("description")] public string? Description;
+
+        /// <summary>文档说明（旧版兼容）</summary>
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        [JsonProperty("doc")]
         public List<string>? Document;
-        [JsonProperty("check",
+
+        [JsonProperty("default_check",
             NullValueHandling = NullValueHandling.Include,
             DefaultValueHandling = DefaultValueHandling.Include)]
         public bool? Check = false;
@@ -89,6 +455,10 @@ public partial class MaaInterface
         [JsonProperty("option")] public List<MaaInterfaceSelectOption>? Option;
 
         [JsonProperty("pipeline_override")] public Dictionary<string, JToken>? PipelineOverride;
+
+        /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
+        [JsonIgnore]
+        public string DisplayName => Label ?? Name ?? string.Empty;
 
         public override string ToString()
         {
@@ -112,14 +482,44 @@ public partial class MaaInterface
         }
     }
 
-    public class MaaInterfaceResource
+    public partial class MaaInterfaceResource : ObservableObject
     {
         [JsonProperty("name")]
         public string? Name { get; set; }
 
+        /// <summary>
+        /// 显示名称，用于在用户界面中展示。支持国际化字符串（以$开头）。
+        /// 如果未设置，则显示name字段的值。可选。
+        /// </summary>
+        [JsonProperty("label")]
+        public string? Label { get; set; }
+
         [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
         [JsonProperty("path")]
         public List<string>? Path { get; set; }
+
+        [ObservableProperty]
+        [property: JsonIgnore]
+        private string _displayName = string.Empty;
+
+        /// <summary>
+        /// 初始化显示名称并注册语言变化监听
+        /// </summary>
+        public void InitializeDisplayName()
+        {
+            UpdateDisplayName();
+            LanguageHelper.LanguageChanged += OnLanguageChanged;
+        }
+
+        private void OnLanguageChanged(object? sender, LanguageHelper.LanguageEventArgs e)
+        {
+            UpdateDisplayName();
+        }
+
+        private void UpdateDisplayName()
+        {
+            DisplayName = LanguageHelper.GetLocalizedDisplayName(Label, Name ?? string.Empty);
+        }
     }
 
     public class MaaResourceVersion
@@ -191,6 +591,13 @@ public partial class MaaInterface
     [JsonProperty("interface_version")]
     public int? InterfaceVersion { get; set; }
 
+    /// <summary>
+    /// 多语言支持配置，键为语言代码，值为对应的翻译文件路径（相对于 interface.json 同目录）
+    /// 示例: { "zh_cn": "interface_zh.json", "en_us": "interface_en.json" }
+    /// </summary>
+    [JsonProperty("languages")]
+    public Dictionary<string, string>? Languages { get; set; }
+
     [JsonProperty("mirrorchyan_rid")]
     public string? RID { get; set; }
 
@@ -211,6 +618,9 @@ public partial class MaaInterface
 
     [JsonProperty("message")]
     public string? Message { get; set; }
+
+    [JsonProperty("github")]
+    public string? Github { get; set; }
 
     [JsonProperty("url")]
     public string? Url { get; set; }
@@ -243,7 +653,6 @@ public partial class MaaInterface
     [JsonExtensionData]
     public Dictionary<string, object> AdditionalData { get; set; } = new();
 
-
     [JsonIgnore]
     public Dictionary<string, MaaInterfaceResource> Resources { get; } = new();
 
@@ -253,8 +662,11 @@ public partial class MaaInterface
     /// </summary>
     /// <param name="input">待处理的字符串（可能包含路径片段）</param>
     /// <param name="replacement">占位符替换值（项目目录路径）</param>
+    /// <param name="checkIfPath">是否检查 input 是否为路径。
+    /// - 为 false（默认）：无 {PROJECT_DIR} 时直接 Path.Combine 拼接
+    /// - 为 true：无 {PROJECT_DIR} 时，仅当 input 是路径才拼接，否则原样返回</param>
     /// <returns>替换后并标准化路径格式的字符串</returns>
-    public static string? ReplacePlaceholder(string? input, string? replacement)
+    public static string? ReplacePlaceholder(string? input, string? replacement, bool checkIfPath = false)
     {
         // 处理输入为空的情况，保持原有行为
         if (string.IsNullOrEmpty(input))
@@ -263,13 +675,69 @@ public partial class MaaInterface
         // 处理替换值为 null 的情况（避免 Replace 抛出空引用异常）
         string safeReplacement = replacement ?? string.Empty;
 
-        // 步骤1：替换占位符
-        string replaced = input.Replace("{PROJECT_DIR}", safeReplacement);
+        string result;
+
+        // 步骤1：检查是否包含 {PROJECT_DIR} 占位符
+        if (input.Contains("{PROJECT_DIR}"))
+        {
+            // 有占位符，直接替换
+            result = input.Replace("{PROJECT_DIR}", safeReplacement);
+        }
+        else
+        {
+            // 无占位符
+            if (checkIfPath)
+            {
+                // 开启路径检查：仅当 input 是路径时才拼接
+                if (IsPathLike(input))
+                {
+                    result = Path.Combine(safeReplacement, input);
+                }
+                else
+                {
+                    // 不是路径，原样返回
+                    return input;
+                }
+            }
+            else
+            {
+                // 未开启路径检查：直接拼接
+                result = Path.Combine(safeReplacement, input);
+            }
+        }
 
         // 步骤2：标准化路径分隔符（适配当前操作系统，不检查文件是否存在）
-        string normalizedPath = NormalizePathSeparators(replaced);
+        return NormalizePathSeparators(result);
+    }
 
-        return normalizedPath;
+    /// <summary>
+    /// 判断字符串是否看起来像路径（相对路径或绝对路径）
+    /// </summary>
+    private static bool IsPathLike(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+
+        // 包含路径分隔符
+        if (input.Contains('/') || input.Contains('\\'))
+            return true;
+
+        // 绝对路径（Windows 盘符 或 Unix 根目录）
+        if (Path.IsPathRooted(input))
+            return true;
+
+        // 以 . 或 .. 开头的相对路径
+        if (input.StartsWith("./") || input.StartsWith(".\\") ||
+            input.StartsWith("../") || input.StartsWith("..\\") ||
+            input == "." || input == "..")
+            return true;
+
+        // 包含常见的文件扩展名
+        var ext = Path.GetExtension(input);
+        if (!string.IsNullOrEmpty(ext))
+            return true;
+
+        return false;
     }
 
     /// <summary>
@@ -277,14 +745,15 @@ public partial class MaaInterface
     /// </summary>
     /// <param name="inputs">待处理的字符串列表（可能包含路径片段）</param>
     /// <param name="replacement">占位符替换值（项目目录路径）</param>
+    /// <param name="checkIfPath">是否检查每个元素是否为路径（详见单个字符串版本的说明）</param>
     /// <returns>处理后的字符串列表</returns>
-    public static List<string> ReplacePlaceholder(IEnumerable<string>? inputs, string? replacement)
+    public static List<string> ReplacePlaceholder(IEnumerable<string>? inputs, string? replacement, bool checkIfPath = false)
     {
         if (inputs == null)
             return new List<string>();
 
         // 复用单个字符串的处理逻辑（自动包含占位符替换和路径标准化）
-        return inputs.ToList().ConvertAll(input => ReplacePlaceholder(input, replacement)!);
+        return inputs.ToList().ConvertAll(input => ReplacePlaceholder(input, replacement, checkIfPath)!);
     }
 
     /// <summary>

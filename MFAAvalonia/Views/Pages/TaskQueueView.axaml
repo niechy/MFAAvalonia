@@ -68,7 +68,7 @@
                             VerticalAlignment="Center" />
                     </suki:GroupBox.Header>
                     <ComboBox ex:ComboBoxExtensions.DisableNavigationOnLostFocus="True"
-                              DisplayMemberBinding="{Binding Name}"
+                              DisplayMemberBinding="{Binding DisplayName}"
                               IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                               ItemsSource="{Binding CurrentResources}"
                               Margin="10,0,10,0"

@@ -12,7 +12,7 @@ public partial class DragItemViewModel : ObservableObject
     public DragItemViewModel(MaaInterface.MaaInterfaceTask? interfaceItem)
     {
         InterfaceItem = interfaceItem;
-        Name = interfaceItem?.Name ?? "未命名";
+        Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName,InterfaceItem.Name  ?? LangKeys.Unnamed);
         LanguageHelper.LanguageChanged += OnLanguageChanged;
     }
 
@@ -84,9 +84,9 @@ public partial class DragItemViewModel : ObservableObject
         {
             if (value != null)
             {
-                if (value.Name != null)
-                    Name = value.Name;
-                IsVisible = value is { Advanced.Count: > 0 } || value is { Option.Count: > 0 } || value.Repeatable == true || value.Document is { Count: > 0 };
+                if (!string.IsNullOrEmpty(value.DisplayName))
+                    Name = value.DisplayName;
+                IsVisible = value is { Advanced.Count: > 0 } || value is { Option.Count: > 0 } || value.Repeatable == true || !string.IsNullOrWhiteSpace(value.Description) || value.Document is { Count: > 0 };
                 IsCheckedWithNull = value.Check;
             }
 
@@ -99,9 +99,9 @@ public partial class DragItemViewModel : ObservableObject
 
     private void UpdateContent()
     {
-        if (!string.IsNullOrEmpty(InterfaceItem?.Name))
+        if (!string.IsNullOrEmpty(InterfaceItem?.DisplayName ?? LangKeys.Unnamed))
         {
-            Name = LanguageHelper.GetLocalizedString(Name);
+            Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName,InterfaceItem.Name  ?? LangKeys.Unnamed);
         }
     }
 

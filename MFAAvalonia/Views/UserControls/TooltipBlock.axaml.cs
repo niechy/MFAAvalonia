@@ -26,7 +26,7 @@ public partial class TooltipBlock : UserControl
         AvaloniaProperty.Register<TooltipBlock, string>(nameof(TooltipText), string.Empty);
 
     public static readonly StyledProperty<double> TooltipMaxWidthProperty =
-        AvaloniaProperty.Register<TooltipBlock, double>(nameof(TooltipMaxWidth), double.MaxValue);
+        AvaloniaProperty.Register<TooltipBlock, double>(nameof(TooltipMaxWidth), 500);
 
     public static readonly StyledProperty<double> NormalOpacityProperty =
         AvaloniaProperty.Register<TooltipBlock, double>(

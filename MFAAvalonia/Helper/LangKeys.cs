@@ -421,4 +421,5 @@ public static class LangKeys
 	public static readonly string MirrorChyanResourceUpdateShortTip = "MirrorChyanResourceUpdateShortTip";
 	public static readonly string ExternalNotificationLarkWebhookUrl = "ExternalNotificationLarkWebhookUrl";
 	public static readonly string ExternalNotificationLarkWebhookDescription = "ExternalNotificationLarkWebhookDescription";
+	public static readonly string Unnamed = "Unnamed";
 }

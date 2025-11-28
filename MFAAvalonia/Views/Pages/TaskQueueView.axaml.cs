@@ -258,7 +258,7 @@ public partial class TaskQueueView : UserControl
             vm.ShowSettings = false;
         }
     }
-    
+
     private void RunSingleTask(object? sender, RoutedEventArgs e)
     {
         var menuItem = sender as MenuItem;
@@ -267,7 +267,7 @@ public partial class TaskQueueView : UserControl
             MaaProcessor.Instance.Start([taskItemViewModel]);
         }
     }
-    
+
     private void RunCheckedFromCurrent(object? sender, RoutedEventArgs e)
     {
         var menuItem = sender as MenuItem;
@@ -366,15 +366,9 @@ public partial class TaskQueueView : UserControl
         {
             var newIntroduction = IntroductionsCache.GetOrAdd(cacheKey, key =>
             {
-                var input = string.Empty;
-
-                // 原始带标记的文本
-                if (dragItem.InterfaceItem?.Document?.Count > 0)
-                {
-                    input = Regex.Unescape(string.Join("\\n", dragItem.InterfaceItem.Document));
-                }
-                input = LanguageHelper.GetLocalizedString(input);
-                return ConvertCustomMarkup(input);
+                // 优先使用 Description，没有则使用 Document
+                var input = GetTooltipText(dragItem.InterfaceItem?.Description, dragItem.InterfaceItem?.Document);
+                return ConvertCustomMarkup(input ?? string.Empty);
             });
 
             SetMarkDown(newIntroduction);
@@ -389,7 +383,8 @@ public partial class TaskQueueView : UserControl
 
         if (dragItem.InterfaceItem?.Option != null)
         {
-            foreach (var option in dragItem.InterfaceItem.Option)
+            // 使用 ToList() 创建副本，避免遍历时修改集合导致异常
+            foreach (var option in dragItem.InterfaceItem.Option.ToList())
             {
                 AddOption(panel, option, dragItem);
             }
@@ -397,7 +392,7 @@ public partial class TaskQueueView : UserControl
 
         if (dragItem.InterfaceItem?.Advanced != null)
         {
-            foreach (var option in dragItem.InterfaceItem.Advanced)
+            foreach (var option in dragItem.InterfaceItem.Advanced.ToList())
             {
                 AddAdvancedOption(panel, option);
             }
@@ -411,7 +406,8 @@ public partial class TaskQueueView : UserControl
 
         if (dragItem.InterfaceItem?.Option != null)
         {
-            foreach (var option in dragItem.InterfaceItem.Option)
+            // 使用 ToList() 创建副本，避免遍历时修改集合导致异常
+            foreach (var option in dragItem.InterfaceItem.Option.ToList())
             {
                 AddOption(panel, option, dragItem);
             }
@@ -422,7 +418,7 @@ public partial class TaskQueueView : UserControl
     {
         if (dragItem.InterfaceItem?.Advanced != null)
         {
-            foreach (var option in dragItem.InterfaceItem.Advanced)
+            foreach (var option in dragItem.InterfaceItem.Advanced.ToList())
             {
                 AddAdvancedOption(panel, option);
             }
@@ -681,19 +677,19 @@ public partial class TaskQueueView : UserControl
                     return itemText.IndexOf(search, StringComparison.InvariantCultureIgnoreCase) >= 0;
                 },
             };
-      
 
-// 绑定启用状态
+
+            // 绑定启用状态
             autoCompleteBox.Bind(IsEnabledProperty, new Binding("Idle")
             {
                 Source = Instances.RootViewModel
             });
             var completionItems = new List<string>();
-// 生成补全列表（从Default获取）
+            // 生成补全列表（从Default获取）
             if (interfaceOption.Default != null && interfaceOption.Default.Count > i)
             {
                 var defaultToken = interfaceOption.Default[i];
-               
+
 
                 if (defaultToken is JArray arr)
                 {
@@ -712,7 +708,7 @@ public partial class TaskQueueView : UserControl
                 var behavior = new AutoCompleteBehavior();
                 Interaction.GetBehaviors(autoCompleteBox).Add(behavior);
             }
-// 文本变化事件 - 修改此处以确保文本清空时下拉框保持打开
+            // 文本变化事件 - 修改此处以确保文本清空时下拉框保持打开
             autoCompleteBox.TextChanged += (_, _) =>
             {
                 if (type.ToLower() == "int")
@@ -735,7 +731,7 @@ public partial class TaskQueueView : UserControl
             option.Data[field] = autoCompleteBox.Text;
             option.PipelineOverride = interfaceOption.GenerateProcessedPipeline(option.Data);
             SaveConfiguration();
-// 选择项变化事件
+            // 选择项变化事件
             autoCompleteBox.SelectionChanged += (_, _) =>
             {
                 if (autoCompleteBox.SelectedItem is string selectedText)
@@ -749,14 +745,14 @@ public partial class TaskQueueView : UserControl
 
             Grid.SetColumn(autoCompleteBox, 1);
 
-            // 标签部分（保持不变）
+            // 标签部分（使用 ResourceBinding 支持语言动态切换）
             var textBlock = new TextBlock
             {
                 FontSize = 14,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Text = LanguageHelper.GetLocalizedString(field),
             };
+            textBlock.Bind(TextBlock.TextProperty, new ResourceBinding(field));
             textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiLowText"));
 
             var stackPanel = new StackPanel
@@ -769,22 +765,12 @@ public partial class TaskQueueView : UserControl
             Grid.SetColumn(stackPanel, 0);
             stackPanel.Children.Add(textBlock);
 
-            // 文档提示部分（保持不变）
-            if (interfaceOption.Document is { Count: > 0 } && i < interfaceOption.Document.Count)
+            // 优先使用 Description，没有则使用 Document[i]
+            var tooltipText = GetTooltipText(interfaceOption.Description, interfaceOption.Document);
+            if (!string.IsNullOrWhiteSpace(tooltipText))
             {
-                var doc = interfaceOption.Document[i];
-                var input = doc;
-                try
-                {
-                    input = Regex.Unescape(doc);
-                }
-                catch (Exception)
-                {
-                }
-                var docBlock = new TooltipBlock
-                {
-                    TooltipText = input
-                };
+                var docBlock = new TooltipBlock();
+                docBlock.Bind(TooltipBlock.TooltipTextProperty, new ResourceBinding(tooltipText));
                 stackPanel.Children.Add(docBlock);
             }
 
@@ -840,11 +826,255 @@ public partial class TaskQueueView : UserControl
     private void AddOption(Panel panel, MaaInterface.MaaInterfaceSelectOption option, DragItemViewModel source)
     {
         if (MaaProcessor.Interface?.Option?.TryGetValue(option.Name ?? string.Empty, out var interfaceOption) != true) return;
-        Control control = interfaceOption.Cases.ShouldSwitchButton(out var yes, out var no)
-            ? CreateToggleControl(option, yes, no, interfaceOption, source)
-            : CreateComboBoxControl(option, interfaceOption, source);
+
+        Control control;
+
+        // 根据 option 类型创建不同的控件
+        if (interfaceOption.IsInput)
+        {
+            control = CreateInputControl(option, interfaceOption, source);
+        }
+        else if (interfaceOption.IsSwitch)
+        {
+            // type 为 "switch" 时，强制使用 ToggleSwitch（cases[0] 为开，cases[1] 为关）
+            control = CreateToggleControl(option, 0, 1, interfaceOption, source);
+        }
+        else if (interfaceOption.Cases.ShouldSwitchButton(out var yes, out var no))
+        {
+            // 向后兼容：cases 名称为 yes/no 时也使用 ToggleSwitch
+            control = CreateToggleControl(option, yes, no, interfaceOption, source);
+        }
+        else
+        {
+            control = CreateComboBoxControl(option, interfaceOption, source);
+        }
 
         panel.Children.Add(control);
+    }
+
+    /// <summary>
+    /// 创建 input 类型的控件
+    /// </summary>
+    private Control CreateInputControl(
+        MaaInterface.MaaInterfaceSelectOption option,
+        MaaInterface.MaaInterfaceOption interfaceOption,
+        DragItemViewModel source)
+    {
+        var container = new StackPanel();
+
+        // 确保 Data 字典已初始化
+        option.Data ??= new Dictionary<string, string?>();
+
+        if (interfaceOption.Inputs == null || interfaceOption.Inputs.Count == 0)
+            return container;
+
+        foreach (var input in interfaceOption.Inputs)
+        {
+            if (string.IsNullOrEmpty(input.Name)) continue;
+
+            // 获取当前值或默认值
+            if (!option.Data.TryGetValue(input.Name, out var currentValue) || currentValue == null)
+            {
+                currentValue = input.Default ?? string.Empty;
+                option.Data[input.Name] = currentValue;
+            }
+
+            var grid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = new GridLength(7, GridUnitType.Star) },
+                    new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) }
+                },
+                Margin = new Thickness(8, 0, 5, 5)
+            };
+
+            // 创建输入框
+            var textBox = new TextBox
+            {
+                MinWidth = 150,
+                Margin = new Thickness(0, 5, 5, 5),
+                Text = currentValue
+            };
+            if (!string.IsNullOrWhiteSpace(input.PatternMsg))
+                textBox.Bind(TextBox.WatermarkProperty, new ResourceBinding(input.PatternMsg));
+            // 绑定启用状态
+            textBox.Bind(IsEnabledProperty, new Binding("Idle")
+            {
+                Source = Instances.RootViewModel
+            });
+
+            // 验证和保存
+            var fieldName = input.Name;
+            var verifyPattern = input.Verify;
+            var patternMsg = input.PatternMsg;
+            var pipelineType = input.PipelineType?.ToLower() ?? "string";
+
+            textBox.TextChanged += (_, _) =>
+            {
+                var text = textBox.Text ?? string.Empty;
+
+                // 类型验证
+                if (pipelineType == "int" && !IsValidIntegerInput(text))
+                {
+                    textBox.Text = FilterToInteger(text);
+                    if (textBox.CaretIndex > textBox.Text.Length)
+                    {
+                        textBox.CaretIndex = textBox.Text.Length;
+                    }
+                    return;
+                }
+
+                // 正则验证
+                if (!string.IsNullOrEmpty(verifyPattern))
+                {
+                    try
+                    {
+                        var regex = new Regex(verifyPattern);
+                        if (!regex.IsMatch(text))
+                        {
+                            // 可以在这里添加视觉反馈，比如红色边框
+                            // textBox.Classes.Add("error");
+                        }
+                        else
+                        {
+                            // textBox.Classes.Remove("error");
+                        }
+                    }
+                    catch { /* 正则出错时忽略 */ }
+                }
+
+                option.Data[fieldName] = text;
+
+                // 生成 pipeline override
+                if (interfaceOption.PipelineOverride != null)
+                {
+                    option.PipelineOverride = interfaceOption.GenerateProcessedPipeline(
+                        option.Data.Where(kv => kv.Value != null)
+                            .ToDictionary(kv => kv.Key, kv => kv.Value!));
+                }
+
+                SaveConfiguration();
+            };
+
+            // 初始化 pipeline override
+            if (interfaceOption.PipelineOverride != null)
+            {
+                option.PipelineOverride = interfaceOption.GenerateProcessedPipeline(
+                    option.Data.Where(kv => kv.Value != null)
+                        .ToDictionary(kv => kv.Key, kv => kv.Value!));
+            }
+
+            Grid.SetColumn(textBox, 1);
+
+            // 标签 - 使用 ResourceBindingWithFallback 支持语言动态切换
+            var textBlock = new TextBlock
+            {
+                FontSize = 14,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            };
+            textBlock.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(input.DisplayName, input.Name));
+            textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiLowText"));
+
+            var stackPanel = new StackPanel
+            {
+                MinWidth = 180,
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            };
+
+            Grid.SetColumn(stackPanel, 0);
+            stackPanel.Children.Add(textBlock);
+            var tooltipText = GetTooltipText(input.Description, null);
+            if (!string.IsNullOrWhiteSpace(tooltipText))
+            {
+                var docBlock = new TooltipBlock();
+                docBlock.Bind(TooltipBlock.TooltipTextProperty, new ResourceBinding(tooltipText));
+                stackPanel.Children.Add(docBlock);
+            }
+            // 布局自适应
+            grid.Children.Add(textBox);
+            grid.Children.Add(stackPanel);
+            grid.SizeChanged += (sender, e) =>
+            {
+                var currentGrid = sender as Grid;
+                if (currentGrid == null) return;
+
+                var totalMinWidth = currentGrid.Children.Sum(c => c.MinWidth);
+                var availableWidth = currentGrid.Bounds.Width;
+
+                if (availableWidth < totalMinWidth)
+                {
+                    currentGrid.ColumnDefinitions.Clear();
+                    currentGrid.RowDefinitions.Clear();
+                    currentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    currentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    Grid.SetRow(stackPanel, 0);
+                    Grid.SetRow(textBox, 1);
+                    Grid.SetColumn(stackPanel, 0);
+                    Grid.SetColumn(textBox, 0);
+                }
+                else
+                {
+                    currentGrid.RowDefinitions.Clear();
+                    currentGrid.ColumnDefinitions.Clear();
+                    currentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(7, GridUnitType.Star) });
+                    currentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) });
+                    Grid.SetRow(stackPanel, 0);
+                    Grid.SetRow(textBox, 0);
+                    Grid.SetColumn(stackPanel, 0);
+                    Grid.SetColumn(textBox, 1);
+                }
+            };
+
+            container.Children.Add(grid);
+        }
+
+        // 添加主标签（option 名称）- 多个输入字段时显示，使用绑定支持语言动态切换
+        if (interfaceOption.Inputs.Count > 1)
+        {
+            var headerText = new TextBlock
+            {
+                FontSize = 14,
+                FontWeight = FontWeight.SemiBold,
+                Margin = new Thickness(2, 2, 5, 2)
+            };
+            headerText.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(interfaceOption.DisplayName, interfaceOption.Name));
+            headerText.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
+            container.Children.Insert(0, headerText);
+        }
+
+        return container;
+    }
+
+    /// <summary>
+    /// 获取 tooltip 文本：优先使用 Description，没有则使用 Document
+    /// </summary>
+    private static string? GetTooltipText(string? description, List<string>? document)
+    {
+        // 优先使用 Description
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            return description;
+        }
+
+        // 没有 Description 则使用 Document
+        if (document is { Count: > 0 })
+        {
+            try
+            {
+                var input = Regex.Unescape(string.Join("\\n", document));
+                return LanguageHelper.GetLocalizedString(input);
+            }
+            catch
+            {
+                return string.Join("\n", document);
+            }
+        }
+
+        return null;
     }
 
     private Grid CreateToggleControl(
@@ -855,6 +1085,15 @@ public partial class TaskQueueView : UserControl
         DragItemViewModel source
     )
     {
+        // 外层容器，包含主选项和子配置项
+        var outerContainer = new StackPanel();
+
+        // 子配置项容器
+        var subOptionsContainer = new StackPanel
+        {
+            Margin = new Thickness(16, 0, 0, 0) // 缩进显示子配置项
+        };
+
         var button = new ToggleSwitch
         {
             IsChecked = option.Index == yesValue,
@@ -874,21 +1113,58 @@ public partial class TaskQueueView : UserControl
             Source = Instances.RootViewModel
         });
 
+        // 更新子配置项显示的方法
+        void UpdateSubOptions(int selectedIndex)
+        {
+            subOptionsContainer.Children.Clear();
+
+            if (interfaceOption.Cases == null || selectedIndex < 0 || selectedIndex >= interfaceOption.Cases.Count)
+                return;
+
+            var selectedCase = interfaceOption.Cases[selectedIndex];
+            if (selectedCase.Option == null || selectedCase.Option.Count == 0)
+                return;
+
+            // 确保 SubOptions 列表已初始化
+            option.SubOptions ??= new List<MaaInterface.MaaInterfaceSelectOption>();
+
+            // 查找或创建子配置项的 SelectOption
+            foreach (var subOptionName in selectedCase.Option)
+            {
+                var existingSubOption = option.SubOptions.FirstOrDefault(o => o.Name == subOptionName);
+
+                if (existingSubOption == null)
+                {
+                    existingSubOption = CreateDefaultSelectOption(subOptionName);
+                    option.SubOptions.Add(existingSubOption);
+                }
+
+                if (existingSubOption != null)
+                {
+                    AddSubOption(subOptionsContainer, existingSubOption, source);
+                }
+            }
+        }
 
         button.IsCheckedChanged += (_, _) =>
         {
             option.Index = button.IsChecked == true ? yesValue : noValue;
+            UpdateSubOptions(option.Index ?? 0);
             SaveConfiguration();
         };
 
-        button.SetValue(ToolTip.TipProperty, LanguageHelper.GetLocalizedString(option.Name));
+        // 初始化时显示子配置项
+        UpdateSubOptions(option.Index ?? 0);
+
+        // 使用 ResourceBinding 支持语言动态切换
+        button.Bind(ToolTip.TipProperty, new ResourceBindingWithFallback(option.DisplayName, option.Name));
         var textBlock = new TextBlock
         {
-            Text = LanguageHelper.GetLocalizedString(option.Name),
             Margin = new Thickness(8, 0, 5, 0),
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
+        textBlock.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(option.DisplayName, option.Name));
 
         var grid = new Grid
         {
@@ -916,22 +1192,29 @@ public partial class TaskQueueView : UserControl
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         stackPanel.Children.Add(textBlock);
-        if (interfaceOption.Document is { Count: > 0 })
-        {
-            var input = Regex.Unescape(string.Join("\\n", interfaceOption.Document));
 
-            var docBlock = new TooltipBlock
-            {
-                TooltipText = input
-            };
+        // 优先使用 Description，没有则使用 Document
+        var tooltipText = GetTooltipText(interfaceOption.Description, interfaceOption.Document);
+        if (!string.IsNullOrWhiteSpace(tooltipText))
+        {
+            var docBlock = new TooltipBlock();
+            docBlock.Bind(TooltipBlock.TooltipTextProperty, new ResourceBinding(tooltipText));
             stackPanel.Children.Add(docBlock);
         }
+
         Grid.SetColumn(stackPanel, 0);
         Grid.SetColumn(button, 2);
         grid.Children.Add(stackPanel);
         grid.Children.Add(button);
 
-        return grid;
+        // 将主 grid 和子配置项容器添加到外层容器
+        outerContainer.Children.Add(grid);
+        outerContainer.Children.Add(subOptionsContainer);
+
+        // 返回包装后的 Grid
+        var wrapperGrid = new Grid();
+        wrapperGrid.Children.Add(outerContainer);
+        return wrapperGrid;
     }
 
     private Grid CreateComboBoxControl(
@@ -939,6 +1222,9 @@ public partial class TaskQueueView : UserControl
         MaaInterface.MaaInterfaceOption interfaceOption,
         DragItemViewModel source)
     {
+        // 外层容器，包含主选项和子配置项
+        var outerContainer = new StackPanel();
+
         var grid = new Grid
         {
             ColumnDefinitions =
@@ -955,6 +1241,12 @@ public partial class TaskQueueView : UserControl
             Margin = new Thickness(8, 0, 5, 5)
         };
 
+        // 子配置项容器
+        var subOptionsContainer = new StackPanel
+        {
+            Margin = new Thickness(16, 0, 0, 0) // 缩进显示子配置项
+        };
+
         var combo = new ComboBox
         {
             MinWidth = 150,
@@ -963,35 +1255,33 @@ public partial class TaskQueueView : UserControl
                 "LimitWidth"
             },
             Margin = new Thickness(0, 5, 5, 5),
-            ItemsSource = interfaceOption.Cases?.Select(caseOption => new LocalizationViewModel
-            {
-                Name = caseOption.Name ?? "",
-            }).ToList(),
+            ItemsSource = interfaceOption.Cases?.Select(caseOption => new LocalizationViewModel(
+                caseOption.DisplayName,  // 优先使用 Label
+                caseOption.Name          // 回退到 Name
+            )).ToList(),
             ItemTemplate = new FuncDataTemplate<LocalizationViewModel>((optionCase, b) =>
             {
-
-                var data =
-                    new TextBlock
-                    {
-                        Text = optionCase?.Name ?? string.Empty,
-                        TextTrimming = TextTrimming.WordEllipsis,
-                        TextWrapping = TextWrapping.NoWrap
-                    };
-                ToolTip.SetTip(data, optionCase?.Name ?? string.Empty);
+                var data = new TextBlock
+                {
+                    TextTrimming = TextTrimming.WordEllipsis,
+                    TextWrapping = TextWrapping.NoWrap
+                };
+                // 绑定到 Name 属性，支持语言动态切换
+                data.Bind(TextBlock.TextProperty, new Binding(nameof(LocalizationViewModel.Name)));
+                data.Bind(ToolTip.TipProperty, new Binding(nameof(LocalizationViewModel.Name)));
                 ToolTip.SetShowDelay(data, 100);
                 return data;
             }),
             SelectionBoxItemTemplate = new FuncDataTemplate<LocalizationViewModel>((optionCase, b) =>
             {
-
-                var data =
-                    new TextBlock
-                    {
-                        Text = optionCase?.Name ?? string.Empty,
-                        TextTrimming = TextTrimming.WordEllipsis,
-                        TextWrapping = TextWrapping.NoWrap
-                    };
-                ToolTip.SetTip(data, optionCase?.Name ?? string.Empty);
+                var data = new TextBlock
+                {
+                    TextTrimming = TextTrimming.WordEllipsis,
+                    TextWrapping = TextWrapping.NoWrap
+                };
+                // 绑定到 Name 属性，支持语言动态切换
+                data.Bind(TextBlock.TextProperty, new Binding(nameof(LocalizationViewModel.Name)));
+                data.Bind(ToolTip.TipProperty, new Binding(nameof(LocalizationViewModel.Name)));
                 ToolTip.SetShowDelay(data, 100);
                 return data;
             }),
@@ -1004,22 +1294,62 @@ public partial class TaskQueueView : UserControl
             Source = Instances.RootViewModel
         });
 
+        // 更新子配置项显示的方法
+        void UpdateSubOptions(int selectedIndex)
+        {
+            subOptionsContainer.Children.Clear();
+
+            if (interfaceOption.Cases == null || selectedIndex < 0 || selectedIndex >= interfaceOption.Cases.Count)
+                return;
+
+            var selectedCase = interfaceOption.Cases[selectedIndex];
+            if (selectedCase.Option == null || selectedCase.Option.Count == 0)
+                return;
+
+            // 确保 SubOptions 列表已初始化
+            option.SubOptions ??= new List<MaaInterface.MaaInterfaceSelectOption>();
+
+            // 查找或创建子配置项的 SelectOption
+            foreach (var subOptionName in selectedCase.Option)
+            {
+                // 在 option.SubOptions 中查找是否已存在
+                var existingSubOption = option.SubOptions.FirstOrDefault(o => o.Name == subOptionName);
+
+                if (existingSubOption == null)
+                {
+                    existingSubOption = CreateDefaultSelectOption(subOptionName);
+                    option.SubOptions.Add(existingSubOption);
+                }
+
+                if (existingSubOption != null)
+                {
+                    // 添加子配置项 UI
+                    AddSubOption(subOptionsContainer, existingSubOption, source);
+                }
+            }
+        }
+
         combo.SelectionChanged += (_, _) =>
         {
             option.Index = combo.SelectedIndex;
+            UpdateSubOptions(combo.SelectedIndex);
             SaveConfiguration();
         };
 
+        // 初始化时显示子配置项
+        UpdateSubOptions(option.Index ?? 0);
+
         ComboBoxExtensions.SetDisableNavigationOnLostFocus(combo, true);
         Grid.SetColumn(combo, 1);
+
+        // 使用 ResourceBinding 支持语言动态切换
         var textBlock = new TextBlock
         {
             FontSize = 14,
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Center,
-
-            Text = LanguageHelper.GetLocalizedString(option.Name),
         };
+        textBlock.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(option.DisplayName, option.Name));
         textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiLowText"));
 
         var stackPanel = new StackPanel
@@ -1031,14 +1361,13 @@ public partial class TaskQueueView : UserControl
         };
         Grid.SetColumn(stackPanel, 0);
         stackPanel.Children.Add(textBlock);
-        if (interfaceOption.Document is { Count: > 0 })
-        {
-            var input = Regex.Unescape(string.Join("\\n", interfaceOption.Document));
 
-            var docBlock = new TooltipBlock
-            {
-                TooltipText = input
-            };
+        // 优先使用 Description，没有则使用 Document
+        var tooltipText = GetTooltipText(interfaceOption.Description, interfaceOption.Document);
+        if (!string.IsNullOrWhiteSpace(tooltipText))
+        {
+            var docBlock = new TooltipBlock();
+            docBlock.Bind(TooltipBlock.TooltipTextProperty, new ResourceBinding(tooltipText));
             stackPanel.Children.Add(docBlock);
         }
         grid.Children.Add(combo);
@@ -1091,7 +1420,94 @@ public partial class TaskQueueView : UserControl
                 Grid.SetColumn(combo, 1);
             }
         };
-        return grid;
+
+        // 将主 grid 和子配置项容器添加到外层容器
+        outerContainer.Children.Add(grid);
+        outerContainer.Children.Add(subOptionsContainer);
+
+        // 返回包装后的 Grid
+        var wrapperGrid = new Grid();
+        wrapperGrid.Children.Add(outerContainer);
+        return wrapperGrid;
+    }
+
+    /// <summary>
+    /// 添加子配置项 UI（递归支持嵌套）
+    /// </summary>
+    /// <summary>
+    /// 根据 option 名称创建带默认值的 SelectOption
+    /// </summary>
+    private static MaaInterface.MaaInterfaceSelectOption CreateDefaultSelectOption(string optionName)
+    {
+        var selectOption = new MaaInterface.MaaInterfaceSelectOption
+        {
+            Name = optionName,
+            Index = 0
+        };
+
+        // 获取对应的 interfaceOption 定义
+        if (MaaProcessor.Interface?.Option?.TryGetValue(optionName, out var interfaceOption) == true)
+        {
+            if (interfaceOption.IsInput)
+            {
+                // input 类型：初始化 Data 字典
+                selectOption.Data = new Dictionary<string, string?>();
+                if (interfaceOption.Inputs != null)
+                {
+                    foreach (var input in interfaceOption.Inputs)
+                    {
+                        if (!string.IsNullOrEmpty(input.Name))
+                        {
+                            selectOption.Data[input.Name] = input.Default ?? string.Empty;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // select/switch 类型：设置默认索引
+                if (!string.IsNullOrEmpty(interfaceOption.DefaultCase) && interfaceOption.Cases != null)
+                {
+                    var defaultCaseIndex = interfaceOption.Cases.FindIndex(c => c.Name == interfaceOption.DefaultCase);
+                    if (defaultCaseIndex >= 0)
+                    {
+                        selectOption.Index = defaultCaseIndex;
+                    }
+                }
+            }
+        }
+
+        return selectOption;
+    }
+
+    private void AddSubOption(Panel panel, MaaInterface.MaaInterfaceSelectOption subOption, DragItemViewModel source)
+    {
+        if (MaaProcessor.Interface?.Option?.TryGetValue(subOption.Name ?? string.Empty, out var subInterfaceOption) != true)
+            return;
+
+        Control control;
+
+        // 根据 option 类型创建不同的控件
+        if (subInterfaceOption.IsInput)
+        {
+            control = CreateInputControl(subOption, subInterfaceOption, source);
+        }
+        else if (subInterfaceOption.IsSwitch)
+        {
+            // type 为 "switch" 时，强制使用 ToggleSwitch（cases[0] 为开，cases[1] 为关）
+            control = CreateToggleControl(subOption, 0, 1, subInterfaceOption, source);
+        }
+        else if (subInterfaceOption.Cases.ShouldSwitchButton(out var yes, out var no))
+        {
+            // 向后兼容：cases 名称为 yes/no 时也使用 ToggleSwitch
+            control = CreateToggleControl(subOption, yes, no, subInterfaceOption, source);
+        }
+        else
+        {
+            control = CreateComboBoxControl(subOption, subInterfaceOption, source);
+        }
+
+        panel.Children.Add(control);
     }
 
 
@@ -1100,6 +1516,7 @@ public partial class TaskQueueView : UserControl
         ConfigurationManager.Current.SetValue(ConfigurationKeys.TaskItems,
             Instances.TaskQueueViewModel.TaskItemViewModels.Select(m => m.InterfaceItem));
     }
+
     public static string ConvertCustomMarkup(string input, string outputFormat = "markdown")
     {
         // 预处理换行符
