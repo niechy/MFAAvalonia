@@ -113,16 +113,16 @@ public static class GlobalHotkeyService
             Key.OemCloseBrackets => KeyCode.VcCloseBracket, // 右括号（]）
             Key.OemPipe => KeyCode.VcBackslash, // 竖线（|）
             Key.OemTilde => KeyCode.VcBackQuote, // 波浪号（~）
-            Key.NumPad0 => KeyCode.VcO,
-            Key.NumPad1 => KeyCode.Vc1,
-            Key.NumPad2 => KeyCode.Vc2,
-            Key.NumPad3 => KeyCode.Vc3,
-            Key.NumPad4 => KeyCode.Vc4,
-            Key.NumPad5 => KeyCode.Vc5,
-            Key.NumPad6 => KeyCode.Vc6,
-            Key.NumPad7 => KeyCode.Vc7,
-            Key.NumPad8 => KeyCode.Vc8,
-            Key.NumPad9 => KeyCode.Vc9,
+            Key.NumPad0 => KeyCode.VcNumPad0,
+            Key.NumPad1 => KeyCode.VcNumPad1,
+            Key.NumPad2 => KeyCode.VcNumPad2,
+            Key.NumPad3 => KeyCode.VcNumPad3,
+            Key.NumPad4 => KeyCode.VcNumPad4,
+            Key.NumPad5 => KeyCode.VcNumPad5,
+            Key.NumPad6 => KeyCode.VcNumPad6,
+            Key.NumPad7 => KeyCode.VcNumPad7,
+            Key.NumPad8 => KeyCode.VcNumPad8,
+            Key.NumPad9 => KeyCode.VcNumPad9,
             // 功能键（可选补充，避免遗漏）
             Key.Enter => KeyCode.VcEnter,
             Key.Space => KeyCode.VcSpace,
