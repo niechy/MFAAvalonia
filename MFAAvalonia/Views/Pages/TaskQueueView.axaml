@@ -30,9 +30,11 @@
 
     <UserControl.Resources>
         <ContextMenu x:Key="TaskMenu">
-            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}" Click="RunSingleTask"
+            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                      Click="RunSingleTask"
                       Header="{markup:I18n {x:Static helper:LangKeys.RunSingle}}" />
-            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}" Click="RunCheckedFromCurrent"
+            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                      Click="RunCheckedFromCurrent"
                       Header="{markup:I18n {x:Static helper:LangKeys.RunCheckedFromCurrent}}" />
             <MenuItem Click="Delete" Header="{markup:I18n {x:Static helper:LangKeys.Delete}}" />
         </ContextMenu>
@@ -68,13 +70,47 @@
                             VerticalAlignment="Center" />
                     </suki:GroupBox.Header>
                     <ComboBox ex:ComboBoxExtensions.DisableNavigationOnLostFocus="True"
-                              DisplayMemberBinding="{Binding DisplayName}"
                               IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                               ItemsSource="{Binding CurrentResources}"
                               Margin="10,0,10,0"
                               SelectedValue="{Binding CurrentResource}"
                               SelectedValueBinding="{Binding Name}"
-                              VerticalAlignment="Center" />
+                              VerticalAlignment="Center">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="maa:MaaInterface+MaaInterfaceResource">
+                                <Grid ColumnDefinitions="*,40">
+                                    <TextBlock
+                                        Background="Transparent"
+                                        Foreground="{DynamicResource SukiText}"
+                                        Grid.Column="0"
+                                        Text="{Binding DisplayName}"
+                                        TextTrimming="CharacterEllipsis"
+                                        VerticalAlignment="Center" />
+                                    <controls:TooltipBlock
+                                        Grid.Column="1"
+                                        IsVisible="{Binding HasDescription}"
+                                        TooltipText="{Binding DisplayDescription}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <ComboBox.SelectionBoxItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,40">
+                                    <TextBlock
+                                        Background="Transparent"
+                                        Foreground="{DynamicResource SukiText}"
+                                        Grid.Column="0"
+                                        Text="{Binding DisplayName}"
+                                        TextTrimming="CharacterEllipsis"
+                                        VerticalAlignment="Center" />
+                                    <controls:TooltipBlock
+                                        Grid.Column="1"
+                                        IsVisible="{Binding HasDescription}"
+                                        TooltipText="{Binding DisplayDescription}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ComboBox.SelectionBoxItemTemplate>
+                    </ComboBox>
                 </suki:GroupBox>
 
             </suki:GlassCard>
@@ -635,7 +671,7 @@
                                             HorizontalAlignment="Stretch"
                                             Margin="0,5" TextWrapping="WrapWithOverflow"
                                             Text="{Binding Content}"
-                                            VerticalAlignment="Stretch" >
+                                            VerticalAlignment="Stretch">
                                             <TextBlock.MaxWidth>
                                                 <MultiBinding Converter="{converters:MaxWidthConverter}">
                                                     <Binding ElementName="ParentGrid" Path="Bounds.Width" />

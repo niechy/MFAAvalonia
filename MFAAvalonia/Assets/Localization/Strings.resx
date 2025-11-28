@@ -183,6 +183,9 @@
     <data name="ConfigAddedSuccessfully" xml:space="preserve">
         <value>配置 &lt;{0}&gt; 添加成功！</value>
     </data>
+    <data name="ContactInfo" xml:space="preserve">
+        <value>联系方式</value>
+    </data>
     <data name="ConfigNameAlreadyExists" xml:space="preserve">
         <value>配置名称 &lt;{0}&gt; 已存在！</value>
     </data>
@@ -591,6 +594,9 @@
     <data name="LDPlayer" xml:space="preserve">
         <value>雷电模拟器</value>
     </data>
+    <data name="LicenseInfo" xml:space="preserve">
+        <value>许可证</value>
+    </data>
     <data name="LightColor" xml:space="preserve">
         <value>浅色</value>
     </data>
@@ -707,6 +713,9 @@
     </data>
     <data name="Prescript" xml:space="preserve">
         <value>开始前脚本</value>
+    </data>
+    <data name="ProjectDescription" xml:space="preserve">
+        <value>项目介绍</value>
     </data>
     <data name="ProjectLink" xml:space="preserve">
         <value>项目链接: </value>

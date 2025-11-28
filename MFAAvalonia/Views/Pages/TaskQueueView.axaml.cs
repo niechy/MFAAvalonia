@@ -1247,6 +1247,15 @@ public partial class TaskQueueView : UserControl
             Margin = new Thickness(16, 0, 0, 0) // 缩进显示子配置项
         };
 
+        // 初始化所有 Case 的显示名称
+        if (interfaceOption.Cases != null)
+        {
+            foreach (var caseOption in interfaceOption.Cases)
+            {
+                caseOption.InitializeDisplayName();
+            }
+        }
+
         var combo = new ComboBox
         {
             MinWidth = 150,
@@ -1255,35 +1264,68 @@ public partial class TaskQueueView : UserControl
                 "LimitWidth"
             },
             Margin = new Thickness(0, 5, 5, 5),
-            ItemsSource = interfaceOption.Cases?.Select(caseOption => new LocalizationViewModel(
-                caseOption.DisplayName,  // 优先使用 Label
-                caseOption.Name          // 回退到 Name
-            )).ToList(),
-            ItemTemplate = new FuncDataTemplate<LocalizationViewModel>((optionCase, b) =>
+            ItemsSource = interfaceOption.Cases,
+            ItemTemplate = new FuncDataTemplate<MaaInterface.MaaInterfaceOptionCase>((caseOption, b) =>
             {
-                var data = new TextBlock
+                var itemGrid = new Grid
+                {
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition { Width = GridLength.Star },
+                        new ColumnDefinition { Width = new GridLength(40) }
+                    }
+                };
+
+                var textBlock = new TextBlock
                 {
                     TextTrimming = TextTrimming.WordEllipsis,
-                    TextWrapping = TextWrapping.NoWrap
+                    TextWrapping = TextWrapping.NoWrap,
+                    VerticalAlignment = VerticalAlignment.Center
                 };
-                // 绑定到 Name 属性，支持语言动态切换
-                data.Bind(TextBlock.TextProperty, new Binding(nameof(LocalizationViewModel.Name)));
-                data.Bind(ToolTip.TipProperty, new Binding(nameof(LocalizationViewModel.Name)));
-                ToolTip.SetShowDelay(data, 100);
-                return data;
+                textBlock.Bind(TextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
+                textBlock.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
+                ToolTip.SetShowDelay(textBlock, 100);
+                Grid.SetColumn(textBlock, 0);
+
+                var tooltipBlock = new TooltipBlock();
+                tooltipBlock.Bind(TooltipBlock.TooltipTextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayDescription)));
+                tooltipBlock.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.HasDescription)));
+                Grid.SetColumn(tooltipBlock, 1);
+
+                itemGrid.Children.Add(textBlock);
+                itemGrid.Children.Add(tooltipBlock);
+                return itemGrid;
             }),
-            SelectionBoxItemTemplate = new FuncDataTemplate<LocalizationViewModel>((optionCase, b) =>
+            SelectionBoxItemTemplate = new FuncDataTemplate<MaaInterface.MaaInterfaceOptionCase>((caseOption, b) =>
             {
-                var data = new TextBlock
+                var itemGrid = new Grid
+                {
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition { Width = GridLength.Star },
+                        new ColumnDefinition { Width = new GridLength(40) }
+                    }
+                };
+
+                var textBlock = new TextBlock
                 {
                     TextTrimming = TextTrimming.WordEllipsis,
-                    TextWrapping = TextWrapping.NoWrap
+                    TextWrapping = TextWrapping.NoWrap,
+                    VerticalAlignment = VerticalAlignment.Center
                 };
-                // 绑定到 Name 属性，支持语言动态切换
-                data.Bind(TextBlock.TextProperty, new Binding(nameof(LocalizationViewModel.Name)));
-                data.Bind(ToolTip.TipProperty, new Binding(nameof(LocalizationViewModel.Name)));
-                ToolTip.SetShowDelay(data, 100);
-                return data;
+                textBlock.Bind(TextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
+                textBlock.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
+                ToolTip.SetShowDelay(textBlock, 100);
+                Grid.SetColumn(textBlock, 0);
+
+                var tooltipBlock = new TooltipBlock();
+                tooltipBlock.Bind(TooltipBlock.TooltipTextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayDescription)));
+                tooltipBlock.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.HasDescription)));
+                Grid.SetColumn(tooltipBlock, 1);
+
+                itemGrid.Children.Add(textBlock);
+                itemGrid.Children.Add(tooltipBlock);
+                return itemGrid;
             }),
             SelectedIndex = option.Index ?? 0,
         };

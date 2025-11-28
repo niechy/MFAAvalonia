@@ -1,21 +1,22 @@
 ﻿using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
-using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using System;
+using System.Threading.Tasks;
 
 namespace MFAAvalonia.Views.UserControls;
 
-public partial class TooltipBlock : UserControl
+public class TooltipBlock : TemplatedControl
 {
+    private const string ElementBorder = "PART_Border";
+
+    private Border? _border;
+
     public TooltipBlock()
     {
-        AvaloniaXamlLoader.Load(this);
-
-        DataContext = this;
-
         Opacity = NormalOpacity;
 
         PointerEntered += OnPointerEnter;
@@ -88,17 +89,23 @@ public partial class TooltipBlock : UserControl
         return baseValue;
     }
 
-    private void OnPointerEnter(object sender, PointerEventArgs e)
+    protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
-        AnimateOpacity(HoverOpacity);
+        base.OnApplyTemplate(e);
+        _border = e.NameScope.Find<Border>(ElementBorder);
     }
 
-    private void OnPointerLeave(object sender, PointerEventArgs e)
+    private void OnPointerEnter(object? sender, PointerEventArgs e)
     {
-        AnimateOpacity(NormalOpacity);
+        _ = AnimateOpacity(HoverOpacity);
     }
 
-    private async void AnimateOpacity(double targetOpacity)
+    private void OnPointerLeave(object? sender, PointerEventArgs e)
+    {
+        _ = AnimateOpacity(NormalOpacity);
+    }
+
+    async private Task AnimateOpacity(double targetOpacity)
     {
         var animation = new Animation
         {

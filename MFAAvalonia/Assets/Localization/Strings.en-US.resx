@@ -176,6 +176,9 @@
     <data name="ConfigAddedSuccessfully" xml:space="preserve">
         <value>Configuration &lt;{0}&gt; added successfully!</value>
     </data>
+    <data name="ContactInfo" xml:space="preserve">
+        <value>Contact</value>
+    </data>
     <data name="ConfigNameAlreadyExists" xml:space="preserve">
         <value>Configuration name &lt;{0}&gt; already exists!</value>
     </data>
@@ -584,6 +587,9 @@
     <data name="LDPlayer" xml:space="preserve">
         <value>LD Player</value>
     </data>
+    <data name="LicenseInfo" xml:space="preserve">
+        <value>License</value>
+    </data>
     <data name="LightColor" xml:space="preserve">
         <value>Light Color</value>
     </data>
@@ -700,6 +706,9 @@
     </data>
     <data name="Prescript" xml:space="preserve">
         <value>Prescript</value>
+    </data>
+    <data name="ProjectDescription" xml:space="preserve">
+        <value>About Project</value>
     </data>
     <data name="ProjectLink" xml:space="preserve">
         <value>Project Link: </value>

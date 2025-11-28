@@ -65,6 +65,7 @@ public static class LangKeys
 	public static readonly string ColorTheme = "ColorTheme";
 	public static readonly string CommonSetting = "CommonSetting";
 	public static readonly string ConfigAddedSuccessfully = "ConfigAddedSuccessfully";
+	public static readonly string ContactInfo = "ContactInfo";
 	public static readonly string ConfigNameAlreadyExists = "ConfigNameAlreadyExists";
 	public static readonly string ConfigNameCannotBeEmpty = "ConfigNameCannotBeEmpty";
 	public static readonly string ConfigurationName = "ConfigurationName";
@@ -201,6 +202,7 @@ public static class LangKeys
 	public static readonly string LanguageSettings = "LanguageSettings";
 	public static readonly string Lark = "Lark";
 	public static readonly string LDPlayer = "LDPlayer";
+	public static readonly string LicenseInfo = "LicenseInfo";
 	public static readonly string LightColor = "LightColor";
 	public static readonly string Load = "Load";
 	public static readonly string LoadFileTitle = "LoadFileTitle";
@@ -240,6 +242,7 @@ public static class LangKeys
 	public static readonly string PipelineLoadError = "PipelineLoadError";
 	public static readonly string Postscript = "Postscript";
 	public static readonly string Prescript = "Prescript";
+	public static readonly string ProjectDescription = "ProjectDescription";
 	public static readonly string ProjectLink = "ProjectLink";
 	public static readonly string PurchaseLink = "PurchaseLink";
 	public static readonly string Quit = "Quit";

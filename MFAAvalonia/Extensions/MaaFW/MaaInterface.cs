@@ -7,8 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MFAAvalonia.Extensions.MaaFW;
 
@@ -17,7 +19,7 @@ public partial class MaaInterface
     /// <summary>
     /// Option 配置项的选项（用于 select/switch 类型）
     /// </summary>
-    public class MaaInterfaceOptionCase
+    public partial class MaaInterfaceOptionCase : ObservableObject
     {
         /// <summary>选项唯一标识符</summary>
         [JsonProperty("name")]
@@ -27,9 +29,8 @@ public partial class MaaInterface
         [JsonProperty("label")]
         public string? Label { get; set; }
 
-        // /// <summary>选项详细描述，支持 Markdown</summary>
-        // [JsonProperty("description")]
-        // public string? Description { get; set; }
+        [JsonProperty("description")]
+        public string? Description { get; set; }
 
         /// <summary>选项图标文件路径</summary>
         [JsonProperty("icon")]
@@ -44,9 +45,32 @@ public partial class MaaInterface
         [JsonProperty("pipeline_override")]
         public Dictionary<string, JToken>? PipelineOverride { get; set; }
 
-        /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
-        [JsonIgnore]
-        public string DisplayName => Label ?? Name ?? string.Empty;
+        [ObservableProperty][JsonIgnore] private string _displayName = string.Empty;
+
+        [ObservableProperty][JsonIgnore] private bool _hasDescription;
+
+        [ObservableProperty][JsonIgnore] private string _displayDescription = string.Empty;
+
+        /// <summary>
+        /// 初始化显示名称并注册语言变化监听
+        /// </summary>
+        public void InitializeDisplayName()
+        {
+            UpdateDisplayName();
+            LanguageHelper.LanguageChanged += OnLanguageChanged;
+        }
+
+        private void OnLanguageChanged(object? sender, LanguageHelper.LanguageEventArgs e)
+        {
+            UpdateDisplayName();
+        }
+
+        private void UpdateDisplayName()
+        {
+            DisplayName = LanguageHelper.GetLocalizedDisplayName(Label, Name ?? string.Empty);
+            DisplayDescription = LanguageHelper.GetLocalizedString(Description);
+            HasDescription = !string.IsNullOrWhiteSpace(DisplayDescription);
+        }
 
         public override string? ToString()
         {
@@ -487,20 +511,21 @@ public partial class MaaInterface
         [JsonProperty("name")]
         public string? Name { get; set; }
 
-        /// <summary>
-        /// 显示名称，用于在用户界面中展示。支持国际化字符串（以$开头）。
-        /// 如果未设置，则显示name字段的值。可选。
-        /// </summary>
         [JsonProperty("label")]
         public string? Label { get; set; }
+
+        [JsonProperty("description")]
+        public string? Description { get; set; }
 
         [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
         [JsonProperty("path")]
         public List<string>? Path { get; set; }
 
-        [ObservableProperty]
-        [property: JsonIgnore]
-        private string _displayName = string.Empty;
+        [ObservableProperty][JsonIgnore] private string _displayName = string.Empty;
+
+        [ObservableProperty][JsonIgnore] private bool _hasDescription = false;
+
+        [ObservableProperty][JsonIgnore] private string _displayDescription = string.Empty;
 
         /// <summary>
         /// 初始化显示名称并注册语言变化监听
@@ -519,6 +544,10 @@ public partial class MaaInterface
         private void UpdateDisplayName()
         {
             DisplayName = LanguageHelper.GetLocalizedDisplayName(Label, Name ?? string.Empty);
+            DisplayDescription = LanguageHelper.GetLocalizedString(Description);
+
+            HasDescription = !string.IsNullOrWhiteSpace(DisplayDescription);
+            LoggerHelper.Info($"DisplayDescription:{DisplayDescription},HasDescription: {HasDescription}");
         }
     }
 
@@ -579,22 +608,22 @@ public partial class MaaInterface
     {
         [JsonProperty("name")]
         public string? Name { get; set; }
-        
+
         [JsonProperty("label")]
         public string? Label { get; set; }
-        
+
         [JsonProperty("type")]
         public string? Type { get; set; }
-        
+
         [JsonProperty("display_short_side")]
         public long? DisplayShortSide { get; set; }
-        
+
         [JsonProperty("display_long_side")]
         public long? DisplayLongSide { get; set; }
-        
+
         [JsonProperty("display_raw")]
         public bool? DisplayRaw { get; set; }
-        
+
         [JsonProperty("adb")]
         public MaaResourceControllerAdb? Adb { get; set; }
         [JsonProperty("win32")]
@@ -639,6 +668,9 @@ public partial class MaaInterface
     [JsonProperty("url")]
     public string? Url { get; set; }
 
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
     [JsonProperty("custom_title")]
     public string? CustomTitle { get; set; }
 
@@ -670,6 +702,75 @@ public partial class MaaInterface
     [JsonIgnore]
     public Dictionary<string, MaaInterfaceResource> Resources { get; } = new();
 
+    /// <summary>联系方式信息，显示在"关于"页面。支持文件路径、URL或直接文本，内容支持Markdown格式。支持国际化（以$开头）</summary>
+    [JsonProperty("contact")]
+    public string? Contact { get; set; }
+
+    /// <summary>项目描述信息，显示在"关于"页面。支持文件路径、URL或直接文本，内容支持Markdown格式。支持国际化（以$开头）</summary>
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    /// <summary>项目许可证信息，显示在"关于"页面。支持文件路径、URL或直接文本，内容支持Markdown格式。支持国际化（以$开头）</summary>
+    [JsonProperty("license")]
+    public string? License { get; set; }
+
+    /// <summary>
+    /// 解析 Markdown 内容：支持国际化字符串、文件路径、URL 或直接文本
+    /// </summary>
+    /// <param name="input">输入内容（可能是 $key、文件路径、URL 或直接文本）</param>
+    /// <param name="projectDir">项目目录（用于解析相对路径）</param>
+    /// <returns>解析后的 Markdown 文本</returns>
+    public static async Task<string> ResolveMarkdownContentAsync(string? input, string? projectDir)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        try
+        {
+            // 1. 国际化处理（以$开头）
+            var content = LanguageHelper.GetLocalizedString(input);
+
+            // 2. 判断是否为 URL
+            if (Uri.TryCreate(content, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                return await FetchUrlContentAsync(content);
+            }
+
+            // 3. 判断是否为文件路径
+            var filePath = ReplacePlaceholder(content, projectDir, checkIfPath: true);
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                return await File.ReadAllTextAsync(filePath);
+            }
+
+            // 4. 直接返回文本（可能是 Markdown）
+            return content;
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"解析 Markdown 内容失败: {input}, 错误: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 从 URL 获取文本内容
+    /// </summary>
+    private static async Task<string> FetchUrlContentAsync(string url)
+    {
+        try
+        {
+            using var httpClient = VersionChecker.CreateHttpClientWithProxy();
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+            return await httpClient.GetStringAsync(url);
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Warning($"获取 URL 内容失败: {url}, 错误: {ex.Message}");
+            return string.Empty;
+        }
+    }
 
     /// <summary>
     /// 替换单个字符串中的 {PROJECT_DIR} 占位符，并标准化为当前系统的路径格式
@@ -741,9 +842,7 @@ public partial class MaaInterface
             return true;
 
         // 以 . 或 .. 开头的相对路径
-        if (input.StartsWith("./") || input.StartsWith(".\\") ||
-            input.StartsWith("../") || input.StartsWith("..\\") ||
-            input == "." || input == "..")
+        if (input.StartsWith("./") || input.StartsWith(".\\") || input.StartsWith("../") || input.StartsWith("..\\") || input == "." || input == "..")
             return true;
 
         // 包含常见的文件扩展名

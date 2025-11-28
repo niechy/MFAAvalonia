@@ -97,13 +97,8 @@ public class MaaProcessor
             {
                 var nameKey = customResource.Name?.Trim() ?? string.Empty;
                 var paths = MaaInterface.ReplacePlaceholder(customResource.Path ?? new(), AppContext.BaseDirectory);
-
-                value!.Resources[nameKey] = new MaaInterface.MaaInterfaceResource
-                {
-                    Name = nameKey,
-                    Label = customResource.Label,
-                    Path = paths
-                };
+                customResource.Path = paths;
+                value!.Resources[nameKey] = customResource;
             }
 
             // 为 Option 字典中的每个项设置 Name（因为 Name 是 JsonIgnore 的）
@@ -135,8 +130,58 @@ public class MaaProcessor
                 {
                     LanguageHelper.LoadLanguagesFromInterface(value.Languages, AppContext.BaseDirectory);
                 }
+
+                // 异步加载 Contact 和 Description 内容
+                _ = LoadContactAndDescriptionAsync(value);
             }
 
+        }
+    }
+
+    /// <summary>
+    /// 异步加载 Contact 和 Description 内容
+    /// </summary>
+    private static async Task LoadContactAndDescriptionAsync(MaaInterface maaInterface)
+    {
+        var projectDir = AppContext.BaseDirectory;
+
+        // 加载 Description
+        if (!string.IsNullOrWhiteSpace(maaInterface.Description))
+        {
+            var description = await MaaInterface.ResolveMarkdownContentAsync(maaInterface.Description, projectDir);
+            Instances.SettingsViewModel.ResourceDescription = description;
+            Instances.SettingsViewModel.HasResourceDescription = !string.IsNullOrWhiteSpace(description);
+        }
+        else
+        {
+            Instances.SettingsViewModel.ResourceDescription = string.Empty;
+            Instances.SettingsViewModel.HasResourceDescription = false;
+        }
+
+        // 加载 Contact
+        if (!string.IsNullOrWhiteSpace(maaInterface.Contact))
+        {
+            var contact = await MaaInterface.ResolveMarkdownContentAsync(maaInterface.Contact, projectDir);
+            Instances.SettingsViewModel.ResourceContact = contact;
+            Instances.SettingsViewModel.HasResourceContact = !string.IsNullOrWhiteSpace(contact);
+        }
+        else
+        {
+            Instances.SettingsViewModel.ResourceContact = string.Empty;
+            Instances.SettingsViewModel.HasResourceContact = false;
+        }
+
+        // 加载 License
+        if (!string.IsNullOrWhiteSpace(maaInterface.License))
+        {
+            var license = await MaaInterface.ResolveMarkdownContentAsync(maaInterface.License, projectDir);
+            Instances.SettingsViewModel.ResourceLicense = license;
+            Instances.SettingsViewModel.HasResourceLicense = !string.IsNullOrWhiteSpace(license);
+        }
+        else
+        {
+            Instances.SettingsViewModel.ResourceLicense = string.Empty;
+            Instances.SettingsViewModel.HasResourceLicense = false;
         }
     }
 
@@ -624,15 +669,15 @@ public class MaaProcessor
                         : LangKeys.Window.ToLocalization()), true,
                 LangKeys.InitControllerFailed.ToLocalization()));
 
-            var displayShortSide = Interface?.Controller?.Find(c => c.Type!= null && c.Type.Equals( Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayShortSide;
+            var displayShortSide = Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayShortSide;
 
-            var displayLongSide = Interface?.Controller?.Find(c => c.Type!= null && c.Type.Equals(Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayLongSide;
-            var displayRaw = Interface?.Controller?.Find(c => c.Type!= null && c.Type.Equals(Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayRaw;
-            if (displayLongSide != null && displayShortSide == null && displayRaw ==null) 
+            var displayLongSide = Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayLongSide;
+            var displayRaw = Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayRaw;
+            if (displayLongSide != null && displayShortSide == null && displayRaw == null)
                 controller.SetOption_ScreenshotTargetLongSide(Convert.ToInt32(displayLongSide.Value));
-            if (displayShortSide != null && displayLongSide == null && displayRaw ==null)
+            if (displayShortSide != null && displayLongSide == null && displayRaw == null)
                 controller.SetOption_ScreenshotTargetShortSide(Convert.ToInt32(displayShortSide.Value));
-            if (displayRaw != null && displayShortSide == null && displayLongSide ==null)
+            if (displayRaw != null && displayShortSide == null && displayLongSide == null)
                 controller.SetOption_ScreenshotUseRawSize(displayRaw.Value);
         }
         catch (OperationCanceledException)
@@ -1352,7 +1397,7 @@ public class MaaProcessor
                 Interface, new MaaInterfaceSelectAdvancedConverter(true), new MaaInterfaceSelectOptionConverter(true));
             Name = Interface?.Name ?? string.Empty;
             Version = Interface?.Version ?? string.Empty;
-            CustomTitle = Interface?.CustomTitle ?? string.Empty;
+            CustomTitle = Interface?.Title ?? Interface?.CustomTitle ?? string.Empty;
             return true;
         }
         Name = string.Empty;
@@ -1382,6 +1427,7 @@ public class MaaProcessor
                             defaultValue.MFAMinVersion = @interface["mfa_min_version"]?.ToString();
                             defaultValue.MFAMaxVersion = @interface["mfa_max_version"]?.ToString();
                             defaultValue.CustomTitle = @interface["custom_title"]?.ToString();
+                            defaultValue.Title = @interface["title"]?.ToString();
                             defaultValue.Name = @interface["name"]?.ToString();
                             defaultValue.Url = @interface["url"]?.ToString();
                             defaultValue.Github = @interface["github"]?.ToString();
@@ -1396,7 +1442,7 @@ public class MaaProcessor
                 new MaaInterfaceSelectOptionConverter(false));
 
 
-        return (Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.CustomTitle ?? string.Empty);
+        return (Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.Title ?? Interface?.CustomTitle ?? string.Empty);
 
     }
 
