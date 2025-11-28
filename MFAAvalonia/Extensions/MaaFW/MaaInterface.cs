@@ -581,6 +581,16 @@ public partial class MaaInterface
         public string? Name { get; set; }
         [JsonProperty("type")]
         public string? Type { get; set; }
+        
+        [JsonProperty("display_short_side")]
+        public long? DisplayShortSide { get; set; }
+        
+        [JsonProperty("display_long_side")]
+        public long? DisplayLongSide { get; set; }
+        
+        [JsonProperty("display_raw")]
+        public bool? DisplayRaw { get; set; }
+        
         [JsonProperty("adb")]
         public MaaResourceControllerAdb? Adb { get; set; }
         [JsonProperty("win32")]

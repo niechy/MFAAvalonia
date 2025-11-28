@@ -11,14 +11,26 @@ public enum MaaControllerTypes
 
 public static class MaaControllerHelper
 {
-    public static string ToResourceKey(this MaaControllerTypes type)
+    extension(MaaControllerTypes controllerType)
     {
-        return type switch
+        public string ToResourceKey()
         {
-            MaaControllerTypes.Win32 => "TabWin32",
-            MaaControllerTypes.Adb => "TabADB",
-            _ => "TabADB"
-        };
+            return controllerType switch
+            {
+                MaaControllerTypes.Win32 => "TabWin32",
+                MaaControllerTypes.Adb => "TabADB",
+                _ => "TabADB"
+            };
+        }
+        public string ToJsonKey()
+        {
+            return controllerType switch
+            {
+                MaaControllerTypes.Win32 => "win32",
+                MaaControllerTypes.Adb => "adb",
+                _ => "adb"
+            };
+        }
     }
 
     public static MaaControllerTypes ToMaaControllerTypes(this string? type, MaaControllerTypes defaultValue = MaaControllerTypes.Adb)
@@ -31,4 +43,6 @@ public static class MaaControllerHelper
             return MaaControllerTypes.Adb;
         return defaultValue;
     }
+    
+    
 }

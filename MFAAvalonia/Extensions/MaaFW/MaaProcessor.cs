@@ -623,6 +623,17 @@ public class MaaProcessor
                         ? LangKeys.Emulator.ToLocalization()
                         : LangKeys.Window.ToLocalization()), true,
                 LangKeys.InitControllerFailed.ToLocalization()));
+
+            var displayShortSide = Interface?.Controller?.Find(c => c.Type!= null && c.Type.Equals( Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayShortSide;
+
+            var displayLongSide = Interface?.Controller?.Find(c => c.Type!= null && c.Type.Equals(Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayLongSide;
+            var displayRaw = Interface?.Controller?.Find(c => c.Type!= null && c.Type.Equals(Instances.TaskQueueViewModel.CurrentController.ToJsonKey(), StringComparison.OrdinalIgnoreCase))?.DisplayRaw;
+            if (displayLongSide != null && displayShortSide == null && displayRaw ==null) 
+                controller.SetOption_ScreenshotTargetLongSide(Convert.ToInt32(displayLongSide.Value));
+            if (displayShortSide != null && displayLongSide == null && displayRaw ==null)
+                controller.SetOption_ScreenshotTargetShortSide(Convert.ToInt32(displayShortSide.Value));
+            if (displayRaw != null && displayShortSide == null && displayLongSide ==null)
+                controller.SetOption_ScreenshotUseRawSize(displayRaw.Value);
         }
         catch (OperationCanceledException)
         {
