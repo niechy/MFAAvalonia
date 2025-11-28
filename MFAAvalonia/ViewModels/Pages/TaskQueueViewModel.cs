@@ -28,8 +28,55 @@ namespace MFAAvalonia.ViewModels.Pages;
 
 public partial class TaskQueueViewModel : ViewModelBase
 {
+    private string adbKey = LangKeys.TabADB;
+    private string win32Key = LangKeys.TabWin32;
+    private string adbFallback = "";
+    private string win32Fallback = "";
+
+    private void UpdateControllerName()
+    {
+        Adb = adbKey == LangKeys.TabADB ? adbKey.ToLocalization() : LanguageHelper.GetLocalizedDisplayName(adbKey, adbFallback);
+        Win32 = win32Key == LangKeys.TabWin32 ? win32Key.ToLocalization() : LanguageHelper.GetLocalizedDisplayName(win32Key, win32Fallback);
+    }
+
+    public void InitializeControllerName()
+    {
+        try
+        {
+            var adb = MaaProcessor.Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(MaaControllerTypes.Adb.ToJsonKey(), StringComparison.OrdinalIgnoreCase));
+            var win32 = MaaProcessor.Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(MaaControllerTypes.Win32.ToJsonKey(), StringComparison.OrdinalIgnoreCase));
+            if (adb is { Label: not null } or { Name: not null })
+            {
+                adbKey = adb.Label ?? string.Empty;
+                adbFallback = adb.Name?? string.Empty;
+            }
+            if (win32 is { Label: not null } or { Name: not null })
+            {
+                win32Key = win32.Label ?? string.Empty;
+                win32Fallback = win32.Name?? string.Empty;
+            }
+            LanguageHelper.LanguageChanged += (_, _) =>
+            {
+                UpdateControllerName();
+            };
+            UpdateControllerName();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Error(e);
+        }
+    }
+    
     protected override void Initialize()
     {
+        try
+        {
+            UpdateControllerName();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Error(e);
+        }
         try
         {
             var col1Str = ConfigurationManager.Current.GetValue(ConfigurationKeys.TaskQueueColumn1Width, DefaultColumn1Width);
@@ -362,6 +409,9 @@ public partial class TaskQueueViewModel : ViewModelBase
     #endregion
 
     #region 连接
+
+    [ObservableProperty] private string _adb = string.Empty;
+    [ObservableProperty] private string _win32 = string.Empty;
 
     [ObservableProperty] private int shouldShow = 0;
     [ObservableProperty] private ObservableCollection<object> _devices = [];

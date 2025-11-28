@@ -496,7 +496,7 @@
                     <Grid x:Name="connectionGrid" HorizontalAlignment="Stretch">
                         <RadioButton
                             Classes="GigaChips"
-                            Content="{markup:I18n {x:Static helper:LangKeys.TabADB}}"
+                            Content="{Binding Adb}"
                             FontSize="12"
                             GroupName="Controller"
                             IsChecked="{Binding CurrentController, Converter={converters:UniversalEqualityConverter}, ConverterParameter={x:Static maa:MaaControllerTypes.Adb}, Mode=TwoWay}"
@@ -507,7 +507,7 @@
                             x:Name="FirstButton" />
                         <RadioButton
                             Classes="GigaChips"
-                            Content="{markup:I18n {x:Static helper:LangKeys.TabWin32}}"
+                            Content="{Binding Win32}"
                             FontSize="12"
                             GroupName="Controller"
                             IsChecked="{Binding CurrentController, Converter={converters:UniversalEqualityConverter}, ConverterParameter={x:Static maa:MaaControllerTypes.Win32}, Mode=TwoWay}"
