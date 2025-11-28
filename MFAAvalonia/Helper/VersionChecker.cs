@@ -144,7 +144,7 @@ public static class VersionChecker
     public static void CheckForResourceUpdates(bool isGithub = true)
     {
         Instances.RootViewModel.SetUpdating(true);
-        var url = MaaProcessor.Interface?.Url ?? string.Empty;
+        var url = MaaProcessor.Interface?.Github ?? MaaProcessor.Interface?.Url ?? string.Empty;
 
         string[] strings = [];
         try
@@ -313,7 +313,7 @@ public static class VersionChecker
         string[] strings = [];
         if (isGithub)
         {
-            var url = MaaProcessor.Interface?.Url ?? string.Empty;
+            var url = MaaProcessor.Interface?.Github ?? MaaProcessor.Interface?.Url ?? string.Empty;
             if (string.IsNullOrWhiteSpace(url))
             {
                 Dismiss(sukiToast);
@@ -600,7 +600,7 @@ public static class VersionChecker
             var @interface = JObject.Parse(jsonContent);
             if (@interface != null)
             {
-                @interface["url"] = MaaProcessor.Interface?.Url;
+                @interface["github"] = MaaProcessor.Interface?.Github ?? MaaProcessor.Interface?.Url;
                 @interface["version"] = latestVersion;
             }
 
@@ -640,7 +640,7 @@ public static class VersionChecker
         Program.ReleaseMutex();
         await RestartApplicationAsync(exeName);
     }
- /// <summary>
+    /// <summary>
     /// 跨平台重启应用（仅 macOS 处理权限和启动逻辑，Windows/Linux 保留原有逻辑）
     /// </summary>
     /// <param name="exeName">应用可执行文件路径</param>
@@ -735,7 +735,7 @@ public static class VersionChecker
         startInfo.CreateNoWindow = true;
         Process.Start(startInfo);
     }
-    
+
     /// <summary>
     /// 将源目录（newPath）的所有内容复制到目标目录（oldPath）
     /// 1. 缺失的目标目录自动创建

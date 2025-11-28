@@ -1373,7 +1373,7 @@ public class MaaProcessor
                             defaultValue.CustomTitle = @interface["custom_title"]?.ToString();
                             defaultValue.Name = @interface["name"]?.ToString();
                             defaultValue.Url = @interface["url"]?.ToString();
-
+                            defaultValue.Github = @interface["github"]?.ToString();
                             RootView.AddLog(LangKeys.FileLoadFailed.ToLocalizationFormatted(false, "interface.json"));
                         }
                     }
