@@ -66,7 +66,13 @@ public static class GlobalHotkeyService
     /// </summary>
     public static void Shutdown()
     {
-        _hook?.Dispose();
+        // 先取消事件订阅，避免内存泄漏
+        if (_hook != null)
+        {
+            _hook.KeyPressed -= HandleKeyEvent;
+            _hook.Dispose();
+            _hook = null;
+        }
         _commands.Clear();
         IsStopped = true;
     }

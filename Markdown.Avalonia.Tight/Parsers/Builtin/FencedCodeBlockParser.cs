@@ -26,14 +26,15 @@ namespace Markdown.Avalonia.Parsers.Builtin
 
         public override IEnumerable<DocumentElement>? Convert2(string text, Match firstMatch, ParseStatus status, IMarkdownEngine2 engine, out int parseTextBegin, out int parseTextEnd)
         {
-            var closeTagPattern = new Regex($"\n[ ]*{firstMatch.Groups[1].Value}[ ]*\n");
-            var closeTagMatch = closeTagPattern.Match(text, firstMatch.Index + firstMatch.Length);
+            // 优化：使用字符串搜索替代动态正则，避免每次创建新 Regex 对象
+            var backticks = firstMatch.Groups[1].Value;
+            var (found, closeIndex, closeEndIndex) = FindCloseTag(text, firstMatch.Index + firstMatch.Length, backticks);
 
             int codeEndIndex;
-            if (closeTagMatch.Success)
+            if (found)
             {
-                codeEndIndex = closeTagMatch.Index;
-                parseTextEnd = closeTagMatch.Index + closeTagMatch.Length;
+                codeEndIndex = closeIndex;
+                parseTextEnd = closeEndIndex;
             }
             else if (_enablePreRenderingCodeBlock)
             {
@@ -51,6 +52,66 @@ namespace Markdown.Avalonia.Parsers.Builtin
             string code = text.Substring(firstMatch.Index + firstMatch.Length, codeEndIndex - (firstMatch.Index + firstMatch.Length));
             var border = Create(code);
             return new[] { new UnBlockElement(border) };
+        }
+
+        /// <summary>
+        /// 查找代码块的结束标记（使用字符串搜索替代动态正则）
+        /// </summary>
+        /// <returns>(是否找到, 结束标记起始位置, 结束标记结束位置)</returns>
+        private static (bool Found, int Index, int EndIndex) FindCloseTag(string text, int startIndex, string backticks)
+        {
+            int index = startIndex;
+            while (index < text.Length)
+            {
+                // 查找换行符
+                int newlineIndex = text.IndexOf('\n', index);
+                if (newlineIndex == -1) break;
+
+                // 检查换行符后是否是空格+反引号
+                int lineStart = newlineIndex + 1;
+                int checkIndex = lineStart;
+
+                // 跳过前导空格
+                while (checkIndex < text.Length && text[checkIndex] == ' ')
+                    checkIndex++;
+
+                // 检查是否匹配反引号
+                if (checkIndex + backticks.Length <= text.Length)
+                {
+                    bool match = true;
+                    for (int i = 0; i < backticks.Length; i++)
+                    {
+                        if (text[checkIndex + i] != backticks[i])
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match)
+                    {
+                        int afterBackticks = checkIndex + backticks.Length;
+                        // 跳过尾部空格
+                        while (afterBackticks < text.Length && text[afterBackticks] == ' ')
+                            afterBackticks++;
+
+                        // 检查是否以换行符结束
+                        if (afterBackticks < text.Length && text[afterBackticks] == '\n')
+                        {
+                            return (true, newlineIndex, afterBackticks + 1);
+                        }
+                        // 文件末尾也算
+                        if (afterBackticks == text.Length)
+                        {
+                            return (true, newlineIndex, afterBackticks);
+                        }
+                    }
+                }
+
+                index = newlineIndex + 1;
+            }
+
+            return (false, -1, -1);
         }
 
         public static Border Create(string code)

@@ -70,6 +70,33 @@ namespace Markdown.Avalonia
 
         #endregion
 
+        #region static regex patterns
+
+        /// <summary>
+        /// 预编译的 HTML 注释匹配正则
+        /// </summary>
+        private static readonly Regex _htmlCommentPattern = new(@"<!--([\s\S]*?)-->", RegexOptions.Compiled);
+
+        /// <summary>
+        /// 预编译的中文字符检测正则
+        /// </summary>
+        private static readonly Regex _chineseCharPattern = new(@"[\u4e00-\u9fa5]", RegexOptions.Compiled);
+
+        /// <summary>
+        /// 预编译的 HTML 标签名提取正则
+        /// </summary>
+        private static readonly Regex _htmlTagNamePattern = new(@"^<\/?([a-zA-Z0-9]+)", RegexOptions.Compiled);
+
+        /// <summary>
+        /// 自闭合 HTML 标签集合
+        /// </summary>
+        private static readonly HashSet<string> _selfClosingTags = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "img", "br", "hr", "input", "meta", "link", "area", "base", "col", "embed", "param", "source", "track", "wbr"
+        };
+
+        #endregion
+
         /// <summary>
         /// when true, bold and italic require non-word characters on either side  
         /// WARNING: this is a significant deviation from the markdown spec
@@ -284,17 +311,14 @@ namespace Markdown.Avalonia
             if (string.IsNullOrWhiteSpace(input))
                 return input;
 
-            // 正则匹配HTML注释，捕获注释内容（不含前后标签）
-            var commentPattern = new Regex(@"<!--([\s\S]*?)-->", RegexOptions.Compiled);
-
-            // 对每个匹配项进行处理
-            return commentPattern.Replace(input, match =>
+            // 使用预编译的静态正则表达式处理 HTML 注释
+            return _htmlCommentPattern.Replace(input, match =>
             {
                 // 提取注释中间的内容（捕获组1）
                 string commentContent = match.Groups[1].Value;
 
-                // 检查内容中是否包含中文字符（仅汉字，范围：\u4e00-\u9fa5）
-                bool hasChineseChars = Regex.IsMatch(commentContent, @"[\u4e00-\u9fa5]");
+                // 检查内容中是否包含中文字符（使用预编译的静态正则）
+                bool hasChineseChars = _chineseCharPattern.IsMatch(commentContent);
 
                 // 若包含汉字，则保留中间内容；否则完全移除
                 return hasChineseChars ? commentContent : string.Empty;
@@ -559,33 +583,16 @@ namespace Markdown.Avalonia
         /// </summary>
         private string GetHtmlTagName(string tag)
         {
-            var match = Regex.Match(tag, @"^<\/?([a-zA-Z0-9]+)", RegexOptions.Compiled);
-            return match.Success ? match.Groups[1].Value.ToLower() : string.Empty;
+            var match = _htmlTagNamePattern.Match(tag);
+            return match.Success ? match.Groups[1].Value.ToLowerInvariant() : string.Empty;
         }
 
         /// <summary>
         /// 判断是否为HTML自闭合标签
         /// </summary>
-        private bool IsSelfClosingTag(string tagName)
+        private static bool IsSelfClosingTag(string tagName)
         {
-            var selfClosingTags = new HashSet<string>
-            {
-                "img",
-                "br",
-                "hr",
-                "input",
-                "meta",
-                "link",
-                "area",
-                "base",
-                "col",
-                "embed",
-                "param",
-                "source",
-                "track",
-                "wbr"
-            };
-            return selfClosingTags.Contains(tagName.ToLower());
+            return _selfClosingTags.Contains(tagName);
         }
 
         /// <summary>
@@ -635,6 +642,9 @@ namespace Markdown.Avalonia
         {
             return htmlBlocks.Any(block => position >= block.StartIdx && position <= block.EndIdx);
         }
+
+
+
 
         #endregion
         #region 核心：通用成对符号解析（可扩展、支持嵌套）
@@ -790,7 +800,7 @@ namespace Markdown.Avalonia
                     result.AddRange(markdownInlines);
                 }
 
-                // 2. 处理HTML块（纯行级解析上下文，允许块级解析）
+                // 2. 处理HTML块（交给 HTML 插件处理）
                 string htmlContent = htmlBlock.Content;
                 var htmlInlines = ProcessWithHTMLParsers(htmlContent, level + 1, isBlockContext: false);
                 result.AddRange(htmlInlines);
@@ -964,34 +974,38 @@ namespace Markdown.Avalonia
         /// <summary>
         /// 查找非转义的目标字符串（跳过 \ 开头的符号）
         /// </summary>
-        private int FindNonEscaped(string text, string target, int startFrom)
+        private static int FindNonEscaped(string text, string target, int startFrom)
         {
-            int index = text.IndexOf(target, startFrom);
+            int index = text.IndexOf(target, startFrom, StringComparison.Ordinal);
             while (index != -1)
             {
                 // 检查是否被转义（前面不是 \，或前面是 \\ 双重转义）
                 bool isEscaped = index > 0 && text[index - 1] == '\\';
                 if (isEscaped)
                 {
-                    index = text.IndexOf(target, index + target.Length);
+                    index = text.IndexOf(target, index + target.Length, StringComparison.Ordinal);
                     continue;
                 }
 
-                // 优化：如果目标是长符号（≥2字符），检查是否被短符号“截断”（比如 ** 中间夹了 *）
+                // 优化：如果目标是长符号（≥2字符），检查是否被短符号"截断"
                 if (target.Length >= 2)
                 {
                     bool isTruncated = false;
-                    // 检查长符号内部是否包含对应的短符号（比如 ** 内部有 * → 不视为完整长符号）
-                    string innerText = text.Substring(index, target.Length);
-                    var shortSymbol = target.Substring(0, 1); // 长符号对应的短符号（如 **→*）
-                    if (innerText.Count(c => c.ToString() == shortSymbol) != target.Length)
+                    // 检查长符号是否由相同字符组成（如 ** 应该全是 *）
+                    char shortChar = target[0];
+                    var span = text.AsSpan(index, target.Length);
+                    foreach (char c in span)
                     {
-                        isTruncated = true;
+                        if (c != shortChar)
+                        {
+                            isTruncated = true;
+                            break;
+                        }
                     }
 
                     if (isTruncated)
                     {
-                        index = text.IndexOf(target, index + target.Length);
+                        index = text.IndexOf(target, index + target.Length, StringComparison.Ordinal);
                         continue;
                     }
                 }
@@ -1011,23 +1025,32 @@ namespace Markdown.Avalonia
 
             while (currentIdx < endIdx)
             {
+                bool matched = false;
                 // 遍历所有成对符号，统计嵌套次数
                 foreach (var (start, end, _) in _pairSymbols)
                 {
-                    if (currentIdx + start.Length <= endIdx && text.Substring(currentIdx, start.Length) == start)
+                    if (currentIdx + start.Length <= endIdx && 
+                        text.AsSpan(currentIdx, start.Length).SequenceEqual(start.AsSpan()))
                     {
                         nestLevel++;
                         currentIdx += start.Length;
+                        matched = true;
                         break;
                     }
-                    if (currentIdx + end.Length <= endIdx && text.Substring(currentIdx, end.Length) == end)
+                    if (currentIdx + end.Length <= endIdx && 
+                        text.AsSpan(currentIdx, end.Length).SequenceEqual(end.AsSpan()))
                     {
                         nestLevel--;
                         currentIdx += end.Length;
+                        matched = true;
                         break;
                     }
                 }
-                currentIdx++;
+                // 只有在没有匹配到任何符号时才递增索引
+                if (!matched)
+                {
+                    currentIdx++;
+                }
             }
 
             return nestLevel;
@@ -1640,26 +1663,35 @@ namespace Markdown.Avalonia
             return rtn;
         }
 
-        private CUnderline? ParseAsUnderline(string text, ref int start)
+        /// <summary>
+        /// 通用的成对标记解析方法（用于下划线、删除线等）
+        /// </summary>
+        /// <typeparam name="T">返回的 CInline 类型</typeparam>
+        /// <param name="text">待解析文本</param>
+        /// <param name="start">起始位置（会被修改）</param>
+        /// <param name="marker">标记字符（如 '_' 或 '~'）</param>
+        /// <param name="minCount">最少需要的标记数量</param>
+        /// <param name="factory">创建结果元素的工厂方法</param>
+        /// <returns>解析结果，失败返回 null</returns>
+        private T? ParseAsDecoration<T>(string text, ref int start, char marker, int minCount, 
+            Func<IEnumerable<CInline>, T> factory) where T : CInline
         {
-            var bgnCnt = CountRepeat(text, start, '_');
+            var bgnCnt = CountRepeat(text, start, marker);
+            int last = EscapedIndexOf(text, start + bgnCnt, marker);
+            int endCnt = last >= 0 ? CountRepeat(text, last, marker) : -1;
 
-            int last = EscapedIndexOf(text, start + bgnCnt, '_');
-
-            int endCnt = last >= 0 ? CountRepeat(text, last, '_') : -1;
-
-            if (endCnt >= 2 && bgnCnt >= 2)
+            if (endCnt >= minCount && bgnCnt >= minCount)
             {
-                int cnt = 2;
+                int cnt = minCount;
                 int bgn = start + cnt;
                 int end = last;
 
-                // 核心修改：递归解析 __ 内部的内容
+                // 递归解析内部内容
                 var innerText = text.Substring(bgn, end - bgn);
                 var innerInlines = PrivateRunSpanGamut(innerText);
 
                 start = end + cnt - 1;
-                return new CUnderline(innerInlines); // 用递归结果创建下划线
+                return factory(innerInlines);
             }
             else
             {
@@ -1667,34 +1699,12 @@ namespace Markdown.Avalonia
                 return null;
             }
         }
+
+        private CUnderline? ParseAsUnderline(string text, ref int start)
+            => ParseAsDecoration(text, ref start, '_', 2, inlines => new CUnderline(inlines));
 
         private CStrikethrough? ParseAsStrikethrough(string text, ref int start)
-        {
-            var bgnCnt = CountRepeat(text, start, '~');
-
-            int last = EscapedIndexOf(text, start + bgnCnt, '~');
-
-            int endCnt = last >= 0 ? CountRepeat(text, last, '~') : -1;
-
-            if (endCnt >= 2 && bgnCnt >= 2)
-            {
-                int cnt = 2;
-                int bgn = start + cnt;
-                int end = last;
-
-                // 核心修改：递归解析 ~~ 内部的内容
-                var innerText = text.Substring(bgn, end - bgn);
-                var innerInlines = PrivateRunSpanGamut(innerText);
-
-                start = end + cnt - 1;
-                return new CStrikethrough(innerInlines); // 用递归结果创建删除线
-            }
-            else
-            {
-                start += bgnCnt - 1;
-                return null;
-            }
-        }
+            => ParseAsDecoration(text, ref start, '~', 2, inlines => new CStrikethrough(inlines));
 
         private CInline? ParseAsBoldOrItalic(string text, ref int start)
         {

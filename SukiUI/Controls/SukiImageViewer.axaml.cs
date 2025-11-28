@@ -127,6 +127,7 @@ public class SukiImageViewer : TemplatedControl
         TranslateYProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnTranslateYChanged(e));
         StretchProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnStretchChanged(e));
         MinScaleProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnMinScaleChanged(e));
+        BoundsProperty.Changed.AddClassHandler<SukiImageViewer>((o, e) => o.OnBoundsChanged(e));
     }
 
     private void OnTranslateYChanged(AvaloniaPropertyChangedEventArgs args)
@@ -190,6 +191,29 @@ public class SukiImageViewer : TemplatedControl
         }
     }
 
+    private void OnBoundsChanged(AvaloniaPropertyChangedEventArgs args)
+    {
+        if (!IsLoaded || _image is null || Source is null) return;
+        
+        var newBounds = args.GetNewValue<Rect>();
+        double width = newBounds.Width;
+        double height = newBounds.Height;
+        
+        if (width <= 0 || height <= 0) return;
+        
+        // 重新计算最小缩放系数
+        _sourceMinScale = Math.Min(width * MinScale / _image.Width, height * MinScale / _image.Height);
+        
+        // 如果当前缩放小于新的最小值，需要调整
+        if (_sourceMinScale > Scale)
+        {
+            Scale = _sourceMinScale;
+        }
+        
+        // 重新应用边界限制，确保图片不会跑到看不见的地方
+        ApplyClampedTranslation(TranslateX, TranslateY);
+    }
+
     private double GetScaleRatio(double widthRatio, double heightRatio, Stretch stretch)
     {
         return stretch switch
@@ -200,6 +224,40 @@ public class SukiImageViewer : TemplatedControl
             Stretch.UniformToFill => Math.Max(widthRatio, heightRatio),
             _ => 1d,
         };
+    }
+
+    /// <summary>
+    /// 计算并限制平移值，确保图片不会移出可视区域太多
+    /// </summary>
+    private (double clampedX, double clampedY) ClampTranslation(double translateX, double translateY)
+    {
+        if (_image is null) return (translateX, translateY);
+
+        double viewportWidth = Bounds.Width;
+        double viewportHeight = Bounds.Height;
+        double scaledWidth = _image.Width * Scale;
+        double scaledHeight = _image.Height * Scale;
+
+        // 计算允许的最大平移量
+        // 如果图片比视口大，允许移动到图片边缘对齐视口边缘
+        // 如果图片比视口小，允许图片在视口内移动但不能完全移出
+        double maxTranslateX = Math.Max(0, (scaledWidth - viewportWidth) / 2) + Math.Min(scaledWidth, viewportWidth) / 2;
+        double maxTranslateY = Math.Max(0, (scaledHeight - viewportHeight) / 2) + Math.Min(scaledHeight, viewportHeight) / 2;
+
+        double clampedX = Math.Clamp(translateX, -maxTranslateX, maxTranslateX);
+        double clampedY = Math.Clamp(translateY, -maxTranslateY, maxTranslateY);
+
+        return (clampedX, clampedY);
+    }
+
+    /// <summary>
+    /// 应用限制后的平移值
+    /// </summary>
+    private void ApplyClampedTranslation(double translateX, double translateY)
+    {
+        var (clampedX, clampedY) = ClampTranslation(translateX, translateY);
+        TranslateX = clampedX;
+        TranslateY = clampedY;
     }
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -246,8 +304,10 @@ public class SukiImageViewer : TemplatedControl
         var imgP = e.GetPosition(_image);
         Scale = newScale;
         var imgPA = e.GetPosition(_image);
-        TranslateX += (imgPA.X - imgP.X) * Scale;
-        TranslateY += (imgPA.Y - imgP.Y) * Scale;
+        // 应用边界限制
+        ApplyClampedTranslation(
+            TranslateX + (imgPA.X - imgP.X) * Scale,
+            TranslateY + (imgPA.Y - imgP.Y) * Scale);
         e.Handled = true;
     }
     
@@ -260,8 +320,10 @@ public class SukiImageViewer : TemplatedControl
             Point p = e.GetPosition(this);
             double deltaX = p.X - _lastClickPoint.Value.X;
             double deltaY = p.Y - _lastClickPoint.Value.Y;
-            TranslateX = deltaX + (_lastLocation?.X ?? 0);
-            TranslateY = deltaY + (_lastLocation?.Y ?? 0);
+            // 应用边界限制
+            ApplyClampedTranslation(
+                deltaX + (_lastLocation?.X ?? 0),
+                deltaY + (_lastLocation?.Y ?? 0));
         }
     }
 
@@ -289,21 +351,25 @@ public class SukiImageViewer : TemplatedControl
     protected override void OnKeyDown(KeyEventArgs e)
     {
         double step = e.KeyModifiers.HasFlag(KeyModifiers.Control) ? LargeChange : SmallChange;
+        double newTranslateX = TranslateX;
+        double newTranslateY = TranslateY;
         switch (e.Key)
         {
             case Key.Left:
-                TranslateX -= step;
+                newTranslateX -= step;
                 break;
             case Key.Right:
-                TranslateX += step;
+                newTranslateX += step;
                 break;
             case Key.Up:
-                TranslateY -= step;
+                newTranslateY -= step;
                 break;
             case Key.Down:
-                TranslateY += step;
+                newTranslateY += step;
                 break;
         }
+        // 应用边界限制
+        ApplyClampedTranslation(newTranslateX, newTranslateY);
         base.OnKeyDown(e);
     }
 }

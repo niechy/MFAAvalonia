@@ -82,6 +82,12 @@ namespace Markdown.Avalonia
                 (owner, v) => owner.SelectionEnabled = v);
 
         private static readonly HttpClient s_httpclient = new();
+        
+        /// <summary>
+        /// 预编译的换行符分割正则
+        /// </summary>
+        private static readonly Regex s_newlineSplitter = new(@"\r\n|\r|\n", RegexOptions.Compiled);
+        
         private readonly ScrollViewer _viewer;
         private SetupInfo _setup;
         private DocumentElement? _document;
@@ -139,7 +145,8 @@ namespace Markdown.Avalonia
 
             static bool nvl(bool? vl) => vl.HasValue && vl.Value;
 
-            _viewer.ScrollChanged += (s, e) => OnScrollChanged();
+            // 使用命名方法而非匿名 lambda，便于取消订阅
+            _viewer.ScrollChanged += Viewer_ScrollChanged;
             _viewer.PointerPressed += _viewer_PointerPressed;
             _viewer.PointerMoved += _viewer_PointerMoved;
             _viewer.PointerReleased += _viewer_PointerReleased;
@@ -152,6 +159,8 @@ namespace Markdown.Avalonia
 
         private bool _isLeftButtonPressed;
         private Point _startPoint;
+
+        private void Viewer_ScrollChanged(object? sender, ScrollChangedEventArgs e) => OnScrollChanged();
 
         private void _viewer_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
@@ -414,7 +423,7 @@ namespace Markdown.Avalonia
                     // like PHP's flexible_heredoc_nowdoc_syntaxes,
                     // The indentation of the closing tag dictates 
                     // the amount of whitespace to strip from each line 
-                    var lines = Regex.Split(value, "\r\n|\r|\n", RegexOptions.Multiline);
+                    var lines = s_newlineSplitter.Split(value);
 
                     // count last line indent
                     int lastIdtCnt = TextUtil.CountIndent(lines.Last());

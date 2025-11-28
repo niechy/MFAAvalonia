@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -12,7 +13,7 @@ public class AvaloniaMemoryCracker : IDisposable
     #region 平台相关API
 
     [DllImport("kernel32.dll")]
-    private extern static bool SetProcessWorkingSetSize(IntPtr proc, int min, int max);
+    private static extern bool SetProcessWorkingSetSize(IntPtr proc, int min, int max);
 
     private const int VM_PURGE_ALL = 0x00000001;
 
@@ -21,6 +22,11 @@ public class AvaloniaMemoryCracker : IDisposable
 
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
+    private Task? _monitorTask;
+
+    // 内存历史记录（用于诊断泄漏趋势）
+    private readonly Queue<(DateTime Time, long Memory)> _memoryHistory = new();
+    private const int MaxHistoryCount = 10;
 
     #endregion
 
@@ -30,22 +36,81 @@ public class AvaloniaMemoryCracker : IDisposable
     /// <param name="intervalSeconds">清理间隔秒数（默认30秒）</param>
     public void Cracker(int intervalSeconds = 30)
     {
-        Task.Factory.StartNew(async () =>
+        // 修复：使用 Task.Run 而不是 Task.Factory.StartNew + async
+        _monitorTask = Task.Run(async () =>
         {
             while (!_cts.IsCancellationRequested)
             {
                 try
                 {
+                    var beforeMemory = GetCurrentMemoryUsage();
                     PerformMemoryCleanup();
-                    Thread.Sleep(TimeSpan.FromSeconds(intervalSeconds));
+                    var afterMemory = GetCurrentMemoryUsage();
+
+                    // 记录内存变化用于诊断
+                    RecordMemorySnapshot(afterMemory);
+                    
+                    // 检测内存泄漏趋势
+                    CheckMemoryLeakTrend(beforeMemory, afterMemory);
+
+                    // 修复：使用 Task.Delay 而不是 Thread.Sleep
+                    await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), _cts.Token);
                 }
-                catch
+                catch (OperationCanceledException)
                 {
-                    // 异常处理可扩展日志记录
+                    // 正常取消，退出循环
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Warning($"内存清理异常: {ex.Message}");
                 }
             }
-        }, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+        }, _cts.Token);
+    }
 
+    /// <summary>记录内存快照用于趋势分析</summary>
+    private void RecordMemorySnapshot(long memory)
+    {
+        lock (_memoryHistory)
+        {
+            _memoryHistory.Enqueue((DateTime.Now, memory));
+            while (_memoryHistory.Count > MaxHistoryCount)
+            {
+                _memoryHistory.Dequeue();
+            }
+        }
+    }
+
+    /// <summary>检测内存泄漏趋势</summary>
+    private void CheckMemoryLeakTrend(long beforeCleanup, long afterCleanup)
+    {
+        // 如果清理后内存没有明显下降，可能存在泄漏
+        var freedMemory = beforeCleanup - afterCleanup;
+        var freedMB = freedMemory / (1024.0 * 1024.0);
+
+        if (freedMemory > 0)
+        {
+            LoggerHelper.Debug($"内存清理: 释放了 {freedMB:F2} MB");
+        }
+
+        // 检查内存是否持续增长（泄漏预警）
+        lock (_memoryHistory)
+        {
+            if (_memoryHistory.Count >= 5)
+            {
+                var snapshots = _memoryHistory.ToArray();
+                var firstMemory = snapshots[0].Memory;
+                var lastMemory = snapshots[^1].Memory;
+                var growthRate = (lastMemory - firstMemory) / (double)firstMemory;
+
+                // 如果在多次清理后内存仍持续增长超过 50%，发出警告
+                if (growthRate > 0.5)
+                {
+                    LoggerHelper.Warning($"检测到潜在内存泄漏: 内存从 {firstMemory / (1024 * 1024)} MB 增长到 {lastMemory / (1024 * 1024)} MB (增长 {growthRate * 100:F1}%)");
+                }
+            }
+        }
     }
 
 

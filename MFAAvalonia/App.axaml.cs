@@ -35,6 +35,11 @@ public partial class App : Application
     /// </summary>
     public static IServiceProvider Services { get; private set; }
 
+    /// <summary>
+    /// 内存优化器实例（保存引用以便在退出时释放）
+    /// </summary>
+    private static AvaloniaMemoryCracker? _memoryCracker;
+
     public override void Initialize()
     {
         base.Initialize();
@@ -42,8 +47,11 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
         LanguageHelper.Initialize();
         ConfigurationManager.Initialize();
-        var cracker = new AvaloniaMemoryCracker();
-        cracker.Cracker();
+        
+        // 保存引用以便在退出时正确释放
+        _memoryCracker = new AvaloniaMemoryCracker();
+        _memoryCracker.Cracker();
+        
         GlobalHotkeyService.Initialize();
         TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException; //Task线程内未捕获异常处理事件
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException; //非UI线程内未捕获异常处理事件
@@ -83,6 +91,15 @@ public partial class App : Application
 
         MaaProcessor.Instance.SetTasker();
         GlobalHotkeyService.Shutdown();
+        
+        // 释放内存优化器
+        _memoryCracker?.Dispose();
+        _memoryCracker = null;
+        
+        // 取消全局异常事件订阅，避免内存泄漏
+        TaskScheduler.UnobservedTaskException -= TaskScheduler_UnobservedTaskException;
+        AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
+        Dispatcher.UIThread.UnhandledException -= OnDispatcherUnhandledException;
     }
 
     private static ViewsHelper ConfigureViews(ServiceCollection services)

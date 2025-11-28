@@ -56,10 +56,11 @@ namespace Markdown.Avalonia.Html.Core.Utils
             var styleAttr = node.Attributes["style"];
             if (styleAttr == null) return null;
 
-            // 匹配color样式（支持 color: red; / color:#fff; / color: rgb(255,0,0); 等）
+            // 匹配color样式（使用否定回顾断言排除 background-color）
+            // 支持 color: red; / color:#fff; / color: rgb(255,0,0); 等
             var colorMatch = Regex.Match(
                 styleAttr.Value,
-                @"color\s*:\s*([^;]+)",
+                @"(?<![\w-])color\s*:\s*([^;]+)",
                 RegexOptions.IgnoreCase
             );
             if (!colorMatch.Success) return null;
