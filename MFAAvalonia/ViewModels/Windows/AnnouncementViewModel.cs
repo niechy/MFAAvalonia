@@ -17,13 +17,12 @@ using System.Threading.Tasks;
 
 namespace MFAAvalonia.ViewModels.Windows;
 
-public partial class AnnouncementItem : ObservableObject
+public class AnnouncementItem
 {
-    public string Title { get; set; }
-    public string FilePath { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
     public DateTime LastModified { get; set; }
-
-    public string Content { set; get; }
+    public string Content { get; set; } = string.Empty;
 }
 
 public partial class AnnouncementViewModel : ViewModelBase
@@ -31,7 +30,7 @@ public partial class AnnouncementViewModel : ViewModelBase
     public static readonly string AnnouncementFolder = "Announcement";
 
     [ObservableProperty] private AvaloniaList<AnnouncementItem> _announcementItems = new();
-    [ObservableProperty] private AnnouncementItem _selectedAnnouncement;
+    [ObservableProperty] private AnnouncementItem? _selectedAnnouncement;
     [ObservableProperty] private string _announcementContent; // 绑定到 MarkdownScrollViewer.Markdown
     [ObservableProperty] private bool _doNotRemindThisAnnouncementAgain = Convert.ToBoolean(
         GlobalConfiguration.GetValue(ConfigurationKeys.DoNotShowAnnouncementAgain, bool.FalseString));
@@ -55,10 +54,17 @@ public partial class AnnouncementViewModel : ViewModelBase
     }
 
     // 选中项变更时：清理之前的懒加载状态，重新初始化
-    partial void OnSelectedAnnouncementChanged(AnnouncementItem value)
+    partial void OnSelectedAnnouncementChanged(AnnouncementItem? value)
     {
+        if (value is null) return;
+        
         // 取消之前的加载任务
-        _lazyLoadCts?.CancelAsync();
+        if (_lazyLoadCts != null)
+        {
+            _lazyLoadCts.Cancel();
+            _lazyLoadCts.Dispose();
+            _lazyLoadCts = null;
+        }
         // 清理滚动监听和资源
         CleanupScrollListener();
 
@@ -278,23 +284,27 @@ public partial class AnnouncementViewModel : ViewModelBase
     /// </summary>
     private void CleanupLazyLoadResources()
     {
-        // 取消加载任务
-        _lazyLoadCts?.CancelAsync();
-        _lazyLoadCts = null;
+        // 取消并释放加载任务
+        if (_lazyLoadCts != null)
+        {
+            _lazyLoadCts.Cancel();
+            _lazyLoadCts.Dispose();
+            _lazyLoadCts = null;
+        }
 
-        // 清理滚动监听
+        // 清理滚动监听（内部已重置 _allBatches 和 _currentBatchIndex）
         CleanupScrollListener();
 
         // 重置状态
-        _allBatches.Clear();
-        _currentBatchIndex = 0;
         _isLoadingNextBatch = false;
     }
 
     #endregion
 
-    // 以下方法保持不变（仅优化 Markdown 相关兼容）
-    async private Task LoadAnnouncementMetadataAsync()
+    /// <summary>
+    /// 加载公告元数据（Markdown 文件列表）
+    /// </summary>
+    private async Task LoadAnnouncementMetadataAsync()
     {
         try
         {
@@ -357,15 +367,6 @@ public partial class AnnouncementViewModel : ViewModelBase
         }
     }
 
-    // 异步读取 Markdown 文件第一行（提取标题）
-    private async Task<string> ReadFirstLineAsync(string filePath)
-    {
-        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        string firstLine = await reader.ReadLineAsync().ConfigureAwait(false);
-        return firstLine?.TrimStart('#', ' ').Trim() ?? string.Empty; // 移除 Markdown 标题符号
-    }
-
     // 拆分 Markdown 第一行（标题）和剩余内容
     public static void SplitFirstLine(string content, out string firstLine, out string remainingContent)
     {
@@ -408,11 +409,6 @@ public partial class AnnouncementViewModel : ViewModelBase
         }
     }
 
-    public AnnouncementViewModel()
-    {
-        _ = LoadAnnouncementMetadataAsync();
-    }
-
     private AnnouncementView? _view;
 
     public void SetView(AnnouncementView? view)
@@ -420,19 +416,26 @@ public partial class AnnouncementViewModel : ViewModelBase
         _view = view;
     }
 
-    public static void CheckAnnouncement(bool forceShow = false)
+    public static async void CheckAnnouncement(bool forceShow = false)
     {
-        var viewModel = new AnnouncementViewModel();
-        if (forceShow)
-        {
-            if (!viewModel.AnnouncementItems.Any())
-                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.AnnouncementEmpty.ToLocalization());
-        }
-        else if (viewModel.DoNotRemindThisAnnouncementAgain || !viewModel.AnnouncementItems.Any())
-            return;
-
         try
         {
+            var viewModel = new AnnouncementViewModel();
+            await viewModel.LoadAnnouncementMetadataAsync();
+            
+            if (forceShow)
+            {
+                if (!viewModel.AnnouncementItems.Any())
+                {
+                    ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.AnnouncementEmpty.ToLocalization());
+                    return;
+                }
+            }
+            else if (viewModel.DoNotRemindThisAnnouncementAgain || !viewModel.AnnouncementItems.Any())
+            {
+                return;
+            }
+
             var announcementView = new AnnouncementView
             {
                 DataContext = viewModel
