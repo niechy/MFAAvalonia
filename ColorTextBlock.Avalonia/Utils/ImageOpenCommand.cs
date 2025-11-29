@@ -35,16 +35,16 @@ public class ImageOpenCommand : ICommand
     // 确保应用内临时目录存在，同时设置全平台权限
     private void EnsureTempDirectoryExists()
     {
-        if (!Directory.Exists(_appTempDir))
-        {
-            Directory.CreateDirectory(_appTempDir);
-            // 非Windows系统设置目录权限（确保读写）
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(_appTempDir,
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute);
-            }
-        }
+        // if (!Directory.Exists(_appTempDir))
+        // {
+        //     Directory.CreateDirectory(_appTempDir);
+        //     // 非Windows系统设置目录权限（确保读写）
+        //     if (!OperatingSystem.IsWindows())
+        //     {
+        //         File.SetUnixFileMode(_appTempDir,
+        //             UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute);
+        //     }
+        // }
     }
 
     public bool CanExecute(object? parameter)

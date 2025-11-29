@@ -79,7 +79,7 @@ public class CustomPathResolver : IPathResolver
                         var memoryStream = new MemoryStream();
                         await stream.CopyToAsync(memoryStream);
                         memoryStream.Position = 0;
-                        stream.Dispose();
+                        await stream.DisposeAsync();
                         return memoryStream;
                     }
                     stream.Position = 0;
