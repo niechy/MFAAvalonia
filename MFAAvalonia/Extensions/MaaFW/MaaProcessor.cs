@@ -968,7 +968,7 @@ public class MaaProcessor
 
                 }
 
-                if ((args.Message.StartsWith(MaaMsg.Node.Action.Prefix) || args.Message.StartsWith(MaaMsg.Node.Recognition.Prefix)) && jObject.ContainsKey("focus"))
+                if (args.Message.StartsWith("Node.") && jObject.ContainsKey("focus"))
                 {
                     DisplayFocus(jObject, args.Message, args.Details);
                 }
@@ -1054,7 +1054,7 @@ public class MaaProcessor
                 // 提取新协议字段（消息类型为键的条目）
                 newProtocolFocus = new JObject(
                     focusObj.Properties()
-                        .Where(prop => prop.Name.StartsWith("Node.Action.") || prop.Name.StartsWith("Node.Recognition."))
+                        .Where(prop => prop.Name.StartsWith("Node."))
                         .Select(prop => new JProperty(prop.Name, prop.Value))
                 );
             }
