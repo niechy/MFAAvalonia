@@ -64,6 +64,10 @@ sealed class Program
     }
 
 
+    // 缓存已加载的库句柄，避免重复加载（静态字段，供预加载和解析器共用）
+    private static readonly Dictionary<string, IntPtr> _loadedLibraries = new(StringComparer.OrdinalIgnoreCase);
+    private static string? _libsPath;
+
     /// <summary>
     /// 设置原生库解析器，从 libs 文件夹加载原生库（.so/.dylib/.dll 原生库）
     /// </summary>
@@ -72,13 +76,13 @@ sealed class Program
         try
         {
             string baseDirectory = AppContext.BaseDirectory;
-            string libsPath = Path.Combine(baseDirectory, "libs");
+            _libsPath = Path.Combine(baseDirectory, "libs");
 
-            if (!Directory.Exists(libsPath))
+            if (!Directory.Exists(_libsPath))
             {
                 try
                 {
-                    LoggerHelper.Info($"libs folder does not exist, skipping native library resolver setup: {libsPath}");
+                    LoggerHelper.Info($"libs folder does not exist, skipping native library resolver setup: {_libsPath}");
                 }
                 catch
                 {
@@ -87,108 +91,62 @@ sealed class Program
                 return;
             }
 
-            // // 方法2: 使用环境变量设置库搜索路径（备选方案，必须在程序启动早期设置）
-            // if (OperatingSystem.IsWindows())
-            // {
-            //     string? currentPath = Environment.GetEnvironmentVariable("PATH");
-            //     if (!string.IsNullOrEmpty(currentPath) && !currentPath.Contains(libsPath, StringComparison.OrdinalIgnoreCase))
-            //     {
-            //         Environment.SetEnvironmentVariable("PATH", $"{libsPath};{currentPath}");
-            //         LoggerHelper.Info($"Added libs folder to PATH environment variable: {libsPath}");
-            //     }
-            //     else if (string.IsNullOrEmpty(currentPath))
-            //     {
-            //         Environment.SetEnvironmentVariable("PATH", libsPath);
-            //         LoggerHelper.Info($"Set PATH environment variable to libs folder: {libsPath}");
-            //     }
-            // }
-            // else if (OperatingSystem.IsLinux())
-            // {
-            //     string? currentLdPath = Environment.GetEnvironmentVariable("LD_LIBRARY_PATH");
-            //     if (!string.IsNullOrEmpty(currentLdPath) && !currentLdPath.Contains(libsPath))
-            //     {
-            //         Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", $"{libsPath};{currentLdPath}");
-            //         try
-            //         {
-            //             LoggerHelper.Info($"Added libs folder to LD_LIBRARY_PATH environment variable: {libsPath}");
-            //         }
-            //         catch { }
-            //     }
-            //     else if (string.IsNullOrEmpty(currentLdPath))
-            //     {
-            //         Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", libsPath);
-            //         try
-            //         {
-            //             LoggerHelper.Info($"Set LD_LIBRARY_PATH environment variable to libs folder: {libsPath}");
-            //         }
-            //         catch { }
-            //     }
-            // }
-            // else if (OperatingSystem.IsMacOS())
-            // {
-            //     string? currentDyldPath = Environment.GetEnvironmentVariable("DYLD_LIBRARY_PATH");
-            //     if (!string.IsNullOrEmpty(currentDyldPath) && !currentDyldPath.Contains(libsPath))
-            //     {
-            //         Environment.SetEnvironmentVariable("DYLD_LIBRARY_PATH", $"{libsPath}:{currentDyldPath}");
-            //         try
-            //         {
-            //             LoggerHelper.Info($"Added libs folder to DYLD_LIBRARY_PATH environment variable: {libsPath}");
-            //         }
-            //         catch { }
-            //     }
-            //     else if (string.IsNullOrEmpty(currentDyldPath))
-            //     {
-            //         Environment.SetEnvironmentVariable("DYLD_LIBRARY_PATH", libsPath);
-            //         try
-            //         {
-            //             LoggerHelper.Info($"Set DYLD_LIBRARY_PATH environment variable to libs folder: {libsPath}");
-            //         }
-            //         catch { }
-            //     }
-            // }
-
-            // 方法1: 使用 DllImportResolver 来实际加载库（主要方案，跨平台）
-            // 在 Linux/macOS 上，仅设置环境变量可能不够，需要 DllImportResolver 来实际加载
-            
-            // 缓存已加载的库句柄，避免重复加载
-            var loadedLibraries = new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
-
             // 使用 DllImportResolver 为所有程序集设置解析器
             DllImportResolver resolver = (libraryName, assembly, searchPath) =>
             {
                 try
                 {
                     // 检查缓存，如果已经加载过，直接返回缓存的句柄
-                    if (loadedLibraries.TryGetValue(libraryName, out IntPtr cachedHandle))
+                    if (_loadedLibraries.TryGetValue(libraryName, out IntPtr cachedHandle))
                     {
                         return cachedHandle;
                     }
 
                     // 直接在 libs 文件夹中查找库文件
-                    string? libraryPath = FindLibraryInLibs(libsPath, libraryName);
+                    string? libraryPath = FindLibraryInLibs(_libsPath, libraryName);
                     if (libraryPath != null)
                     {
-                        IntPtr handle = NativeLibrary.Load(
-                            libraryPath,
-                            assembly,
-                            DllImportSearchPath.UseDllDirectoryForDependencies
-                        );
+                        IntPtr handle = NativeLibrary.Load(libraryPath);
 
                         // 缓存加载的句柄
-                        loadedLibraries[libraryName] = handle;
+                        _loadedLibraries[libraryName] = handle;
+                        
+                        try
+                        {
+                            LoggerHelper.Info($"Loaded native library from libs: {libraryPath}");
+                        }
+                        catch { }
+                        
                         return handle;
                     }
 
                     // 在 libs 中找不到，返回 IntPtr.Zero 让系统使用默认的解析逻辑
                     return IntPtr.Zero;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 静默失败，返回 IntPtr.Zero 让系统使用默认的解析逻辑
+                    // 记录错误但不中断，返回 IntPtr.Zero 让系统使用默认的解析逻辑
+                    try
+                    {
+                        LoggerHelper.Warning($"Failed to load native library '{libraryName}': {ex.Message}");
+                    }
+                    catch { }
                     return IntPtr.Zero;
                 }
             };
 
+            // 为当前已加载的所有程序集设置解析器
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    NativeLibrary.SetDllImportResolver(assembly, resolver);
+                }
+                catch
+                {
+                    // 某些程序集可能无法设置解析器，静默忽略
+                }
+            }
 
             // 监听程序集加载事件，为新加载的程序集自动设置解析器
             AppDomain.CurrentDomain.AssemblyLoad += (sender, args) =>
@@ -220,13 +178,18 @@ sealed class Program
                 return null;
 
             // 定义平台特定的扩展名
-            string[] extensions = OperatingSystem.IsWindows() 
+            string[] extensions = OperatingSystem.IsWindows()
                 ? new[] { ".dll" }
-                : OperatingSystem.IsLinux() 
+                : OperatingSystem.IsLinux()
                     ? new[] { ".so" }
-                    : OperatingSystem.IsMacOS() 
+                    : OperatingSystem.IsMacOS()
                         ? new[] { ".dylib", ".so" }
                         : new[] { ".dll", ".so", ".dylib" };
+
+            // 定义平台特定的前缀（Linux/macOS 上的库通常以 "lib" 开头）
+            string[] prefixes = OperatingSystem.IsWindows()
+                ? new[] { "" }
+                : new[] { "", "lib" };
 
             // 首先尝试直接匹配（libraryName 可能已经包含扩展名）
             string directPath = Path.Combine(libsPath, libraryName);
@@ -235,27 +198,73 @@ sealed class Program
                 return directPath;
             }
 
-            // 尝试添加平台特定的扩展名
-            foreach (string ext in extensions)
-            {
-                string pathWithExt = Path.Combine(libsPath, libraryName + ext);
-                if (File.Exists(pathWithExt))
-                {
-                    return pathWithExt;
-                }
-            }
-
-            // 如果 libraryName 包含扩展名，尝试去掉扩展名后再匹配
+            // 获取不带扩展名的库名
             string nameWithoutExt = Path.GetFileNameWithoutExtension(libraryName);
-            if (nameWithoutExt != libraryName)
+            
+            // 如果库名以 "lib" 开头，也准备一个不带 "lib" 前缀的版本
+            string nameWithoutLibPrefix = nameWithoutExt.StartsWith("lib", StringComparison.OrdinalIgnoreCase)
+                ? nameWithoutExt.Substring(3)
+                : nameWithoutExt;
+
+            // 尝试所有前缀和扩展名的组合
+            foreach (string prefix in prefixes)
             {
                 foreach (string ext in extensions)
                 {
-                    string path = Path.Combine(libsPath, nameWithoutExt + ext);
-                    if (File.Exists(path))
+                    // 尝试原始名称
+                    string pathWithExt = Path.Combine(libsPath, prefix + libraryName + ext);
+                    if (File.Exists(pathWithExt))
                     {
-                        return path;
+                        return pathWithExt;
                     }
+
+                    // 尝试不带扩展名的名称
+                    if (nameWithoutExt != libraryName)
+                    {
+                        string path = Path.Combine(libsPath, prefix + nameWithoutExt + ext);
+                        if (File.Exists(path))
+                        {
+                            return path;
+                        }
+                    }
+
+                    // 尝试不带 "lib" 前缀的名称（如果原名以 lib 开头）
+                    if (nameWithoutLibPrefix != nameWithoutExt)
+                    {
+                        string path = Path.Combine(libsPath, prefix + nameWithoutLibPrefix + ext);
+                        if (File.Exists(path))
+                        {
+                            return path;
+                        }
+                    }
+                }
+            }
+
+            // 最后尝试模糊匹配：在 libs 目录中查找包含库名的文件
+            // 这对于版本化的库文件很有用，如 libfoo.so.1.2.3
+            if (!OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    var files = Directory.GetFiles(libsPath);
+                    foreach (var file in files)
+                    {
+                        string fileName = Path.GetFileName(file);
+                        // 检查文件名是否包含库名（不区分大小写）
+                        if (fileName.Contains(nameWithoutExt, StringComparison.OrdinalIgnoreCase) ||
+                            fileName.Contains(nameWithoutLibPrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // 确保是共享库文件
+                            if (fileName.Contains(".so") || fileName.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return file;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略目录枚举错误
                 }
             }
 
