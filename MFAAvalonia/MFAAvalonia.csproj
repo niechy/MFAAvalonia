@@ -59,6 +59,8 @@
 		<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
     </PropertyGroup>
 
     <ItemGroup>
@@ -165,7 +167,9 @@
 		<Content Include="..\README_en.md">
 		  <Link>README_en.md</Link>
 		</Content>
-		<Content Include="MFAAvalonia.desktop" CopyToPublishDirectory="PreserveNewest">
+		<Content Include="MFAAvalonia.desktop"
+				 Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))"
+				 CopyToPublishDirectory="PreserveNewest">
 			<LinuxPath>/usr/share/applications/MFAAvalonia.desktop</LinuxPath>
 		</Content>
 		<Content Include="Assets/logo.ico" CopyToPublishDirectory="PreserveNewest">
@@ -257,5 +261,61 @@
 	  <Copy SourceFiles="@(WinUpdaterFiles);@(UnixUpdaterFiles)" DestinationFolder="$(MainPublishDir)" OverwriteReadOnlyFiles="true" />
 	  
 	  <Exec Condition="'$(OS)' != 'Windows_NT' AND '$(RuntimeIdentifier)' != 'win-x64'" Command="chmod +x '$(MainPublishDir)/MFAUpdater'" />
+	</Target>
+
+	<!-- 清理发布输出中不需要的文件 -->
+	<Target Name="RemoveUnwantedFiles" AfterTargets="CopyUpdaterAfterPublish">
+	  <PropertyGroup>
+		<MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
+	  </PropertyGroup>
+
+	  <!-- 删除 PDB 文件 -->
+	  <ItemGroup>
+		<PdbFilesToDelete Include="$(MainPublishDir)**\*.pdb" />
+		<XmlFilesToDelete Include="$(MainPublishDir)SukiUI.xml" />
+		<RuntimeConfigFilesToDelete Include="$(MainPublishDir)MFAUpdater.runtimeconfig.json" />
+	  </ItemGroup>
+
+	  <Delete Files="@(PdbFilesToDelete);@(XmlFilesToDelete);@(RuntimeConfigFilesToDelete)" ContinueOnError="true" />
+	</Target>
+
+	<!-- 将库文件（DLL/SO/DYLIB）移动到 libs 文件夹 -->
+	<Target Name="MoveLibrariesToLibs" AfterTargets="RemoveUnwantedFiles">
+	  <PropertyGroup>
+		<MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
+		<LibsDir>$([MSBuild]::NormalizeDirectory('$(MainPublishDir)libs'))</LibsDir>
+	  </PropertyGroup>
+
+	  <!-- 创建 libs 文件夹 -->
+	  <MakeDir Directories="$(LibsDir)" Condition="!Exists('$(LibsDir)')" />
+
+	  <!-- 根据平台收集需要移动的库文件 -->
+	  <ItemGroup>
+		<!-- Windows: 移动 DLL 文件 -->
+		<WinLibFilesToMove Include="$(MainPublishDir)*.dll" 
+						   Exclude="$(MainPublishDir)MFAAvalonia.dll;$(MainPublishDir)MFAUpdater.dll"
+						   Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-arm64'" />
+		
+		<!-- Linux: 移动 DLL 和 SO 文件 -->
+		<LinuxLibFilesToMove Include="$(MainPublishDir)*.dll" 
+							 Exclude="$(MainPublishDir)MFAAvalonia.dll;$(MainPublishDir)MFAUpdater.dll"
+							 Condition="'$(RuntimeIdentifier)' == 'linux-x64' OR '$(RuntimeIdentifier)' == 'linux-arm64'" />
+		<LinuxSoFilesToMove Include="$(MainPublishDir)*.so"
+							Condition="'$(RuntimeIdentifier)' == 'linux-x64' OR '$(RuntimeIdentifier)' == 'linux-arm64'" />
+		
+		<!-- macOS: 移动 DLL 和 DYLIB 文件 -->
+		<MacLibFilesToMove Include="$(MainPublishDir)*.dll" 
+						   Exclude="$(MainPublishDir)MFAAvalonia.dll;$(MainPublishDir)MFAUpdater.dll"
+						   Condition="'$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'osx-arm64'" />
+		<MacDylibFilesToMove Include="$(MainPublishDir)*.dylib"
+							 Condition="'$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'osx-arm64'" />
+	  </ItemGroup>
+
+	  <!-- 移动库文件到 libs 文件夹 -->
+	  <Move SourceFiles="@(WinLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(WinLibFilesToMove)' != ''" />
+	  <Move SourceFiles="@(LinuxLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(LinuxLibFilesToMove)' != ''" />
+	  <Move SourceFiles="@(LinuxSoFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(LinuxSoFilesToMove)' != ''" />
+	  <Move SourceFiles="@(MacLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(MacLibFilesToMove)' != ''" />
+	  <Move SourceFiles="@(MacDylibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(MacDylibFilesToMove)' != ''" />
 	</Target>
 </Project>
