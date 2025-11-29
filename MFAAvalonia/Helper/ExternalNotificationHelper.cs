@@ -240,8 +240,9 @@ public static class ExternalNotificationHelper
         private static MimeMessage CreateEmailMessage(string email, string info)
         {
             var mail = new MimeMessage();
-            mail.From.Add(new MailboxAddress("", email));
-            mail.To.Add(new MailboxAddress("", email));
+            // 使用 Parse 方法支持 "显示名称" <邮箱地址> 格式
+            mail.From.Add(MailboxAddress.Parse(email));
+            mail.To.Add(MailboxAddress.Parse(email));
             mail.Subject = info;
             mail.Body = new TextPart(MimeKit.Text.TextFormat.Plain)
             {
@@ -503,8 +504,9 @@ public static class ExternalNotificationHelper
 
                 // 构建邮件消息
                 var message = new MimeMessage();
-                message.From.Add(new MailboxAddress("", fromAddress));
-                message.To.Add(new MailboxAddress("", toAddress));
+                // 使用 Parse 方法支持 "显示名称" <邮箱地址> 格式
+                message.From.Add(MailboxAddress.Parse(fromAddress));
+                message.To.Add(MailboxAddress.Parse(toAddress));
                 message.Subject = info;
                 message.Body = new TextPart("plain")
                 {
