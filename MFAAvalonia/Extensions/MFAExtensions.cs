@@ -31,17 +31,22 @@ public static class MFAExtensions
             : "/bin/bash";
     }
 
-     /// <summary>
+    /// <summary>
     /// 解析 Markdown 内容：支持国际化字符串、文件路径、URL 或直接文本
     /// </summary>
     /// <param name="input">输入内容（可能是 $key、文件路径、URL 或直接文本）</param>
     /// <param name="projectDir">项目目录（用于解析相对路径）</param>
     /// <returns>解析后的 Markdown 文本</returns>
-    public async static Task<string> ResolveMarkdownContentAsync(this string? input, string? projectDir = null,bool transform = true)
+    /// <summary>
+    /// 可获取内容的文本文件扩展名
+    /// </summary>
+    private static readonly string[] TextFileExtensions = [".md", ".markdown", ".txt", ".text"];
+
+    public async static Task<string> ResolveMarkdownContentAsync(this string? input, string? projectDir = null, bool transform = true)
     {
         if (string.IsNullOrWhiteSpace(input))
             return string.Empty;
-        if (projectDir ==null)
+        if (projectDir == null)
             projectDir = AppContext.BaseDirectory;
         try
         {
@@ -52,7 +57,14 @@ public static class MFAExtensions
             if (Uri.TryCreate(content, UriKind.Absolute, out var uri) &&
                 (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
-                return await content.FetchUrlContentAsync();
+                // 如果是文本文件 URL，获取内容；否则返回超链接格式
+                var path = uri.AbsolutePath;
+                if (TextFileExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return await content.FetchUrlContentAsync();
+                }
+                // 返回 Markdown 超链接格式
+                return $"[{content}]({content})";
             }
 
             // 3. 判断是否为文件路径
@@ -75,7 +87,7 @@ public static class MFAExtensions
     /// <summary>
     /// 从 URL 获取文本内容
     /// </summary>
-    async  private static Task<string> FetchUrlContentAsync(this string url)
+    async private static Task<string> FetchUrlContentAsync(this string url)
     {
         try
         {
@@ -346,7 +358,7 @@ public static class MFAExtensions
         if (string.IsNullOrWhiteSpace(key)) return string.Empty;
 
         var localizedKey = key.ToLocalization();
-        var processedArgs = transformKey 
+        var processedArgs = transformKey
             ? Array.ConvertAll(args, a => a.ToLocalization() as object)
             : Array.ConvertAll(args, a => a as object);
 

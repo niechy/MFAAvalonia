@@ -583,13 +583,13 @@ public partial class MaaInterface
         [JsonProperty("window_regex")]
         public string? WindowRegex { get; set; }
         [JsonProperty("input")]
-        public long? Input { get; set; }
+        public object? Input { get; set; }
         [JsonProperty("mouse")]
-        public long? Mouse { get; set; }
-        [JsonProperty("keyboard ")]
-        public long? Keyboard { get; set; }
+        public object? Mouse { get; set; }
+        [JsonProperty("keyboard")]
+        public object? Keyboard { get; set; }
         [JsonProperty("screencap")]
-        public long? ScreenCap { get; set; }
+        public object? ScreenCap { get; set; }
     }
 
     public class MaaInterfaceAgent
@@ -748,16 +748,8 @@ public partial class MaaInterface
             // 无占位符
             if (checkIfPath)
             {
-                // 开启路径检查：仅当 input 是路径时才拼接
-                if (IsPathLike(input))
-                {
-                    result = Path.Combine(safeReplacement, input);
-                }
-                else
-                {
                     // 不是路径，原样返回
-                    return input;
-                }
+                return input;
             }
             else
             {

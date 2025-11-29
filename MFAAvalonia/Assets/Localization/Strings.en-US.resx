@@ -1187,6 +1187,9 @@
     <data name="FileLoadFailed" xml:space="preserve">
         <value>File {0} failed to load!</value>
     </data>
+    <data name="FileLoadFailedDetail" xml:space="preserve">
+        <value>Please check if the {0} file format is correct, there may be JSON syntax errors</value>
+    </data>
     <data name="CopyToClipboard" xml:space="preserve">
         <value>Copy to clipboard</value>
     </data>

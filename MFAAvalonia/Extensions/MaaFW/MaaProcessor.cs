@@ -12,6 +12,7 @@ using MFAAvalonia.Extensions.MaaFW.Custom;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.Helper.ValueType;
+using MFAAvalonia.ViewModels.Other;
 using MFAAvalonia.Views.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -63,6 +64,31 @@ public class MaaProcessor
     // public Dictionary<string, MaaNode> NodeDictionary = new();
     public ObservableQueue<MFATask> TaskQueue { get; } = new();
     public bool IsV3 = false;
+
+    /// <summary>
+    /// JSON 加载设置，忽略注释（支持 JSONC 格式）
+    /// </summary>
+    private static readonly JsonLoadSettings JsoncLoadSettings = new()
+    {
+        CommentHandling = CommentHandling.Ignore
+    };
+
+    /// <summary>
+    /// 获取 interface 文件路径，优先返回 .jsonc，其次 .json
+    /// </summary>
+    public static string? GetInterfaceFilePath()
+    {
+        var jsoncPath = Path.Combine(AppContext.BaseDirectory, "interface.jsonc");
+        if (File.Exists(jsoncPath))
+            return jsoncPath;
+
+        var jsonPath = Path.Combine(AppContext.BaseDirectory, "interface.json");
+        if (File.Exists(jsonPath))
+            return jsonPath;
+
+        return null;
+    }
+
     public MaaProcessor()
     {
         TaskQueue.CountChanged += (_, args) =>
@@ -70,14 +96,20 @@ public class MaaProcessor
             if (args.NewValue > 0)
                 Instances.RootViewModel.IsRunning = true;
         };
-        CheckInterface(out _,out _, out _, out _,out _);
+        CheckInterface(out _, out _, out _, out _, out _);
         try
         {
-            var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
-            var interfaceVersion = @interface["interface_version"]?.ToString();
-            if (int.TryParse(interfaceVersion, out var result) && result >= 3)
+            var filePath = GetInterfaceFilePath();
+            if (filePath != null)
             {
-                IsV3 = true;
+                var content = File.ReadAllText(filePath);
+                // 使用 JsonLoadSettings 忽略注释，支持 JSONC 格式
+                var @interface = JObject.Parse(content, JsoncLoadSettings);
+                var interfaceVersion = @interface["interface_version"]?.ToString();
+                if (int.TryParse(interfaceVersion, out var result) && result >= 3)
+                {
+                    IsV3 = true;
+                }
             }
         }
         catch (Exception e)
@@ -196,7 +228,18 @@ public class MaaProcessor
             MaaTasker?.Dispose();
             _agentClient = null;
             _agentStarted = false;
-            _agentProcess?.Kill();
+            // 安全地终止 Agent 进程
+            try
+            {
+                if (_agentProcess is { HasExited: false })
+                {
+                    _agentProcess.Kill();
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // 进程未启动或已退出，忽略
+            }
             _agentProcess?.Dispose();
             _agentProcess = null;
             Instances.TaskQueueViewModel.SetConnected(false);
@@ -836,10 +879,10 @@ public class MaaProcessor
                         }
                     };
 
-                    _agentProcess.Start();
                     LoggerHelper.Info(
-                        $"Agent启动: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
+                        $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
+                    _agentProcess.Start();
                     _agentProcess.BeginOutputReadLine();
                     _agentProcess.BeginErrorReadLine();
 
@@ -956,13 +999,17 @@ public class MaaProcessor
 #pragma warning disable CS0649 // 
     private class Focus
     {
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("start")]
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        [JsonProperty("start")]
         public List<string>? Start;
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("succeeded")]
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        [JsonProperty("succeeded")]
         public List<string>? Succeeded;
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("failed")]
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        [JsonProperty("failed")]
         public List<string>? Failed;
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("toast")]
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        [JsonProperty("toast")]
         public List<string>? Toast;
         [JsonProperty("aborted")] public bool? Aborted;
     }
@@ -1337,10 +1384,10 @@ public class MaaProcessor
         public AdbDeviceInfo? Info { get; set; } = null;
     }
 
-    public static bool CheckInterface(out string Name,out string NameFallBack, out string Version, out string CustomTitle, out string CustomTitleFallBack)
+    public static bool CheckInterface(out string Name, out string NameFallBack, out string Version, out string CustomTitle, out string CustomTitleFallBack)
     {
-
-        if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "interface.json")))
+        // 支持 interface.json 和 interface.jsonc
+        if (GetInterfaceFilePath() == null)
         {
             LoggerHelper.Info("未找到interface文件，生成interface.json...");
             Interface = new MaaInterface
@@ -1398,7 +1445,7 @@ public class MaaProcessor
             Name = Interface?.Label ?? string.Empty;
             NameFallBack = Interface?.Name ?? string.Empty;
             Version = Interface?.Version ?? string.Empty;
-            CustomTitle = Interface?.Title  ?? string.Empty;
+            CustomTitle = Interface?.Title ?? string.Empty;
             CustomTitleFallBack = Interface?.CustomTitle ?? string.Empty;
             return true;
         }
@@ -1410,59 +1457,88 @@ public class MaaProcessor
         return false;
     }
 
-    public static (string Key,string Fallback, string Version, string CustomTitle,string CustomFallback) ReadInterface()
+    // 防止 interface 加载失败时 Toast 重复显示
+    private static bool _interfaceLoadErrorShown = false;
+
+    public static (string Key, string Fallback, string Version, string CustomTitle, string CustomFallback, string? error) ReadInterface()
     {
-        if (CheckInterface(out string name, out string back, out string version, out string customTitle,out var fallBack))
+        if (CheckInterface(out string name, out string back, out string version, out string customTitle, out var fallBack))
         {
-            return (name,back, version, customTitle,fallBack);
+            return (name, back, version, customTitle, fallBack, null);
         }
 
+        var interfacePath = GetInterfaceFilePath() ?? Path.Combine(AppContext.BaseDirectory, "interface.json");
+        var interfaceFileName = Path.GetFileName(interfacePath);
         var defaultValue = new MaaInterface();
+        var error = "";
         Interface =
-            JsonHelper.LoadJson(Path.Combine(AppContext.BaseDirectory, "interface.json"), defaultValue
+            JsonHelper.LoadJson(interfacePath, defaultValue
                 , errorHandle: () =>
                 {
                     try
                     {
-                        var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
-                        if (@interface != null)
+                        if (File.Exists(interfacePath))
                         {
-
-                            defaultValue.MFAMinVersion = @interface["mfa_min_version"]?.ToString();
-                            defaultValue.MFAMaxVersion = @interface["mfa_max_version"]?.ToString();
-                            defaultValue.CustomTitle = @interface["custom_title"]?.ToString();
-                            defaultValue.Title = @interface["title"]?.ToString();
-                            defaultValue.Name = @interface["name"]?.ToString();
-                            defaultValue.Url = @interface["url"]?.ToString();
-                            defaultValue.Github = @interface["github"]?.ToString();
-                            RootView.AddLog(LangKeys.FileLoadFailed.ToLocalizationFormatted(false, "interface.json"));
+                            var content = File.ReadAllText(interfacePath);
+                            // 使用 JsonLoadSettings 忽略注释，支持 JSONC 格式
+                            var @interface = JObject.Parse(content, JsoncLoadSettings);
+                            if (@interface != null)
+                            {
+                                defaultValue.MFAMinVersion = @interface["mfa_min_version"]?.ToString();
+                                defaultValue.MFAMaxVersion = @interface["mfa_max_version"]?.ToString();
+                                defaultValue.CustomTitle = @interface["custom_title"]?.ToString();
+                                defaultValue.Title = @interface["title"]?.ToString();
+                                defaultValue.Name = @interface["name"]?.ToString();
+                                defaultValue.Url = @interface["url"]?.ToString();
+                                defaultValue.Github = @interface["github"]?.ToString();
+                            }
+                        }
+                        // 在 UI 层面显示 Toast 错误提示（只显示一次）
+                        if (!_interfaceLoadErrorShown)
+                        {
+                            _interfaceLoadErrorShown = true;
+                            error = LangKeys.FileLoadFailed.ToLocalizationFormatted(false, interfaceFileName);
+                            var errorDetail = LangKeys.FileLoadFailedDetail.ToLocalizationFormatted(false, interfaceFileName);
+                            // 使用 LoggerHelper 确保日志被记录（因为此时 UI 可能尚未完全初始化）
+                            LoggerHelper.Error($"{error} - {errorDetail}");
+                            // 延迟添加 UI 日志，确保 TaskQueueViewModel 已初始化
+                            ToastHelper.Error(error, errorDetail, duration: 10);
                         }
                     }
                     catch (Exception e)
                     {
                         LoggerHelper.Error(e);
+                        // 即使解析失败也显示 Toast 错误提示（只显示一次）
+                        if (!_interfaceLoadErrorShown)
+                        {
+                            _interfaceLoadErrorShown = true;
+                            ToastHelper.Error(
+                                LangKeys.FileLoadFailed.ToLocalizationFormatted(false, interfaceFileName),
+                                e.Message,
+                                duration: 10);
+                        }
                     }
                 }, new MaaInterfaceSelectAdvancedConverter(false),
                 new MaaInterfaceSelectOptionConverter(false));
 
 
-        return (Interface?.Label ?? string.Empty,Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.Title ?? string.Empty, Interface?.CustomTitle ?? string.Empty);
+        return (Interface?.Label ?? string.Empty, Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.Title ?? string.Empty, Interface?.CustomTitle ?? string.Empty, error);
 
     }
 
-    public bool InitializeData(Collection<DragItemViewModel>? dragItem = null)
+    public bool InitializeData(out string? errors,Collection<DragItemViewModel>? dragItem = null)
     {
-        var (name,back, version, customTitle,fallback) = ReadInterface();
+        var (name, back, version, customTitle, fallback, error) = ReadInterface();
         if ((!string.IsNullOrWhiteSpace(name) && !name.Equals("debug", StringComparison.OrdinalIgnoreCase)) || !string.IsNullOrWhiteSpace(back))
-            Instances.RootViewModel.ShowResourceKeyAndFallBack(name,back);
+            Instances.RootViewModel.ShowResourceKeyAndFallBack(name, back);
         if (!string.IsNullOrWhiteSpace(version) && !version.Equals("debug", StringComparison.OrdinalIgnoreCase))
         {
             Instances.RootViewModel.ShowResourceVersion(version);
             Instances.VersionUpdateSettingsUserControlModel.ResourceVersion = version;
         }
-        
+
         if (!string.IsNullOrWhiteSpace(customTitle) || !string.IsNullOrWhiteSpace(fallback))
-            Instances.RootViewModel.ShowCustomTitleAndFallBack(customTitle,fallback);
+            Instances.RootViewModel.ShowCustomTitleAndFallBack(customTitle, fallback);
 
         if (Interface != null)
         {
@@ -1470,7 +1546,7 @@ public class MaaProcessor
             TasksSource.Clear();
             LoadTasks(Interface.Task ?? new List<MaaInterface.MaaInterfaceTask>(), dragItem);
         }
-
+        errors = error;
         return LoadTask();
     }
 
@@ -2434,7 +2510,7 @@ public class MaaProcessor
 
     public void Start(bool onlyStart = false, bool checkUpdate = false)
     {
-        if (InitializeData())
+        if (InitializeData(out _))
         {
             var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList().FindAll(task => task.IsChecked || task.IsCheckedWithNull == null);
             StartTask(tasks, onlyStart, checkUpdate);
@@ -2443,7 +2519,7 @@ public class MaaProcessor
 
     public void Start(List<DragItemViewModel> dragItemViewModels, bool onlyStart = false, bool checkUpdate = false)
     {
-        if (InitializeData())
+        if (InitializeData(out _))
         {
             var tasks = dragItemViewModels;
             StartTask(tasks, onlyStart, checkUpdate);

@@ -689,53 +689,93 @@ public partial class TaskQueueViewModel : ViewModelBase
             var mouse = controller.Win32?.Mouse;
             if (mouse != null)
             {
-                Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = mouse switch
-                {
-                    1 => Win32InputMethod.Seize,
-                    2 => Win32InputMethod.SendMessage,
-                    4 => Win32InputMethod.PostMessage,
-                    8 => Win32InputMethod.LegacyEvent,
-                    16 => Win32InputMethod.PostThreadMessage,
-                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlMouseType
-                };
+                var parsed = ParseWin32InputMethod(mouse);
+                if (parsed != null)
+                    Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = parsed.Value;
             }
             var keyboard = controller.Win32?.Keyboard;
             if (keyboard != null)
             {
-                Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = keyboard switch
-                {
-                    1 => Win32InputMethod.Seize,
-                    2 => Win32InputMethod.SendMessage,
-                    4 => Win32InputMethod.PostMessage,
-                    8 => Win32InputMethod.LegacyEvent,
-                    16 => Win32InputMethod.PostThreadMessage,
-                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
-                };
+                var parsed = ParseWin32InputMethod(keyboard);
+                if (parsed != null)
+                    Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = parsed.Value;
             }
             var input = controller.Win32?.Input;
             if (keyboard == null && mouse == null && input != null)
             {
-                var type = input switch
+                var parsed = ParseWin32InputMethod(input);
+                if (parsed != null)
                 {
-                    1 => Win32InputMethod.Seize,
-                    2 => Win32InputMethod.SendMessage,
-                    4 => Win32InputMethod.PostMessage,
-                    8 => Win32InputMethod.LegacyEvent,
-                    16 => Win32InputMethod.PostThreadMessage,
-                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
-                };
-                Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = type;
-                Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = type;
+                    Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = parsed.Value;
+                    Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = parsed.Value;
+                }
             }
         }
     }
 
+    /// <summary>
+    /// 解析 Win32InputMethod，支持旧版 long 格式和新版 string 格式
+    /// </summary>
+    private static Win32InputMethod? ParseWin32InputMethod(object? value)
+    {
+        if (value == null) return null;
+
+        // 新版 string 格式（枚举名）
+        if (value is string strValue)
+        {
+            if (Enum.TryParse<Win32InputMethod>(strValue, ignoreCase: true, out var result))
+                return result;
+            return null;
+        }
+
+        // 旧版 long 格式
+        var longValue = Convert.ToInt64(value);
+        return longValue switch
+        {
+            1 => Win32InputMethod.Seize,
+            2 => Win32InputMethod.SendMessage,
+            4 => Win32InputMethod.PostMessage,
+            8 => Win32InputMethod.LegacyEvent,
+            16 => Win32InputMethod.PostThreadMessage,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// 解析 Win32ScreencapMethod，支持旧版 long 格式和新版 string 格式
+    /// </summary>
+    private static Win32ScreencapMethod? ParseWin32ScreencapMethod(object? value)
+    {
+        if (value == null) return null;
+
+        // 新版 string 格式（枚举名）
+        if (value is string strValue)
+        {
+            if (Enum.TryParse<Win32ScreencapMethod>(strValue, ignoreCase: true, out var result))
+                return result;
+            return null;
+        }
+
+        // 旧版 long 格式
+        var longValue = Convert.ToInt64(value);
+        return longValue switch
+        {
+            1 => Win32ScreencapMethod.GDI,
+            2 => Win32ScreencapMethod.FramePool,
+            4 => Win32ScreencapMethod.DXGI_DesktopDup,
+            8 => Win32ScreencapMethod.DXGI_DesktopDup_Window,
+            16 => Win32ScreencapMethod.PrintWindow,
+            32 => Win32ScreencapMethod.ScreenDC,
+            _ => null
+        };
+    }
+
     private void HandleScreenCapSettings(MaaInterface.MaaResourceController controller, bool isAdb)
     {
-        var screenCap = isAdb ? controller.Adb?.ScreenCap : controller.Win32?.ScreenCap;
-        if (screenCap == null) return;
         if (isAdb)
         {
+            var screenCap = controller.Adb?.ScreenCap;
+            if (screenCap == null) return;
             Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType = screenCap switch
             {
                 1 => AdbScreencapMethods.EncodeToFileAndPull,
@@ -750,16 +790,11 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
         else
         {
-            Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType = screenCap switch
-            {
-                1 => Win32ScreencapMethod.GDI,
-                2 => Win32ScreencapMethod.FramePool,
-                4 => Win32ScreencapMethod.DXGI_DesktopDup,
-                8 => Win32ScreencapMethod.DXGI_DesktopDup_Window,
-                16 => Win32ScreencapMethod.PrintWindow,
-                32 => Win32ScreencapMethod.ScreenDC,
-                _ => Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType
-            };
+            var screenCap = controller.Win32?.ScreenCap;
+            if (screenCap == null) return;
+            var parsed = ParseWin32ScreencapMethod(screenCap);
+            if (parsed != null)
+                Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType = parsed.Value;
         }
     }
 

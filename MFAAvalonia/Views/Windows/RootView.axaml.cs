@@ -92,7 +92,11 @@ public partial class RootView : SukiWindow
             });
         };
         if (Program.IsNewInstance)
-            MaaProcessor.Instance.InitializeData();
+        {
+            MaaProcessor.Instance.InitializeData(out var errors);
+            if (!string.IsNullOrWhiteSpace(errors))
+                AddLog(errors, Brushes.OrangeRed, changeColor: false);
+        }
     }
 
     private bool _isInitializing = true;

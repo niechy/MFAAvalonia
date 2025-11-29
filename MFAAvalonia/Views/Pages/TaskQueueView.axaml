@@ -529,7 +529,7 @@
                             </StackPanel>
                         </Grid>
                     </suki:GroupBox.Header>
-                    <Grid x:Name="ConnectionGrid" HorizontalAlignment="Stretch">
+                    <Grid x:Name="ConnectionGrid" HorizontalAlignment="Stretch" >
                         <!-- 控制器类型选择 -->
                         <RadioButton x:Name="AdbRadioButton"
                             Classes="GigaChips"

@@ -59,7 +59,7 @@ public partial class TaskQueueView : UserControl
     {
         DataContext = Instances.TaskQueueViewModel;
         InitializeComponent();
-        MaaProcessor.Instance.InitializeData();
+        MaaProcessor.Instance.InitializeData(out _);
         InitializeDeviceSelectorLayout();
     }
     

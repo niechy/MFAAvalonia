@@ -8,7 +8,7 @@ namespace MFAAvalonia.Helper;
 
 public static class JsonHelper
 {
-    // 加载JSON配置（自动处理线程问题）
+    // 加载JSON配置（自动处理线程问题，Newtonsoft.Json 反序列化到实体类时会自动忽略注释）
     public static T LoadJson<T>(string filePath, T defaultValue = default, params JsonConverter[] converters)
     {
         return LoadJson(filePath, defaultValue, null, converters);
@@ -22,7 +22,7 @@ public static class JsonHelper
             if (!File.Exists(filePath)) return defaultValue;
 
             var json = File.ReadAllText(filePath);
-            // 先尝试正常反序列化
+            // Newtonsoft.Json 反序列化到实体类时会自动忽略注释，支持 JSONC 格式
             return TryDeserialize<T>(json, converters) ?? defaultValue;
         }
         catch (Exception ex) when (IsThreadAccessException(ex))

@@ -1198,6 +1198,9 @@
     <data name="FileLoadFailed" xml:space="preserve">
         <value>文件 {0} 加载失败！</value>
     </data>
+    <data name="FileLoadFailedDetail" xml:space="preserve">
+        <value>请检查 {0} 文件格式是否正确，可能存在 JSON 语法错误</value>
+    </data>
     <data name="CopyToClipboard" xml:space="preserve">
         <value>复制到剪切板</value>
     </data>
