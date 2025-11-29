@@ -529,8 +529,9 @@
                             </StackPanel>
                         </Grid>
                     </suki:GroupBox.Header>
-                    <Grid x:Name="connectionGrid" HorizontalAlignment="Stretch">
-                        <RadioButton
+                    <Grid x:Name="ConnectionGrid" HorizontalAlignment="Stretch">
+                        <!-- 控制器类型选择 -->
+                        <RadioButton x:Name="AdbRadioButton"
                             Classes="GigaChips"
                             Content="{Binding Adb}"
                             FontSize="12"
@@ -539,9 +540,9 @@
                             IsVisible="{calcBinding:Binding 'ShouldShow != 1'}"
                             IsEnabled="{calcBinding:Binding '!LockController and Idle',
                                                                 Source={x:Static helper:Instances.RootViewModel}}"
-                            MinWidth="120"
-                            x:Name="FirstButton" />
-                        <RadioButton
+                            Margin="0,0,8,0"
+                            MinWidth="110" />
+                        <RadioButton x:Name="Win32RadioButton"
                             Classes="GigaChips"
                             Content="{Binding Win32}"
                             FontSize="12"
@@ -550,36 +551,39 @@
                             IsVisible="{calcBinding:Binding 'ShouldShow != 2'}"
                             IsEnabled="{calcBinding:Binding '!LockController and Idle',
                                                                 Source={x:Static helper:Instances.RootViewModel}}"
-                            MinWidth="120"
-                            x:Name="SecondButton" />
-
-                        <DockPanel x:Name="ControllerPanel"
-                                   HorizontalAlignment="Stretch"
-                                   LastChildFill="True"
-                                   Margin="5,0"
-                                   MinWidth="200">
-                            <TextBlock
+                            Margin="0,0,4,0"
+                            MinWidth="110" />
+                        
+                        <!-- 设备选择器 -->
+                        <StackPanel x:Name="DeviceSelectorPanel" 
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Stretch"
+                                    MinWidth="200">
+                            <TextBlock x:Name="DeviceSelectorLabel"
                                 FontSize="12"
                                 Foreground="{DynamicResource SukiLowText}"
                                 Text="{markup:I18n {x:Static helper:LangKeys.CurrentController}}"
-                                VerticalAlignment="Center" />
-                            <ComboBox ex:ComboBoxExtensions.DisableNavigationOnLostFocus="True" Classes="LimitWidth"
+                                VerticalAlignment="Center"
+                                Margin="5,2,8,0" />
+                            <ComboBox x:Name="DeviceComboBox"
+                                      ex:ComboBoxExtensions.DisableNavigationOnLostFocus="True" 
+                                      Classes="LimitWidth"
                                       IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                                       ItemsSource="{Binding Devices}"
-                                      Margin="5,0,0,5"
+                                      MinWidth="150"
+                                      HorizontalAlignment="Stretch"
                                       SelectedValue="{Binding CurrentDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                 <ComboBox.DataTemplates>
                                     <DataTemplate DataType="binding:AdbDeviceInfo">
                                         <TextBlock HorizontalAlignment="Left"
                                                    Text="{Binding Converter={converters:DeviceDisplayConverter}}" />
                                     </DataTemplate>
-
                                     <DataTemplate DataType="binding:DesktopWindowInfo">
                                         <TextBlock HorizontalAlignment="Left" Text="{Binding Name}" />
                                     </DataTemplate>
                                 </ComboBox.DataTemplates>
                             </ComboBox>
-                        </DockPanel>
+                        </StackPanel>
                     </Grid>
 
                 </suki:GroupBox>

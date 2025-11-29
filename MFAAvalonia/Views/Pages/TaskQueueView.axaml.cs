@@ -60,7 +60,117 @@ public partial class TaskQueueView : UserControl
         DataContext = Instances.TaskQueueViewModel;
         InitializeComponent();
         MaaProcessor.Instance.InitializeData();
-        InitializeControllerUI();
+        InitializeDeviceSelectorLayout();
+    }
+    
+    private int _currentLayoutMode = -1;
+    
+    private void InitializeDeviceSelectorLayout()
+    {
+        ConnectionGrid.SizeChanged += (_, _) => UpdateConnectionLayout();
+        AdbRadioButton.PropertyChanged += (_, e) => { if (e.Property.Name == "IsVisible") UpdateConnectionLayout(); };
+        Win32RadioButton.PropertyChanged += (_, e) => { if (e.Property.Name == "IsVisible") UpdateConnectionLayout(); };
+    }
+    
+    private void UpdateConnectionLayout()
+    {
+        var totalWidth = ConnectionGrid.Bounds.Width;
+        if (totalWidth <= 0) return;
+        
+        // 计算可见RadioButton的宽度
+        var adbWidth = AdbRadioButton.IsVisible ? AdbRadioButton.MinWidth + 8 : 0;
+        var win32Width = Win32RadioButton.IsVisible ? Win32RadioButton.MinWidth + 8 : 0;
+        var radioButtonsWidth = adbWidth + win32Width;
+        var selectorMinWidth = DeviceSelectorPanel.MinWidth;
+        
+        // 决定布局模式：0=一行，1=两行，2=三行
+        int newMode;
+        if (totalWidth >= radioButtonsWidth + selectorMinWidth + 50) // 留50px余量
+            newMode = 0; // 一行布局
+        else if (totalWidth >= Math.Max(radioButtonsWidth, selectorMinWidth))
+            newMode = 1; // 两行布局
+        else
+            newMode = 2; // 三行布局
+        
+        if (newMode == _currentLayoutMode) return;
+        _currentLayoutMode = newMode;
+        
+        ConnectionGrid.ColumnDefinitions.Clear();
+        ConnectionGrid.RowDefinitions.Clear();
+        
+        switch (newMode)
+        {
+            case 0: // 一行布局：[Adb][Win32][ComboBox────────]
+                if (AdbRadioButton.IsVisible)
+                    ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                if (Win32RadioButton.IsVisible)
+                    ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+                
+                var col = 0;
+                if (AdbRadioButton.IsVisible) { Grid.SetColumn(AdbRadioButton, col); Grid.SetRow(AdbRadioButton, 0); col++; }
+                if (Win32RadioButton.IsVisible) { Grid.SetColumn(Win32RadioButton, col); Grid.SetRow(Win32RadioButton, 0); col++; }
+                Grid.SetColumn(DeviceSelectorPanel, col);
+                Grid.SetRow(DeviceSelectorPanel, 0);
+                break;
+                
+            case 1: // 两行布局：RadioButton在上，ComboBox在下
+                ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                
+                var visibleCount = (AdbRadioButton.IsVisible ? 1 : 0) + (Win32RadioButton.IsVisible ? 1 : 0);
+                for (var i = 0; i < Math.Max(visibleCount, 1); i++)
+                    ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+                
+                var c = 0;
+                if (AdbRadioButton.IsVisible) { Grid.SetColumn(AdbRadioButton, c++); Grid.SetRow(AdbRadioButton, 0); }
+                if (Win32RadioButton.IsVisible) { Grid.SetColumn(Win32RadioButton, c); Grid.SetRow(Win32RadioButton, 0); }
+                Grid.SetColumn(DeviceSelectorPanel, 0);
+                Grid.SetColumnSpan(DeviceSelectorPanel, Math.Max(visibleCount, 1));
+                Grid.SetRow(DeviceSelectorPanel, 1);
+                break;
+                
+            case 2: // 三行布局：每个控件一行
+                ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+                var row = 0;
+                if (AdbRadioButton.IsVisible)
+                {
+                    ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                    Grid.SetColumn(AdbRadioButton, 0); Grid.SetRow(AdbRadioButton, row++);
+                }
+                if (Win32RadioButton.IsVisible)
+                {
+                    ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                    Grid.SetColumn(Win32RadioButton, 0); Grid.SetRow(Win32RadioButton, row++);
+                }
+                ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                Grid.SetColumn(DeviceSelectorPanel, 0);
+                Grid.SetColumnSpan(DeviceSelectorPanel, 1);
+                Grid.SetRow(DeviceSelectorPanel, row);
+                break;
+        }
+        
+        // 设备选择器内部响应式：宽度不足时切换为上下布局
+        UpdateDeviceSelectorOrientation();
+    }
+    
+    private void UpdateDeviceSelectorOrientation()
+    {
+        var selectorWidth = DeviceSelectorPanel.Bounds.Width;
+        if (selectorWidth <= 0) selectorWidth = ConnectionGrid.Bounds.Width;
+        
+        const double verticalThreshold = 280;
+        var useVertical = selectorWidth > 0 && selectorWidth < verticalThreshold;
+        
+        var newOrientation = useVertical ? Avalonia.Layout.Orientation.Vertical : Avalonia.Layout.Orientation.Horizontal;
+        if (DeviceSelectorPanel.Orientation != newOrientation)
+        {
+            DeviceSelectorPanel.Orientation = newOrientation;
+            DeviceSelectorLabel.Margin = useVertical ? new Thickness(0, 0, 0, 5) : new Thickness(0, 0, 8, 0);
+            DeviceComboBox.HorizontalAlignment = useVertical 
+                ? Avalonia.Layout.HorizontalAlignment.Stretch 
+                : Avalonia.Layout.HorizontalAlignment.Left;
+        }
     }
 
     #region UI
@@ -129,113 +239,6 @@ public partial class TaskQueueView : UserControl
     }
 
     #endregion
-
-    private void InitializeControllerUI()
-    {
-        connectionGrid.SizeChanged += (sender, e) =>
-        {
-            var actualWidth = connectionGrid.Bounds.Width;
-            double totalMinWidth = connectionGrid.Children.Sum(c => c.MinWidth);
-            if (actualWidth >= totalMinWidth)
-            {
-                // 左右布局模式
-                connectionGrid.ColumnDefinitions.Clear();
-                connectionGrid.ColumnDefinitions.AddRange([
-                        new ColumnDefinition
-                        {
-                            Width = new GridLength(FirstButton.MinWidth, GridUnitType.Pixel)
-                        },
-                        new ColumnDefinition
-                        {
-                            Width = new GridLength(SecondButton.MinWidth, GridUnitType.Pixel)
-                        },
-                        new ColumnDefinition
-                        {
-                            Width = new GridLength(1, GridUnitType.Star)
-                        }
-                    ]
-                );
-
-                Grid.SetColumn(FirstButton, 0);
-                Grid.SetColumn(SecondButton, 1);
-                Grid.SetColumn(ControllerPanel, 2);
-                Grid.SetRow(FirstButton, 0);
-                Grid.SetRow(SecondButton, 0);
-                Grid.SetRow(ControllerPanel, 0);
-            }
-            else if (actualWidth >= FirstButton.MinWidth + SecondButton.MinWidth)
-            {
-                // 上下布局模式（两行）
-                connectionGrid.ColumnDefinitions.Clear();
-                connectionGrid.RowDefinitions.Clear();
-
-                // 创建两行结构
-                connectionGrid.RowDefinitions.Add(new RowDefinition
-                {
-                    Height = GridLength.Auto
-                });
-                connectionGrid.RowDefinitions.Add(new RowDefinition
-                {
-                    Height = GridLength.Auto
-                });
-
-                // 定义两列等宽布局（网页4提到的Star单位）
-                connectionGrid.ColumnDefinitions.Add(new ColumnDefinition
-                {
-                    Width = new GridLength(1, GridUnitType.Star)
-                });
-                connectionGrid.ColumnDefinitions.Add(new ColumnDefinition
-                {
-                    Width = new GridLength(1, GridUnitType.Star)
-                });
-
-                // 设置控件位置
-                Grid.SetRow(FirstButton, 0);
-                Grid.SetColumn(FirstButton, 0);
-                Grid.SetRow(SecondButton, 0);
-                Grid.SetColumn(SecondButton, 1);
-
-                // 设置DockPanel跨两列
-                Grid.SetRow(ControllerPanel, 1);
-                Grid.SetColumnSpan(ControllerPanel, 2);
-                Grid.SetColumn(ControllerPanel, 0);
-
-                // 强制刷新布局（网页3提到的布局刷新机制）
-                FirstButton.InvalidateMeasure();
-                SecondButton.InvalidateMeasure();
-            }
-            else
-            {
-                // 三层布局模式
-                connectionGrid.ColumnDefinitions.Clear();
-                connectionGrid.ColumnDefinitions.Add(new ColumnDefinition
-                {
-                    Width = new GridLength(1, GridUnitType.Star)
-                });
-
-                connectionGrid.RowDefinitions.Clear();
-                connectionGrid.RowDefinitions.Add(new RowDefinition
-                {
-                    Height = GridLength.Auto
-                });
-                connectionGrid.RowDefinitions.Add(new RowDefinition
-                {
-                    Height = GridLength.Auto
-                });
-                connectionGrid.RowDefinitions.Add(new RowDefinition
-                {
-                    Height = GridLength.Auto
-                });
-
-                Grid.SetRow(FirstButton, 0);
-                Grid.SetColumn(FirstButton, 0);
-                Grid.SetRow(SecondButton, 1);
-                Grid.SetColumn(SecondButton, 0);
-                Grid.SetRow(ControllerPanel, 2);
-                Grid.SetColumn(ControllerPanel, 0);
-            }
-        };
-    }
 
     private void SelectingItemsControl_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
