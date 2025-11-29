@@ -48,12 +48,12 @@ public partial class TaskQueueViewModel : ViewModelBase
             if (adb is { Label: not null } or { Name: not null })
             {
                 adbKey = adb.Label ?? string.Empty;
-                adbFallback = adb.Name?? string.Empty;
+                adbFallback = adb.Name ?? string.Empty;
             }
             if (win32 is { Label: not null } or { Name: not null })
             {
                 win32Key = win32.Label ?? string.Empty;
-                win32Fallback = win32.Name?? string.Empty;
+                win32Fallback = win32.Name ?? string.Empty;
             }
             LanguageHelper.LanguageChanged += (_, _) =>
             {
@@ -66,7 +66,7 @@ public partial class TaskQueueViewModel : ViewModelBase
             LoggerHelper.Error(e);
         }
     }
-    
+
     protected override void Initialize()
     {
         try
@@ -362,17 +362,14 @@ public partial class TaskQueueViewModel : ViewModelBase
             content = content.Substring(CRITICAL.Length);
         }
 
-        Task.Run(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
-            DispatcherHelper.RunOnMainThread(() =>
+            LogItemViewModels.Add(new LogItemViewModel(content, brush, weight, "HH':'mm':'ss",
+                showTime: showTime, changeColor: changeColor)
             {
-                LogItemViewModels.Add(new LogItemViewModel(content, brush, weight, "HH':'mm':'ss",
-                    showTime: showTime, changeColor: changeColor)
-                {
-                    BackgroundColor = backGroundBrush
-                });
-                LoggerHelper.Info(content);
+                BackgroundColor = backGroundBrush
             });
+            LoggerHelper.Info(content);
         });
     }
 
@@ -460,7 +457,8 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
     }
 
-    [ObservableProperty] private MaaControllerTypes _currentController =
+    [ObservableProperty]
+    private MaaControllerTypes _currentController =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.CurrentController, MaaControllerTypes.Adb, MaaControllerTypes.None, new UniversalEnumConverter<MaaControllerTypes>());
 
     partial void OnCurrentControllerChanged(MaaControllerTypes value)

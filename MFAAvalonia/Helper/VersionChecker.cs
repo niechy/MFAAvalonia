@@ -631,7 +631,7 @@ public static class VersionChecker
         //     }
         // });
         var tasks = Instances.TaskQueueViewModel.TaskItemViewModels;
-        Instances.RootView.ClearTasks(() => MaaProcessor.Instance.InitializeData(out _,dragItem: tasks));
+        Instances.RootView.ClearTasks(() => MaaProcessor.Instance.InitializeData(dragItem: tasks));
 
         if (closeDialog)
             Dismiss(sukiToast);

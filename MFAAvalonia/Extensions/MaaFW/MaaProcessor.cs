@@ -228,20 +228,7 @@ public class MaaProcessor
             MaaTasker?.Dispose();
             _agentClient = null;
             _agentStarted = false;
-            // 安全地终止 Agent 进程
-            try
-            {
-                if (_agentProcess is { HasExited: false })
-                {
-                    _agentProcess.Kill();
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // 进程未启动或已退出，忽略
-            }
-            _agentProcess?.Dispose();
-            _agentProcess = null;
+            SafeKillAgentProcess();
             Instances.TaskQueueViewModel.SetConnected(false);
         }
         MaaTasker = maaTasker;
@@ -782,9 +769,7 @@ public class MaaProcessor
                     _agentClient.Dispose();
                     _agentClient.DetachDisposeToResource();
                     _agentClient = null;
-                    _agentProcess?.Kill();
-                    _agentProcess?.Dispose();
-                    _agentProcess = null;
+                    SafeKillAgentProcess();
                 }
 
                 var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -822,9 +807,20 @@ public class MaaProcessor
                         })
                         .Select(ConvertPath).ToList();
 
+                    var executablePath = FindPythonPath(program);
+                    
+                    // 检查可执行文件是否存在
+                    if (!File.Exists(executablePath))
+                    {
+                        var errorMsg = $"Agent 可执行文件不存在: {executablePath}";
+                        LoggerHelper.Error(errorMsg);
+                        ToastHelper.Error(LangKeys.AgentStartFailed.ToLocalization(), errorMsg, duration: 10);
+                        throw new FileNotFoundException(errorMsg, executablePath);
+                    }
+
                     var startInfo = new ProcessStartInfo
                     {
-                        FileName = FindPythonPath(program),
+                        FileName = executablePath,
                         WorkingDirectory = AppContext.BaseDirectory,
                         Arguments = $"{(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id}",
                         UseShellExecute = false,
@@ -1460,11 +1456,11 @@ public class MaaProcessor
     // 防止 interface 加载失败时 Toast 重复显示
     private static bool _interfaceLoadErrorShown = false;
 
-    public static (string Key, string Fallback, string Version, string CustomTitle, string CustomFallback, string? error) ReadInterface()
+    public static (string Key, string Fallback, string Version, string CustomTitle, string CustomFallback) ReadInterface()
     {
         if (CheckInterface(out string name, out string back, out string version, out string customTitle, out var fallBack))
         {
-            return (name, back, version, customTitle, fallBack, null);
+            return (name, back, version, customTitle, fallBack);
         }
 
         var interfacePath = GetInterfaceFilePath() ?? Path.Combine(AppContext.BaseDirectory, "interface.json");
@@ -1499,10 +1495,9 @@ public class MaaProcessor
                             _interfaceLoadErrorShown = true;
                             error = LangKeys.FileLoadFailed.ToLocalizationFormatted(false, interfaceFileName);
                             var errorDetail = LangKeys.FileLoadFailedDetail.ToLocalizationFormatted(false, interfaceFileName);
-                            // 使用 LoggerHelper 确保日志被记录（因为此时 UI 可能尚未完全初始化）
-                            LoggerHelper.Error($"{error} - {errorDetail}");
                             // 延迟添加 UI 日志，确保 TaskQueueViewModel 已初始化
-                            ToastHelper.Error(error, errorDetail, duration: 10);
+                            RootView.AddLog($"error:{error}");
+                            ToastHelper.Error(error, errorDetail, duration: 15);
                         }
                     }
                     catch (Exception e)
@@ -1512,8 +1507,10 @@ public class MaaProcessor
                         if (!_interfaceLoadErrorShown)
                         {
                             _interfaceLoadErrorShown = true;
+                            error = LangKeys.FileLoadFailed.ToLocalizationFormatted(false, interfaceFileName);
+                            RootView.AddLog($"error:{error}");
                             ToastHelper.Error(
-                                LangKeys.FileLoadFailed.ToLocalizationFormatted(false, interfaceFileName),
+                               error,
                                 e.Message,
                                 duration: 10);
                         }
@@ -1522,13 +1519,13 @@ public class MaaProcessor
                 new MaaInterfaceSelectOptionConverter(false));
 
 
-        return (Interface?.Label ?? string.Empty, Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.Title ?? string.Empty, Interface?.CustomTitle ?? string.Empty, error);
+        return (Interface?.Label ?? string.Empty, Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.Title ?? string.Empty, Interface?.CustomTitle ?? string.Empty);
 
     }
 
-    public bool InitializeData(out string? errors,Collection<DragItemViewModel>? dragItem = null)
+    public bool InitializeData(Collection<DragItemViewModel>? dragItem = null)
     {
-        var (name, back, version, customTitle, fallback, error) = ReadInterface();
+        var (name, back, version, customTitle, fallback) = ReadInterface();
         if ((!string.IsNullOrWhiteSpace(name) && !name.Equals("debug", StringComparison.OrdinalIgnoreCase)) || !string.IsNullOrWhiteSpace(back))
             Instances.RootViewModel.ShowResourceKeyAndFallBack(name, back);
         if (!string.IsNullOrWhiteSpace(version) && !version.Equals("debug", StringComparison.OrdinalIgnoreCase))
@@ -1546,7 +1543,6 @@ public class MaaProcessor
             TasksSource.Clear();
             LoadTasks(Interface.Task ?? new List<MaaInterface.MaaInterfaceTask>(), dragItem);
         }
-        errors = error;
         return LoadTask();
     }
 
@@ -2510,7 +2506,7 @@ public class MaaProcessor
 
     public void Start(bool onlyStart = false, bool checkUpdate = false)
     {
-        if (InitializeData(out _))
+        if (InitializeData())
         {
             var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList().FindAll(task => task.IsChecked || task.IsCheckedWithNull == null);
             StartTask(tasks, onlyStart, checkUpdate);
@@ -2519,7 +2515,7 @@ public class MaaProcessor
 
     public void Start(List<DragItemViewModel> dragItemViewModels, bool onlyStart = false, bool checkUpdate = false)
     {
-        if (InitializeData(out _))
+        if (InitializeData())
         {
             var tasks = dragItemViewModels;
             StartTask(tasks, onlyStart, checkUpdate);
@@ -3080,12 +3076,30 @@ public class MaaProcessor
     {
         if (!_agentStarted)
         {
-            _agentProcess?.Kill();
-            _agentProcess?.Dispose();
-            _agentProcess = null;
+            SafeKillAgentProcess();
         }
         _emulatorCancellationTokenSource?.SafeCancel();
         CancellationTokenSource.SafeCancel();
+    }
+
+    /// <summary>
+    /// 安全地终止 Agent 进程
+    /// </summary>
+    private void SafeKillAgentProcess()
+    {
+        try
+        {
+            if (_agentProcess is { HasExited: false })
+            {
+                _agentProcess.Kill();
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // 进程未启动或已退出，忽略
+        }
+        _agentProcess?.Dispose();
+        _agentProcess = null;
     }
 
     private bool ShouldProcessStop(bool finished)

@@ -648,10 +648,10 @@ public partial class MaaInterface
 
     [JsonProperty("name")]
     public string? Name { get; set; }
-    
+
     [JsonProperty("label")]
     public string? Label { get; set; }
-    
+
     [JsonProperty("version")]
     public string? Version { get; set; }
 
@@ -716,7 +716,7 @@ public partial class MaaInterface
     [JsonProperty("license")]
     public string? License { get; set; }
 
-    
+
     /// <summary>
     /// 替换单个字符串中的 {PROJECT_DIR} 占位符，并标准化为当前系统的路径格式
     /// </summary>
@@ -736,7 +736,6 @@ public partial class MaaInterface
         string safeReplacement = replacement ?? string.Empty;
 
         string result;
-
         // 步骤1：检查是否包含 {PROJECT_DIR} 占位符
         if (input.Contains("{PROJECT_DIR}"))
         {
@@ -748,7 +747,7 @@ public partial class MaaInterface
             // 无占位符
             if (checkIfPath)
             {
-                    // 不是路径，原样返回
+                // 不是路径，原样返回
                 return input;
             }
             else

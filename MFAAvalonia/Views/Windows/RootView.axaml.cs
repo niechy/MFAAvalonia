@@ -93,9 +93,7 @@ public partial class RootView : SukiWindow
         };
         if (Program.IsNewInstance)
         {
-            MaaProcessor.Instance.InitializeData(out var errors);
-            if (!string.IsNullOrWhiteSpace(errors))
-                AddLog(errors, Brushes.OrangeRed, changeColor: false);
+            MaaProcessor.Instance.InitializeData();
         }
     }
 
