@@ -6,6 +6,7 @@ using MFAAvalonia.Extensions;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
 using SukiUI.Dialogs;
+using System;
 using System.Linq;
 
 namespace MFAAvalonia.ViewModels.Windows;
@@ -41,7 +42,7 @@ public partial class RootViewModel : ViewModelBase
     }
 
     [ObservableProperty] private string? _windowUpdateInfo = "";
-    
+
     [ObservableProperty] private string? _resourceName;
 
     [ObservableProperty] private bool _isResourceNameVisible;
@@ -54,7 +55,8 @@ public partial class RootViewModel : ViewModelBase
 
     [ObservableProperty] private bool _lockController;
 
-    [ObservableProperty] private bool _isDebugMode = ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false)
+    [ObservableProperty]
+    private bool _isDebugMode = ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false)
         || ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false)
         || ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false);
     private bool _shouldTip = true;
@@ -98,23 +100,27 @@ public partial class RootViewModel : ViewModelBase
     {
         ResourceName = name;
         IsResourceNameVisible = true;
-        
+
     }
-    
-    public void ShowResourceKeyAndFallBack(string? key,string? fallback)
+
+    public void ShowResourceKeyAndFallBack(string? key, string? fallback)
     {
         _resourceNameKey = key ?? string.Empty;
-        _resourceFallbackKey = fallback?? string.Empty;
+        _resourceFallbackKey = fallback ?? string.Empty;
         UpdateName();
-        LanguageHelper.LanguageChanged += (_,__) => UpdateName();
+        LanguageHelper.LanguageChanged += (_, __) => UpdateName();
         IsResourceNameVisible = true;
     }
-    
+
     public void UpdateName()
     {
-        ResourceName = LanguageHelper.GetLocalizedDisplayName(_resourceNameKey, _resourceFallbackKey);
+        var result = LanguageHelper.GetLocalizedDisplayName(_resourceNameKey, _resourceFallbackKey);
+        if (result.Equals("debug", StringComparison.OrdinalIgnoreCase))
+            IsResourceNameVisible = false;
+        else
+            ResourceName = result;
     }
-    
+
     public void ShowResourceVersion(string version)
     {
         version = version.StartsWith("v") ? version : "v" + version;
@@ -127,25 +133,25 @@ public partial class RootViewModel : ViewModelBase
         IsCustomTitleVisible = true;
         IsResourceNameVisible = false;
     }
-    
-    public void ShowCustomTitleAndFallBack(string? key,string? fallback)
+
+    public void ShowCustomTitleAndFallBack(string? key, string? fallback)
     {
-        _customTitleKey = key?? string.Empty;
-        _customTitleFallbackKey = fallback?? string.Empty;
+        _customTitleKey = key ?? string.Empty;
+        _customTitleFallbackKey = fallback ?? string.Empty;
         UpdateCustomTitle();
-        LanguageHelper.LanguageChanged += (_,__) => UpdateCustomTitle();
+        LanguageHelper.LanguageChanged += (_, __) => UpdateCustomTitle();
         if (!string.IsNullOrWhiteSpace(CustomTitle))
         {
             IsCustomTitleVisible = true;
             IsResourceNameVisible = false;
         }
     }
-    
+
     public void UpdateCustomTitle()
     {
-        CustomTitle = LanguageHelper.GetLocalizedDisplayName(_customTitleKey,_customTitleFallbackKey);
+        CustomTitle = LanguageHelper.GetLocalizedDisplayName(_customTitleKey, _customTitleFallbackKey);
     }
-    
+
     [RelayCommand]
     public void ToggleVisible()
     {

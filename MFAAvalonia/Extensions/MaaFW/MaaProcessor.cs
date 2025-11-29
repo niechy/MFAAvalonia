@@ -808,7 +808,7 @@ public class MaaProcessor
                         .Select(ConvertPath).ToList();
 
                     var executablePath = FindPythonPath(program);
-                    
+
                     // 检查可执行文件是否存在
                     if (!File.Exists(executablePath))
                     {
