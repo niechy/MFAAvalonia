@@ -19,12 +19,6 @@ namespace MFAAvalonia;
 
 sealed class Program
 {
-    // Windows API：分配控制台窗口
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool AllocConsole();
-
-
     public static Dictionary<string, string> ParseArguments(string[] args)
     {
         var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -272,113 +266,6 @@ sealed class Program
             return null;
         }
     }
-
-    /// <summary>
-    /// 扫描所有已加载的 assembly，读取它们的 DllImport 声明，建立库名到 libs 文件的映射
-    /// </summary>
-    private static Dictionary<string, string> BuildLibsLibraryMapFromAssemblies(string libsPath)
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        try
-        {
-            if (!Directory.Exists(libsPath))
-                return map;
-
-            // 获取 libs 文件夹中的所有文件（包括 .so/.dylib/.dll）
-            var directoryInfo = new DirectoryInfo(libsPath);
-            var allFiles = directoryInfo.GetFiles()
-                .Where(f => f.Extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) ||
-                           f.Extension.Equals(".so", StringComparison.OrdinalIgnoreCase) ||
-                           f.Extension.Equals(".dylib", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            // 建立文件名到文件路径的映射（用于快速查找）
-            var fileNameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var fileInfo in allFiles)
-            {
-                // 使用完整文件名作为键
-                fileNameMap[fileInfo.Name] = fileInfo.FullName;
-                // 也使用不带扩展名的文件名作为键
-                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileInfo.Name);
-                if (!fileNameMap.ContainsKey(fileNameWithoutExt))
-                {
-                    fileNameMap[fileNameWithoutExt] = fileInfo.FullName;
-                }
-            }
-
-            // 扫描所有已加载的 assembly
-            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    // 读取 assembly 中所有带有 DllImport 属性的方法
-                    var dllImportMethods = GetDllImportMethods(assembly);
-
-                    foreach (var (method, dllImportName) in dllImportMethods)
-                    {
-                        if (string.IsNullOrEmpty(dllImportName))
-                            continue;
-
-                        // 精确匹配：直接查找完全匹配的文件名（不做任何推断）
-                        if (fileNameMap.TryGetValue(dllImportName, out string? matchedFile))
-                        {
-                            // 建立映射：assembly 声明的库名 -> libs 中的文件路径
-                            map[dllImportName] = matchedFile;
-                        }
-                    }
-                }
-                catch
-                {
-                    // 某些 assembly 可能无法读取，忽略
-                }
-            }
-        }
-        catch
-        {
-            // 发生错误，返回已建立的映射
-        }
-
-        return map;
-    }
-
-    /// <summary>
-    /// 获取 assembly 中所有带有 DllImport 属性的方法及其声明的库名
-    /// </summary>
-    private static List<(MethodInfo method, string libraryName)> GetDllImportMethods(Assembly assembly)
-    {
-        var result = new List<(MethodInfo, string)>();
-
-        try
-        {
-            foreach (Type type in assembly.GetTypes())
-            {
-                try
-                {
-                    foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance))
-                    {
-                        var dllImportAttr = method.GetCustomAttribute<DllImportAttribute>();
-                        if (dllImportAttr != null && !string.IsNullOrEmpty(dllImportAttr.Value))
-                        {
-                            result.Add((method, dllImportAttr.Value));
-                        }
-                    }
-                }
-                catch
-                {
-                    // 某些类型可能无法访问，忽略
-                }
-            }
-        }
-        catch
-        {
-            // 发生错误，返回已找到的结果
-        }
-
-        return result;
-    }
-
-
 
     /// <summary>
     /// 清理同目录中与 libs 文件夹重复的动态库文件，防止新旧版本冲突
