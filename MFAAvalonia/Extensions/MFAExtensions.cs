@@ -66,10 +66,8 @@ public static class MFAExtensions
                 // 返回 Markdown 超链接格式
                 return $"[{content}]({content})";
             }
-            Console.WriteLine("file:" + input + ",dir:" + projectDir);
             // 3. 判断是否为文件路径
             var filePath = MaaInterface.ReplacePlaceholder(content, projectDir);
-            Console.WriteLine("filePath:" + filePath);
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
                 return await File.ReadAllTextAsync(filePath);
