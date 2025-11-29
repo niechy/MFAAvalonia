@@ -132,7 +132,7 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
 
 
 ### 实验性功能
-建议使用[IntefaceV2](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-ProjectInterfaceV2%E5%8D%8F%E8%AE%AE.md)添加的input类型
+建议使用[InterfaceV2](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-ProjectInterfaceV2%E5%8D%8F%E8%AE%AE.md)添加的input类型
 - `MFAAvalonia` 为interface和interface的task新增了`advanced`字段。
 - `advanced`字段的用法类似于option，其功能类似于支持通过UI输入框让用户自行编辑功能的`pipeline_override`。
 - 下面是使用`advanced`的例子
