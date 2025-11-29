@@ -116,13 +116,11 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
 
 ### `doc`字符串格式：
 
-#### 使用类似`[color:red]`文本内容`[/color]`的标记来定义文本样式。
+#### 支持大部分Markdown和部分HTML, 另外可以使用类似`[color:red]`文本内容`[/color]`的标记来定义文本样式。
 
 #### 支持的标记包括：
 
 - `[color:color_name]`：颜色，例如`[color:red]`。
-
--  ~~`[size:font_size]`：字号，例如`[size:20]`。~~
 
 - `[b]`：粗体。
 
@@ -132,10 +130,9 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
 
 - `[s]`：删除线。
 
-- `[align:left/center/right]`：居左，居中或者居右，只能在一整行中使用。
 
 ### 实验性功能
-
+建议使用[IntefaceV2](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-ProjectInterfaceV2%E5%8D%8F%E8%AE%AE.md)添加的input类型
 - `MFAAvalonia` 为interface和interface的task新增了`advanced`字段。
 - `advanced`字段的用法类似于option，其功能类似于支持通过UI输入框让用户自行编辑功能的`pipeline_override`。
 - 下面是使用`advanced`的例子
@@ -183,31 +180,8 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
 
 - 欢迎各位大佬贡献代码
 - `MFAAvalonia` 有interface多语言支持,在`interface.json`同目录下新建`lang`文件夹,里面内含`zh-cn.json`,`zh-tw.json`和`en-us.json`后，doc和任务的name和选项的name可以使用key来指代。MFAAvalonia会自动根据语言来读取文件的key对应的value。如果没有则默认为key
-- `MFAAvalonia` 会读取`resource`文件夹(不区分大小写)的`Announcement.md`作为公告，更新资源时会自动下载一份Changelog作为公告
+- `MFAAvalonia` 会读取`resource`文件夹(不区分大小写)中的`announcement`文件夹内的所有`.md`结尾的文件作为公告，更新资源时会自动下载一份Changelog作为公告
 - `MFAAvalonia` 可以通过启动参数`-c 配置名称`来指定以特定配置文件启动，无须后缀名`.json`
-
-**注：在MFA的v1.1.6版本中，移除了focus系列字段，改为any focus，原先的不再可用！**
-
-- `focus` : *string* | *object*  
-格式为
-  ```
-  "focus": {
-    "start": "任务开始",  注：*string* | *string[]*    
-    "succeeded": "任务成功",  注：*string* | *string[]* 
-    "failed": "任务失败", 注：*string* | *string[]* 
-    "toast": "弹窗提醒" 注：*string* 
-  }
-  ```
-  ```
-   "focus": "测试"
-  ```
-  等同于
-  ```
-  "focus": {
-    "start": "测试"
-  }
-    ```
-除了`toast`，其他的均支持使用类似`[color:red]`文本内容`[/color]`的标记来定义文本颜色。
 
 ## 许可证
 

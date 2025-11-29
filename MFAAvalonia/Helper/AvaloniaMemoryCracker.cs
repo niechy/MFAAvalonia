@@ -107,7 +107,7 @@ public class AvaloniaMemoryCracker : IDisposable
                 // 如果在多次清理后内存仍持续增长超过 50%，发出警告
                 if (growthRate > 0.5)
                 {
-                    LoggerHelper.Warning($"检测到潜在内存泄漏: 内存从 {firstMemory / (1024 * 1024)} MB 增长到 {lastMemory / (1024 * 1024)} MB (增长 {growthRate * 100:F1}%)");
+                    LoggerHelper.Debug($"检测到潜在内存泄漏: 内存从 {firstMemory / (1024 * 1024)} MB 增长到 {lastMemory / (1024 * 1024)} MB (增长 {growthRate * 100:F1}%)");
                 }
             }
         }
