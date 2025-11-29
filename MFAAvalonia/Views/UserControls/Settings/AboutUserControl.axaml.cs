@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using AvaloniaEdit.Highlighting;
 using MFAAvalonia.Helper;
 using MFAAvalonia.ViewModels.Windows;
+using MFAAvalonia.Views.Windows;
 
 namespace MFAAvalonia.Views.UserControls.Settings;
 
@@ -24,6 +25,15 @@ public partial class AboutUserControl : UserControl
     private void DisplayAnnouncement(object? sender, RoutedEventArgs e)
     {
        AnnouncementViewModel.CheckAnnouncement(true);
+    }
+    
+    private void ShowLicense_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ViewModels.Pages.SettingsViewModel;
+        if (viewModel != null && !string.IsNullOrEmpty(viewModel.ResourceLicense))
+        {
+            LicenseView.ShowLicense(viewModel.ResourceLicense);
+        }
     }
 }
 

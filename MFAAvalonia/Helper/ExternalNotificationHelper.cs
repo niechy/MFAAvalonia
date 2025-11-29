@@ -44,7 +44,7 @@ public static class ExternalNotificationHelper
                     );
                     break;
                 case Key.LarkKey:
-                    await Lark.SendAsync(
+                    await Lark.SendAsync(Instances.ExternalNotificationSettingsUserControlModel.LarkWebhookUrl,
                         Instances.ExternalNotificationSettingsUserControlModel.LarkId,
                         Instances.ExternalNotificationSettingsUserControlModel.LarkToken, message,
                         cancellationToken
@@ -240,8 +240,9 @@ public static class ExternalNotificationHelper
         private static MimeMessage CreateEmailMessage(string email, string info)
         {
             var mail = new MimeMessage();
-            mail.From.Add(new MailboxAddress("", email));
-            mail.To.Add(new MailboxAddress("", email));
+            // 使用 Parse 方法支持 "显示名称" <邮箱地址> 格式
+            mail.From.Add(MailboxAddress.Parse(email));
+            mail.To.Add(MailboxAddress.Parse(email));
             mail.Subject = info;
             mail.Body = new TextPart(MimeKit.Text.TextFormat.Plain)
             {
@@ -285,7 +286,7 @@ public static class ExternalNotificationHelper
 
     public static class Lark
     {
-        public async static Task<bool> SendAsync(string appId, string appSecret, string info, CancellationToken cancellationToken = default)
+        public async static Task<bool> SendAsync(string webhookUrl, string appId, string appSecret, string info, CancellationToken cancellationToken = default)
         {
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
             var sign = GenerateSignature(timestamp, appSecret);
@@ -298,13 +299,36 @@ public static class ExternalNotificationHelper
                     text = info
                 }
             };
-
+            var jsonContent = new StringContent(
+                JsonConvert.SerializeObject(message),
+                Encoding.UTF8,
+                "application/json"
+            );
             try
             {
                 using var client = VersionChecker.CreateHttpClientWithProxy();
+
+                // 分支1：如果webhookUrl不为空，直接使用该地址发送（通用WebHook）
+                if (!string.IsNullOrWhiteSpace(webhookUrl))
+                {
+                    if (!IsValidWebHookUrl(webhookUrl))
+                    {
+                        LoggerHelper.Warning($"传入的WebHook URL不合法：{webhookUrl}（仅支持http/https协议的绝对URL）");
+                    }
+                    else
+                    {
+                        var webhookResponse = await client.PostAsync(
+                            webhookUrl, // 直接使用传入的webhookUrl，无额外参数
+                            jsonContent,
+                            cancellationToken
+                        );
+                        return webhookResponse.IsSuccessStatusCode;
+                    }
+                }
+
                 var response = await client.PostAsync(
                     $"https://open.feishu.cn/open-apis/bot/v2/hook/{appId}?timestamp={timestamp}&sign={sign}",
-                    new StringContent(JsonConvert.SerializeObject(message), Encoding.UTF8, "application/json"),
+                    jsonContent,
                     cancellationToken
                 );
                 return response.IsSuccessStatusCode;
@@ -315,6 +339,19 @@ public static class ExternalNotificationHelper
                 return false;
             }
         }
+        
+        private static bool IsValidWebHookUrl(string url)
+        {
+            // 1. 验证是否为绝对URL（包含协议、域名/IP）
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            // 2. 仅允许http或https协议（WebHook通用要求，避免非法协议风险）
+            return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+        }
+        
         private static string GenerateSignature(string timestamp, string secret)
         {
             var stringToSign = $"{timestamp}\n{secret}";
@@ -467,8 +504,9 @@ public static class ExternalNotificationHelper
 
                 // 构建邮件消息
                 var message = new MimeMessage();
-                message.From.Add(new MailboxAddress("", fromAddress));
-                message.To.Add(new MailboxAddress("", toAddress));
+                // 使用 Parse 方法支持 "显示名称" <邮箱地址> 格式
+                message.From.Add(MailboxAddress.Parse(fromAddress));
+                message.To.Add(MailboxAddress.Parse(toAddress));
                 message.Subject = info;
                 message.Body = new TextPart("plain")
                 {

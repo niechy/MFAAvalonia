@@ -282,10 +282,10 @@ public partial class SukiTheme : Styles
             "en-US", new en_us()
         },
         {
-            "zh-Hant", new zh_hant()
+            "zh-CN", new zh_hans()
         },
         {
-            "zh-Hans", new zh_hans()
+            "zh-Hant", new zh_hant()
         }
     };
 

@@ -86,11 +86,75 @@ public class MaaInterfaceSelectOptionConverter(bool serializeAsStringArray) : Js
                         ["name"] = option.Name,
                         ["index"] = option.Index
                     };
+                    
+                    // 保存 input 类型的 Data 字典
+                    if (option.Data != null && option.Data.Count > 0)
+                    {
+                        obj["data"] = JObject.FromObject(option.Data);
+                    }
+                    
+                    // 递归保存子选项
+                    if (option.SubOptions != null && option.SubOptions.Count > 0)
+                    {
+                        var subArray = new JArray();
+                        foreach (var subOption in option.SubOptions)
+                        {
+                            var subObj = new JObject
+                            {
+                                ["name"] = subOption.Name,
+                                ["index"] = subOption.Index
+                            };
+                            
+                            if (subOption.Data != null && subOption.Data.Count > 0)
+                            {
+                                subObj["data"] = JObject.FromObject(subOption.Data);
+                            }
+                            
+                            // 递归处理嵌套子选项
+                            if (subOption.SubOptions != null && subOption.SubOptions.Count > 0)
+                            {
+                                subObj["sub_options"] = SerializeSubOptions(subOption.SubOptions);
+                            }
+                            
+                            subArray.Add(subObj);
+                        }
+                        obj["sub_options"] = subArray;
+                    }
+                    
                     array.Add(obj);
                 }
             }
 
             array.WriteTo(writer);
         }
+    }
+    
+    /// <summary>
+    /// 递归序列化子选项列表
+    /// </summary>
+    private static JArray SerializeSubOptions(List<MaaInterface.MaaInterfaceSelectOption> subOptions)
+    {
+        var array = new JArray();
+        foreach (var option in subOptions)
+        {
+            var obj = new JObject
+            {
+                ["name"] = option.Name,
+                ["index"] = option.Index
+            };
+            
+            if (option.Data != null && option.Data.Count > 0)
+            {
+                obj["data"] = JObject.FromObject(option.Data);
+            }
+            
+            if (option.SubOptions != null && option.SubOptions.Count > 0)
+            {
+                obj["sub_options"] = SerializeSubOptions(option.SubOptions);
+            }
+            
+            array.Add(obj);
+        }
+        return array;
     }
 }

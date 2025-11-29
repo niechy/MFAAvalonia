@@ -92,7 +92,9 @@ public partial class RootView : SukiWindow
             });
         };
         if (Program.IsNewInstance)
+        {
             MaaProcessor.Instance.InitializeData();
+        }
     }
 
     private bool _isInitializing = true;
@@ -208,15 +210,28 @@ public partial class RootView : SukiWindow
     {
         if (Program.IsNewInstance)
         {
-            if (!MaaProcessor.Instance.IsV2)
+            foreach (var rfile in Directory.EnumerateFiles(AppContext.BaseDirectory, "*.backupMFA", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(rfile, FileAttributes.Normal);
+                    LoggerHelper.Info("Deleting file: " + rfile);
+                    File.Delete(rfile);
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Error($"文件删除失败: {rfile}", ex);
+                }
+            }
+
+            if (!MaaProcessor.Instance.IsV3)
             {
                 DispatcherHelper.RunOnMainThread(
                     (Action)(async () =>
                     {
                         await Task.Delay(300);
-
-                       if (!ConfigurationManager.Current.ContainsKey(ConfigurationKeys.CurrentController))
-                           Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
+                        if (!ConfigurationManager.Current.ContainsKey(ConfigurationKeys.CurrentController))
+                            Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
                         if (!Convert.ToBoolean(GlobalConfiguration.GetValue(ConfigurationKeys.NoAutoStart, bool.FalseString))
                             && ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("Startup", StringComparison.OrdinalIgnoreCase))
                         {
@@ -252,7 +267,7 @@ public partial class RootView : SukiWindow
                         DragItemViewModel tempTask = null;
                         foreach (var task in Instances.TaskQueueViewModel.TaskItemViewModels)
                         {
-                            if (task.InterfaceItem?.Advanced is { Count: > 0 } || task.InterfaceItem?.Option is { Count: > 0 } || task.InterfaceItem?.Document != null || task.InterfaceItem?.Repeatable == true)
+                            if (task.InterfaceItem?.Advanced is { Count: > 0 } || task.InterfaceItem?.Option is { Count: > 0 } || !string.IsNullOrWhiteSpace(task.InterfaceItem?.Description) || task.InterfaceItem?.Document != null || task.InterfaceItem?.Repeatable == true)
                             {
                                 tempTask ??= task;
                             }
@@ -286,7 +301,7 @@ public partial class RootView : SukiWindow
                             Hide();
                         }
                     });
-   
+
                 }, name: "公告和最新版本检测");
             }
             else

@@ -66,7 +66,13 @@ public static class GlobalHotkeyService
     /// </summary>
     public static void Shutdown()
     {
-        _hook?.Dispose();
+        // 先取消事件订阅，避免内存泄漏
+        if (_hook != null)
+        {
+            _hook.KeyPressed -= HandleKeyEvent;
+            _hook.Dispose();
+            _hook = null;
+        }
         _commands.Clear();
         IsStopped = true;
     }
@@ -113,23 +119,78 @@ public static class GlobalHotkeyService
             Key.OemCloseBrackets => KeyCode.VcCloseBracket, // 右括号（]）
             Key.OemPipe => KeyCode.VcBackslash, // 竖线（|）
             Key.OemTilde => KeyCode.VcBackQuote, // 波浪号（~）
-            Key.NumPad0 => KeyCode.VcO,
-            Key.NumPad1 => KeyCode.Vc1,
-            Key.NumPad2 => KeyCode.Vc2,
-            Key.NumPad3 => KeyCode.Vc3,
-            Key.NumPad4 => KeyCode.Vc4,
-            Key.NumPad5 => KeyCode.Vc5,
-            Key.NumPad6 => KeyCode.Vc6,
-            Key.NumPad7 => KeyCode.Vc7,
-            Key.NumPad8 => KeyCode.Vc8,
-            Key.NumPad9 => KeyCode.Vc9,
-            // 功能键（可选补充，避免遗漏）
+            // 小键盘数字键
+            Key.NumPad0 => KeyCode.VcNumPad0,
+            Key.NumPad1 => KeyCode.VcNumPad1,
+            Key.NumPad2 => KeyCode.VcNumPad2,
+            Key.NumPad3 => KeyCode.VcNumPad3,
+            Key.NumPad4 => KeyCode.VcNumPad4,
+            Key.NumPad5 => KeyCode.VcNumPad5,
+            Key.NumPad6 => KeyCode.VcNumPad6,
+            Key.NumPad7 => KeyCode.VcNumPad7,
+            Key.NumPad8 => KeyCode.VcNumPad8,
+            Key.NumPad9 => KeyCode.VcNumPad9,
+
+            // 小键盘运算键
+            Key.Add => KeyCode.VcNumPadAdd,           // 小键盘加号
+            Key.Subtract => KeyCode.VcNumPadSubtract, // 小键盘减号
+            Key.Multiply => KeyCode.VcNumPadMultiply, // 小键盘乘号
+            Key.Divide => KeyCode.VcNumPadDivide,     // 小键盘除号
+            Key.Decimal => KeyCode.VcNumPadSeparator, // 小键盘小数点
+
+            // F1-F12 功能键
+            Key.F1 => KeyCode.VcF1,
+            Key.F2 => KeyCode.VcF2,
+            Key.F3 => KeyCode.VcF3,
+            Key.F4 => KeyCode.VcF4,
+            Key.F5 => KeyCode.VcF5,
+            Key.F6 => KeyCode.VcF6,
+            Key.F7 => KeyCode.VcF7,
+            Key.F8 => KeyCode.VcF8,
+            Key.F9 => KeyCode.VcF9,
+            Key.F10 => KeyCode.VcF10,
+            Key.F11 => KeyCode.VcF11,
+            Key.F12 => KeyCode.VcF12,
+            Key.F13 => KeyCode.VcF13,
+            Key.F14 => KeyCode.VcF14,
+            Key.F15 => KeyCode.VcF15,
+            Key.F16 => KeyCode.VcF16,
+            Key.F17 => KeyCode.VcF17,
+            Key.F18 => KeyCode.VcF18,
+            Key.F19 => KeyCode.VcF19,
+            Key.F20 => KeyCode.VcF20,
+            Key.F21 => KeyCode.VcF21,
+            Key.F22 => KeyCode.VcF22,
+            Key.F23 => KeyCode.VcF23,
+            Key.F24 => KeyCode.VcF24,
+
+            // 方向键
+            Key.Up => KeyCode.VcUp,
+            Key.Down => KeyCode.VcDown,
+            Key.Left => KeyCode.VcLeft,
+            Key.Right => KeyCode.VcRight,
+
+            // 导航键
+            Key.Home => KeyCode.VcHome,
+            Key.End => KeyCode.VcEnd,
+            Key.PageUp => KeyCode.VcPageUp,
+            Key.PageDown => KeyCode.VcPageDown,
+            Key.Insert => KeyCode.VcInsert,
+            Key.Delete => KeyCode.VcDelete,
+
+            // 常用控制键
             Key.Enter => KeyCode.VcEnter,
             Key.Space => KeyCode.VcSpace,
             Key.Tab => KeyCode.VcTab,
             Key.Back => KeyCode.VcBackspace,
+            Key.Escape => KeyCode.VcEscape,
+            Key.CapsLock => KeyCode.VcCapsLock,
+            Key.NumLock => KeyCode.VcNumLock,
+            Key.Scroll => KeyCode.VcScrollLock,
+            Key.Pause => KeyCode.VcPause,
+            Key.PrintScreen => KeyCode.VcPrintScreen,
 
-            // 其他键（字母、功能键等）保持原有逻辑
+            // 其他键（字母等）保持原有逻辑
             _ => ErrorHandle(gesture)
         };
 

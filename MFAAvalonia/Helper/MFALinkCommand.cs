@@ -130,6 +130,7 @@ public class MFALinkCommand : ICommand
             return true;
         return false;
     }
+    
     private bool IsUrl(string url)
     {
         // 网络链接（http/https/ftp等）

@@ -68,7 +68,7 @@
         </suki:GlassCard>
         <suki:GlassCard Padding="25,15,25,15">
             <StackPanel Spacing="10">
-                <DockPanel>
+                <DockPanel IsVisible="False">
                     <ComboBox
                         DockPanel.Dock="Right"
                         ItemsSource="{Binding UIUpdateChannelList}"
@@ -230,7 +230,7 @@
                             VerticalAlignment="Center" />
                     </StackPanel>
                 </DockPanel>
-                <DockPanel>
+                <DockPanel IsVisible="False">
                     <ToggleSwitch
                         Classes="Switch"
                         DockPanel.Dock="Right"
@@ -249,7 +249,7 @@
         </suki:GlassCard>
         <suki:GlassCard Padding="25,15,25,15">
             <StackPanel Spacing="15">
-                <DockPanel>
+                <DockPanel IsVisible="False">
                     <Button
                         BorderBrush="Transparent"
                         BorderThickness="0"
@@ -293,7 +293,7 @@
                             VerticalAlignment="Center" />
                     </StackPanel>
                 </DockPanel>
-                <DockPanel>
+                <DockPanel IsVisible="False">
                     <Button
                         BorderBrush="Transparent"
                         BorderThickness="0"
@@ -359,7 +359,8 @@
                             VerticalAlignment="Center" />
                     </StackPanel>
                 </DockPanel>
-                <DockPanel IsVisible="{calcBinding:Binding 'DownloadSourceIndex==1'}">
+                <!-- <DockPanel IsVisible="{calcBinding:Binding 'DownloadSourceIndex==1'}"> -->
+                <DockPanel IsVisible="False">
                     <Button
                         BorderBrush="Transparent"
                         BorderThickness="0"

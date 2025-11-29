@@ -48,6 +48,7 @@ public static partial class Instances
                         {
                             // 设计时核心逻辑：接口自动匹配实现类，普通类直接创建
                             object designInstance;
+                           
                             if (serviceType.IsInterface)
                             {
                                 // 1. 接口类型：去掉"I"前缀，查找对应的实现类
@@ -298,7 +299,7 @@ public static partial class Instances
     }
 
 
-    private static string GetExecutablePath()
+    public static string GetExecutablePath()
     {
         // 兼容.NET 5+环境
         return Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? AppContext.BaseDirectory;

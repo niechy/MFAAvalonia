@@ -9,19 +9,64 @@ using System.Text.RegularExpressions;
 
 namespace MFAAvalonia.Extensions.MaaFW;
 
+/// <summary>
+/// Advanced 高级配置项定义（支持通过 UI 输入框让用户自行编辑 pipeline_override）
+/// </summary>
 public class MaaInterfaceAdvancedOption
 {
-    [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("field")]
+    /// <summary>配置项唯一名称标识符</summary>
+    [JsonIgnore]
+    public string? Name { get; set; }
+
+    /// <summary>字段名列表（支持单个字符串或数组）</summary>
+    [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+    [JsonProperty("field")]
     public List<string>? Field;
-    [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("type")]
+
+    /// <summary>字段类型列表: "string", "int", "float", "bool"</summary>
+    [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+    [JsonProperty("type")]
     public List<string>? Type;
-    [JsonConverter(typeof(GenericSingleOrListConverter<JToken>))] 
+
+    /// <summary>默认值列表</summary>
+    [JsonConverter(typeof(GenericSingleOrListConverter<JToken>))]
     [JsonProperty("default")]
     public List<JToken>? Default;
-    [JsonProperty("pipeline_override")] public Dictionary<string, Dictionary<string, JToken>>? PipelineOverride;
+
+    /// <summary>管道覆盖配置（支持 {field} 变量替换）</summary>
+    [JsonProperty("pipeline_override")]
+    public Dictionary<string, Dictionary<string, JToken>>? PipelineOverride;
+
+    /// <summary>显示标签，支持国际化（以$开头）</summary>
+    [JsonProperty("label")]
+    public string? Label { get; set; }
+
+    /// <summary>详细描述，支持 Markdown</summary>
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    /// <summary>图标文件路径</summary>
+    [JsonProperty("icon")]
+    public string? Icon { get; set; }
+
+    /// <summary>文档说明（旧版兼容）</summary>
     [JsonProperty("doc")]
     [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
     public List<string>? Document { get; set; }
+
+    /// <summary>正则表达式验证规则（按字段名索引）</summary>
+    [JsonProperty("verify")]
+    [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+    public List<string>? Verify { get; set; }
+
+    /// <summary>验证失败提示信息（按字段名索引）</summary>
+    [JsonProperty("pattern_msg")]
+    [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+    public List<string>? PatternMsg { get; set; }
+
+    /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
+    [JsonIgnore]
+    public string DisplayName => Label ?? Name ?? string.Empty;
     private Dictionary<string, Type> GetTypeMap()
     {
         var typeMap = new Dictionary<string, Type>();
@@ -242,5 +287,92 @@ public class MaaInterfaceAdvancedOption
             }
         }
         return newObj;
+    }
+
+    /// <summary>
+    /// 验证用户输入是否合法
+    /// </summary>
+    /// <param name="fieldName">字段名</param>
+    /// <param name="value">用户输入值</param>
+    /// <returns>验证结果和错误消息</returns>
+    public (bool IsValid, string? ErrorMessage) ValidateInput(string fieldName, string value)
+    {
+        if (Field == null) return (true, null);
+
+        var fieldIndex = Field.IndexOf(fieldName);
+        if (fieldIndex < 0) return (true, null);
+
+        // 获取验证规则
+        string? verifyPattern = null;
+        if (Verify != null && fieldIndex < Verify.Count)
+        {
+            verifyPattern = Verify[fieldIndex];
+        }
+        else if (Verify != null && Verify.Count > 0)
+        {
+            verifyPattern = Verify[0]; // 如果只有一个，应用于所有字段
+        }
+
+        if (string.IsNullOrEmpty(verifyPattern)) return (true, null);
+
+        try
+        {
+            var regex = new Regex(verifyPattern);
+            if (!regex.IsMatch(value))
+            {
+                // 获取错误消息
+                string? errorMsg = null;
+                if (PatternMsg != null && fieldIndex < PatternMsg.Count)
+                {
+                    errorMsg = PatternMsg[fieldIndex];
+                }
+                else if (PatternMsg != null && PatternMsg.Count > 0)
+                {
+                    errorMsg = PatternMsg[0];
+                }
+
+                return (false, errorMsg ?? $"字段 {fieldName} 输入格式不正确");
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"正则表达式验证失败: {ex.Message}");
+            return (true, null); // 正则出错时放行
+        }
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// 获取字段的默认值
+    /// </summary>
+    public string? GetDefaultValue(string fieldName)
+    {
+        if (Field == null || Default == null) return null;
+
+        var fieldIndex = Field.IndexOf(fieldName);
+        if (fieldIndex < 0 || fieldIndex >= Default.Count) return null;
+
+        var defaultToken = Default[fieldIndex];
+        return defaultToken?.ToString();
+    }
+
+    /// <summary>
+    /// 获取字段的类型
+    /// </summary>
+    public string GetFieldType(string fieldName)
+    {
+        if (Field == null || Type == null) return "string";
+
+        var fieldIndex = Field.IndexOf(fieldName);
+        if (fieldIndex < 0) return "string";
+
+        if (fieldIndex < Type.Count)
+        {
+            return Type[fieldIndex]?.ToLower() ?? "string";
+        }
+        
+        // 如果只有一个类型，应用于所有字段
+        return Type.Count > 0 ? Type[0]?.ToLower() ?? "string" : "string";
     }
 }

@@ -1,4 +1,6 @@
 ﻿using Lang.Avalonia;
+using MFAAvalonia.Helper;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,251 +18,172 @@ namespace MFAAvalonia.Localization;
 /// </summary>
 public class MFAResxLangPlugin : ILangPlugin
 {
-    // 资源管理器字典（资源基础名称 -> 资源管理器）
-    private Dictionary<string, ResourceManager>? _resourceManagers;
-    // 默认文化
-    private CultureInfo? _defaultCulture;
-    // 配置：资源所在的命名空间前缀（适配Assets.Localization路径）
-    public string ResourceNamespacePrefix { get; set; } = "MFAAvalonia.Assets.Localization";
-
-    // 存储加载的资源（文化名称 -> 语言资源）
     public Dictionary<string, LocalizationLanguage> Resources { get; } = new();
+    public string Mark { get; set; } = "MFAAvalonia.Assets.Localization";
+    private Dictionary<Type, ResourceManager>? _resourceManagers;
 
-    // 标记（原插件兼容字段，此处无用但保留接口实现）
-    public string Mark { get; set; } = "i18n";
+    private CultureInfo? _defaultCulture;
 
-    // 当前文化
     public CultureInfo Culture
     {
-        get => _culture ?? CultureInfo.InvariantCulture;
+        get => field ?? CultureInfo.InvariantCulture;
         set
         {
-            _culture = value;
-            Sync(value); // 切换文化时同步资源
+            field = value;
+            Sync(value);
         }
     }
 
-    private CultureInfo? _culture;
-
-    /// <summary>
-    /// 加载资源（指定默认文化）
-    /// </summary>
+    public bool IsLoaded { get; set; } = false;
     public void Load(CultureInfo cultureInfo)
     {
         _defaultCulture = cultureInfo;
-        _culture = cultureInfo;
+        Culture = cultureInfo;
+        _resourceManagers = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(assembly =>
+                assembly.GetTypes()
+                    .Where(type => type.FullName!.Contains(Mark, StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(
+                        type => type,
+                        type => type.GetProperty(nameof(ResourceManager),
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+                            ?.GetValue(null, null) as ResourceManager)
+            )
+            .Where(pair => pair.Value != null)
+            .ToDictionary(pair => pair.Key, pair => pair.Value!);
 
-        // 加载所有程序集中符合命名空间前缀的资源
-        LoadResourceManagers();
-        Sync(_culture);
+        Sync(Culture);
+        IsLoaded = true;
     }
 
-    /// <summary>
-    /// 追加加载资源程序集
-    /// </summary>
-    public void AddResource(params Assembly[]? assemblies)
+    public void AddResource(params Assembly[] assemblies)
     {
-        if (assemblies == null || assemblies.Length == 0) return;
-
-        // 从指定程序集中加载资源
-        var newManagers = GetResourceManagersFromAssemblies(assemblies);
-        if (newManagers == null || newManagers.Count == 0) return;
-
-        if (_resourceManagers == null)
-            _resourceManagers = new Dictionary<string, ResourceManager>();
-
-        // 合并新资源（去重）
-        foreach (var (baseName, manager) in newManagers)
+        var dicts = assemblies.SelectMany(assembly =>
+                assembly.GetTypes()
+                    .Where(type => type.FullName!.Contains(Mark, StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(
+                        type => type,
+                        type => type.GetProperty(nameof(ResourceManager),
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+                            ?.GetValue(null, null) as ResourceManager)
+            )
+            .Where(pair => pair.Value != null)
+            .ToDictionary(pair => pair.Key, pair => pair.Value!);
+        if (dicts.Count != 0)
         {
-            if (!_resourceManagers.ContainsKey(baseName))
-                _resourceManagers[baseName] = manager;
+            foreach (KeyValuePair<Type, ResourceManager> pair in dicts)
+            {
+                if (!_resourceManagers!.ContainsKey(pair.Key))
+                {
+                    _resourceManagers.Add(pair.Key, pair.Value);
+                }
+            }
         }
 
-        Sync(_culture);
+        Sync(Culture);
     }
 
-    /// <summary>
-    /// 获取支持的语言（简化实现，从资源中提取）
-    /// </summary>
-    public List<LocalizationLanguage>? GetLanguages()
-    {
-        return Resources.Values.Distinct().ToList();
-    }
+    public List<LocalizationLanguage>? GetLanguages() =>
+        throw new NotSupportedException("This plugin does not support the current interface for the time being.");
 
-    /// <summary>
-    /// 获取指定键的资源
-    /// </summary>
     public string? GetResource(string key, string? cultureName = null)
     {
-        var targetCulture = string.IsNullOrWhiteSpace(cultureName)
-            ? Culture
-            : new CultureInfo(cultureName);
+        var culture = Culture.Name;
 
-        // 1. 尝试从目标文化获取
-        if (TryGetResource(key, targetCulture.Name, out var value))
-            return value;
+        string? Get()
+        {
+            if (Resources.TryGetValue(culture, out var currentLanguages)
+                && currentLanguages.Languages.TryGetValue(key, out var resource))
+            {
+                return resource;
+            }
 
-        // 2. 尝试从默认文化获取
-        if (TryGetResource(key, _defaultCulture?.Name ?? string.Empty, out value))
-            return value;
+            return default;
+        }
 
-        // 3. 尝试从不变文化（默认资源）获取
-        if (TryGetResource(key, CultureInfo.InvariantCulture.Name, out value))
-            return value;
+        if (!string.IsNullOrWhiteSpace(cultureName))
+        {
+            culture = cultureName;
+        }
 
-        // 4. 未找到返回键本身
+        // bool isFirst = true;
+        var resource = Get();
+        if (!string.IsNullOrWhiteSpace(resource))
+        {
+            return resource;
+        }
+
+        Sync(new CultureInfo(culture));
+        resource = Get();
+        if (!string.IsNullOrWhiteSpace(resource))
+        {
+            return resource;
+        }
+
+        culture = _defaultCulture?.Name ?? "";
+        resource = Get();
+        if (!string.IsNullOrWhiteSpace(resource))
+        {
+            return resource;
+        }
+
         return key;
     }
 
-    /// <summary>
-    /// 同步指定文化的资源到字典
-    /// </summary>
-    private void Sync(CultureInfo? cultureInfo)
+
+    private void Sync(CultureInfo cultureInfo)
     {
-        if (cultureInfo == null || _resourceManagers == null || _resourceManagers.Count == 0)
+        if (_resourceManagers == null || _resourceManagers.Count == 0)
+        {
             return;
+        }
+
+        IEnumerable<DictionaryEntry> GetResources(ResourceManager resourceManager)
+        {
+            var baseEntries = resourceManager.GetResourceSet(CultureInfo.InvariantCulture, true, true)
+                ?.OfType<DictionaryEntry>();
+            var cultureEntries = resourceManager.GetResourceSet(cultureInfo, true, true)?.OfType<DictionaryEntry>();
+            if (cultureEntries == null || baseEntries == null)
+            {
+                yield break;
+            }
+
+            foreach (var entry in cultureEntries
+                         .Concat(baseEntries)
+                         .GroupBy(entry => entry.Key)
+                         .Select(entries => entries.First()))
+            {
+                yield return entry;
+            }
+        }
 
         var cultureName = cultureInfo.Name;
-        // 初始化当前文化的资源容器
-        if (!Resources.ContainsKey(cultureName))
+        LocalizationLanguage? currentLanResources;
+        if (Resources.TryGetValue(cultureName, out var language))
         {
-            Resources[cultureName] = new LocalizationLanguage
+            currentLanResources = language;
+        }
+        else
+        {
+            currentLanResources = new LocalizationLanguage()
             {
                 Language = cultureInfo.DisplayName,
-                Description = cultureInfo.NativeName,
+                Description = cultureInfo.DisplayName,
                 CultureName = cultureName
             };
+            Resources[cultureName] = currentLanResources;
         }
-        var currentLang = Resources[cultureName];
-        currentLang.Languages.Clear(); // 清空旧资源
 
-        // 从所有资源管理器加载当前文化的资源
-        foreach (var (baseName, manager) in _resourceManagers)
+        foreach (var pair in _resourceManagers)
         {
-            try
+            pair.Key.GetProperty("Culture", BindingFlags.Public | BindingFlags.Static)?.SetValue(null, cultureInfo);
+            foreach (var entry in GetResources(pair.Value))
             {
-                // 获取当前文化的资源集（包含该文化特有资源）
-                var cultureResources = manager.GetResourceSet(cultureInfo, true, true);
-                // 获取默认资源集（不变文化，作为 fallback）
-                var invariantResources = manager.GetResourceSet(CultureInfo.InvariantCulture, true, true);
-
-                // 合并资源（当前文化优先，默认资源补充）
-                var allResources = new Dictionary<object, object?>();
-                if (invariantResources != null)
+                if (entry is { Key: string key, Value: string value })
                 {
-                    foreach (DictionaryEntry entry in invariantResources)
-                        allResources[entry.Key] = entry.Value;
+                    currentLanResources.Languages[key] = value;
                 }
-                if (cultureResources != null)
-                {
-                    foreach (DictionaryEntry entry in cultureResources)
-                        allResources[entry.Key] = entry.Value; // 覆盖默认资源
-                }
-
-                // 存入当前文化的资源字典
-                foreach (var (keyObj, valueObj) in allResources)
-                {
-                    if (keyObj is string key && valueObj is string value)
-                        currentLang.Languages[key] = value;
-                }
-            }
-            catch (Exception ex)
-            {
-                // 忽略单个资源文件的加载错误
-                Console.WriteLine($"加载资源 {baseName} 失败: {ex.Message}");
             }
         }
-    }
-
-    /// <summary>
-    /// 从所有程序集中加载资源管理器
-    /// </summary>
-    private void LoadResourceManagers()
-    {
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic) // 排除动态程序集
-            .ToList();
-
-        _resourceManagers = GetResourceManagersFromAssemblies(assemblies);
-    }
-
-    /// <summary>
-    /// 从指定程序集中提取符合命名空间前缀的资源管理器
-    /// </summary>
-    private Dictionary<string, ResourceManager>? GetResourceManagersFromAssemblies(IEnumerable<Assembly> assemblies)
-    {
-        var managers = new Dictionary<string, ResourceManager>();
-
-        foreach (var assembly in assemblies)
-        {
-            try
-            {
-                // 获取程序集中所有嵌入的资源名称
-                var resourceNames = assembly.GetManifestResourceNames();
-
-                // 筛选出符合命名空间前缀的资源（如 "MFAAvalonia.Assets.Localization.Strings.resx" 编译后名称）
-                var targetResourceNames = resourceNames
-                    .Where(name => name.StartsWith(ResourceNamespacePrefix, StringComparison.OrdinalIgnoreCase))
-                    .Select(GetResourceBaseName) // 提取资源基础名称（不含文化和扩展名）
-                    .Distinct() // 去重（同一资源的不同文化版本）
-                    .ToList();
-
-                // 为每个基础名称创建资源管理器
-                foreach (var baseName in targetResourceNames)
-                {
-                    if (!managers.ContainsKey(baseName))
-                    {
-                        var manager = new ResourceManager(baseName, assembly);
-                        managers[baseName] = manager;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // 忽略单个程序集的加载错误
-                Console.WriteLine($"加载程序集 {assembly.FullName} 资源失败: {ex.Message}");
-            }
-        }
-
-        return managers.Count > 0 ? managers : null;
-    }
-
-    /// <summary>
-    /// 从嵌入资源名称提取资源基础名称（如 "MFAAvalonia.Assets.Localization.Strings.fr.resx" → "MFAAvalonia.Assets.Localization.Strings"）
-    /// </summary>
-    private string GetResourceBaseName(string manifestResourceName)
-    {
-        // 移除扩展名（.resources 或 .resx，编译后通常是 .resources）
-        var nameWithoutExt = manifestResourceName;
-        if (nameWithoutExt.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
-            nameWithoutExt = nameWithoutExt[..^".resources".Length];
-
-        // 移除文化后缀（如 .en-US、.zh-Hant）
-        var cultureSeparatorIndex = nameWithoutExt.LastIndexOf('.');
-        if (cultureSeparatorIndex > 0)
-        {
-            var potentialCulture = nameWithoutExt[(cultureSeparatorIndex + 1)..];
-            // 简单判断是否为文化名称（包含连字符或符合语言代码格式）
-            if (potentialCulture.Contains('-')
-                || CultureInfo.GetCultures(CultureTypes.AllCultures)
-                    .Any(c => c.Name.Equals(potentialCulture, StringComparison.OrdinalIgnoreCase)))
-            {
-                nameWithoutExt = nameWithoutExt[..cultureSeparatorIndex];
-            }
-        }
-
-        return nameWithoutExt;
-    }
-
-    /// <summary>
-    /// 尝试从指定文化获取资源
-    /// </summary>
-    private bool TryGetResource(string key, string cultureName, out string? value)
-    {
-        value = null;
-        if (!Resources.TryGetValue(cultureName, out var lang))
-            return false;
-
-        return lang.Languages.TryGetValue(key, out value) && !string.IsNullOrWhiteSpace(value);
     }
 }

@@ -27,4 +27,6 @@
     <x:String x:Key="STRING_PROMPT_ABORT">Abort</x:String>
     <x:String x:Key="STRING_PROMPT_CONTINUE">Continue</x:String>
     <x:String x:Key="STRING_PROMPT_CLOSE">Close</x:String>
+    
+    <x:String x:Key="STRING_IMAGE_VIEWER">Image Viewer</x:String>
 </ResourceDictionary>

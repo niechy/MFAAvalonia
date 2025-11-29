@@ -4,11 +4,15 @@
                     xmlns:mdxaml="https://github.com/whistyun/Markdown.Avalonia"
                     xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
                     xmlns:mdsvg="https://github.com/whistyun/Markdown.Avalonia.Svg"
-                    xmlns:avalonia="https://github.com/whistyun/Markdown.Avalonia.Tight">
+                    xmlns:avalonia="https://github.com/whistyun/Markdown.Avalonia.Tight"
+                    xmlns:helper="clr-namespace:MFAAvalonia.Helper">
     <mdxaml:MdAvPlugins x:Key="MdXamlPlugin">
         <html:HtmlPlugin />
         <mdsvg:SvgFormat />
         <avalonia:ChatAISetup/>
+        <mdxaml:MdAvPlugins.PathResolver>
+            <helper:CustomPathResolver />
+        </mdxaml:MdAvPlugins.PathResolver>
     </mdxaml:MdAvPlugins>
 
 </ResourceDictionary>

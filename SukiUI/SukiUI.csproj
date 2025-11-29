@@ -12,6 +12,8 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
         <LangVersion>preview</LangVersion>
+		<DebugSymbols>False</DebugSymbols>
+		<DebugType>None</DebugType>
     </PropertyGroup>
 
     <PropertyGroup>

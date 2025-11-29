@@ -183,6 +183,9 @@
     <data name="ConfigAddedSuccessfully" xml:space="preserve">
         <value>配置 &lt;{0}&gt; 添加成功！</value>
     </data>
+    <data name="ContactInfo" xml:space="preserve">
+        <value>联系方式</value>
+    </data>
     <data name="ConfigNameAlreadyExists" xml:space="preserve">
         <value>配置名称 &lt;{0}&gt; 已存在！</value>
     </data>
@@ -591,6 +594,9 @@
     <data name="LDPlayer" xml:space="preserve">
         <value>雷电模拟器</value>
     </data>
+    <data name="LicenseInfo" xml:space="preserve">
+        <value>许可证</value>
+    </data>
     <data name="LightColor" xml:space="preserve">
         <value>浅色</value>
     </data>
@@ -707,6 +713,9 @@
     </data>
     <data name="Prescript" xml:space="preserve">
         <value>开始前脚本</value>
+    </data>
+    <data name="ProjectDescription" xml:space="preserve">
+        <value>项目介绍</value>
     </data>
     <data name="ProjectLink" xml:space="preserve">
         <value>项目链接: </value>
@@ -1068,6 +1077,9 @@
     <data name="AgentStartFailed" xml:space="preserve">
         <value>Agent启动失败</value>
     </data>
+    <data name="AgentExecutableNotFound" xml:space="preserve">
+        <value>Agent 可执行文件不存在: {0}</value>
+    </data>
     <data name="Optional" xml:space="preserve">
         <value>可选</value>
     </data>
@@ -1189,6 +1201,9 @@
     <data name="FileLoadFailed" xml:space="preserve">
         <value>文件 {0} 加载失败！</value>
     </data>
+    <data name="FileLoadFailedDetail" xml:space="preserve">
+        <value>请检查 {0} 文件格式是否正确，可能存在 JSON 语法错误</value>
+    </data>
     <data name="CopyToClipboard" xml:space="preserve">
         <value>复制到剪切板</value>
     </data>
@@ -1236,5 +1251,23 @@
     </data>
     <data name="EmulatorMultiInstanceNumber" xml:space="preserve">
         <value>多开号</value>
+    </data>
+    <data name="RunCheckedFromCurrent" xml:space="preserve">
+        <value>运行当前及后续勾选</value>
+    </data>
+    <data name="RunSingle" xml:space="preserve">
+        <value>单独运行</value>
+    </data>
+    <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
+        <value>检测到资源更新: {0}</value>
+    </data>
+    <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
+        <value>飞书 webhook</value>
+    </data>
+    <data name="ExternalNotificationLarkWebhookDescription" xml:space="preserve">
+        <value>填写 Webhook 地址后，无需再填写飞书 ID 和 机器人令牌</value>
+    </data>
+    <data name="Unnamed" xml:space="preserve">
+        <value>未命名</value>
     </data>
 </root>

@@ -77,12 +77,14 @@ public partial class MFAConfiguration(string name, string fileName, Dictionary<s
 
                 if (data is JArray jArray)
                 {
-                    return jArray.ToObject<T>();
+                    // 使用 JsonConvert 进行反序列化，确保嵌套对象也能正确处理
+                    return JsonConvert.DeserializeObject<T>(jArray.ToString()) ?? defaultValue;
                 }
 
                 if (data is JObject jObject)
                 {
-                    return jObject.ToObject<T>();
+                    // 使用 JsonConvert 进行反序列化，确保嵌套对象也能正确处理
+                    return JsonConvert.DeserializeObject<T>(jObject.ToString()) ?? defaultValue;
                 }
             }
             catch (Exception e)
@@ -116,12 +118,14 @@ public partial class MFAConfiguration(string name, string fileName, Dictionary<s
 
                 if (data is JArray jArray)
                 {
-                    return jArray.ToObject<T>();
+                    // 使用 JsonConvert 进行反序列化，确保嵌套对象也能正确处理
+                    return JsonConvert.DeserializeObject<T>(jArray.ToString()) ?? defaultValue;
                 }
 
                 if (data is JObject jObject)
                 {
-                    return jObject.ToObject<T>();
+                    // 使用 JsonConvert 进行反序列化，确保嵌套对象也能正确处理
+                    return JsonConvert.DeserializeObject<T>(jObject.ToString()) ?? defaultValue;
                 }
             }
             catch (Exception e)

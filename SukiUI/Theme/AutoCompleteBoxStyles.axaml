@@ -84,7 +84,7 @@
     </Style>
 
     <Style Selector="AutoCompleteBox:focus /template/ suki|GlassCard#border">
-        <Setter Property="BorderBrush" Value="{DynamicResource SukiPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SukiPrimaryColor}" />
     </Style>
 
     <Style Selector="AutoCompleteBox:disabled /template/ suki|GlassCard#border">

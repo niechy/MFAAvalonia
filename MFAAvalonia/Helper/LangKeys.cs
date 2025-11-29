@@ -65,6 +65,7 @@ public static class LangKeys
 	public static readonly string ColorTheme = "ColorTheme";
 	public static readonly string CommonSetting = "CommonSetting";
 	public static readonly string ConfigAddedSuccessfully = "ConfigAddedSuccessfully";
+	public static readonly string ContactInfo = "ContactInfo";
 	public static readonly string ConfigNameAlreadyExists = "ConfigNameAlreadyExists";
 	public static readonly string ConfigNameCannotBeEmpty = "ConfigNameCannotBeEmpty";
 	public static readonly string ConfigurationName = "ConfigurationName";
@@ -201,6 +202,7 @@ public static class LangKeys
 	public static readonly string LanguageSettings = "LanguageSettings";
 	public static readonly string Lark = "Lark";
 	public static readonly string LDPlayer = "LDPlayer";
+	public static readonly string LicenseInfo = "LicenseInfo";
 	public static readonly string LightColor = "LightColor";
 	public static readonly string Load = "Load";
 	public static readonly string LoadFileTitle = "LoadFileTitle";
@@ -240,6 +242,7 @@ public static class LangKeys
 	public static readonly string PipelineLoadError = "PipelineLoadError";
 	public static readonly string Postscript = "Postscript";
 	public static readonly string Prescript = "Prescript";
+	public static readonly string ProjectDescription = "ProjectDescription";
 	public static readonly string ProjectLink = "ProjectLink";
 	public static readonly string PurchaseLink = "PurchaseLink";
 	public static readonly string Quit = "Quit";
@@ -360,6 +363,7 @@ public static class LangKeys
 	public static readonly string MirrorCdkMismatch = "MirrorCdkMismatch";
 	public static readonly string StartingAgent = "StartingAgent";
 	public static readonly string AgentStartFailed = "AgentStartFailed";
+	public static readonly string AgentExecutableNotFound = "AgentExecutableNotFound";
 	public static readonly string Optional = "Optional";
 	public static readonly string ExternalNotificationEnableCustomNotificationMessage = "ExternalNotificationEnableCustomNotificationMessage";
 	public static readonly string ExternalNotificationCustomNotificationContent = "ExternalNotificationCustomNotificationContent";
@@ -400,6 +404,7 @@ public static class LangKeys
 	public static readonly string Verifying = "Verifying";
 	public static readonly string HashVerificationFailed = "HashVerificationFailed";
 	public static readonly string FileLoadFailed = "FileLoadFailed";
+	public static readonly string FileLoadFailedDetail = "FileLoadFailedDetail";
 	public static readonly string CopyToClipboard = "CopyToClipboard";
 	public static readonly string UseDirectMLSupportedDevice = "UseDirectMLSupportedDevice";
 	public static readonly string SwitchUiUpdateSourceToGithub = "SwitchUiUpdateSourceToGithub";
@@ -416,4 +421,10 @@ public static class LangKeys
 	public static readonly string MuMuEmulator = "MuMuEmulator";
 	public static readonly string XYAZ = "XYAZ";
 	public static readonly string EmulatorMultiInstanceNumber = "EmulatorMultiInstanceNumber";
+	public static readonly string RunCheckedFromCurrent = "RunCheckedFromCurrent";
+	public static readonly string RunSingle = "RunSingle";
+	public static readonly string MirrorChyanResourceUpdateShortTip = "MirrorChyanResourceUpdateShortTip";
+	public static readonly string ExternalNotificationLarkWebhookUrl = "ExternalNotificationLarkWebhookUrl";
+	public static readonly string ExternalNotificationLarkWebhookDescription = "ExternalNotificationLarkWebhookDescription";
+	public static readonly string Unnamed = "Unnamed";
 }

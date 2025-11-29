@@ -1,4 +1,4 @@
-<root>
+﻿<root>
     <resheader name="resmimetype">
         <value>text/microsoft-resx</value>
     </resheader>
@@ -175,6 +175,9 @@
     </data>
     <data name="ConfigAddedSuccessfully" xml:space="preserve">
         <value>Configuration &lt;{0}&gt; added successfully!</value>
+    </data>
+    <data name="ContactInfo" xml:space="preserve">
+        <value>Contact</value>
     </data>
     <data name="ConfigNameAlreadyExists" xml:space="preserve">
         <value>Configuration name &lt;{0}&gt; already exists!</value>
@@ -584,6 +587,9 @@
     <data name="LDPlayer" xml:space="preserve">
         <value>LD Player</value>
     </data>
+    <data name="LicenseInfo" xml:space="preserve">
+        <value>License</value>
+    </data>
     <data name="LightColor" xml:space="preserve">
         <value>Light Color</value>
     </data>
@@ -700,6 +706,9 @@
     </data>
     <data name="Prescript" xml:space="preserve">
         <value>Prescript</value>
+    </data>
+    <data name="ProjectDescription" xml:space="preserve">
+        <value>About Project</value>
     </data>
     <data name="ProjectLink" xml:space="preserve">
         <value>Project Link: </value>
@@ -1058,6 +1067,9 @@
     <data name="AgentStartFailed" xml:space="preserve">
         <value>Agent startup failure</value>
     </data>
+    <data name="AgentExecutableNotFound" xml:space="preserve">
+        <value>Agent executable file not found: {0}</value>
+    </data>
     <data name="Optional" xml:space="preserve">
         <value>Optional</value>
     </data>
@@ -1178,6 +1190,9 @@
     <data name="FileLoadFailed" xml:space="preserve">
         <value>File {0} failed to load!</value>
     </data>
+    <data name="FileLoadFailedDetail" xml:space="preserve">
+        <value>Please check if the {0} file format is correct, there may be JSON syntax errors</value>
+    </data>
     <data name="CopyToClipboard" xml:space="preserve">
         <value>Copy to clipboard</value>
     </data>
@@ -1218,7 +1233,7 @@
         <value>Multi-instance Quick Settings</value>
     </data>
     <data name="EmulatorMultiInstanceEditor" xml:space="preserve">
-        <value>多開編輯器</value>
+        <value>Multi-instance Editor</value>
     </data>
     <data name="MuMuEmulator" xml:space="preserve">
         <value>MuMu Emulator</value>
@@ -1227,6 +1242,24 @@
         <value>MEmu</value>
     </data>
     <data name="EmulatorMultiInstanceNumber" xml:space="preserve">
-        <value>多開號</value>
+        <value>Multi-instance Number</value>
+    </data>
+    <data name="RunSingle" xml:space="preserve">
+        <value>Run Single</value>
+    </data>
+    <data name="RunCheckedFromCurrent" xml:space="preserve">
+        <value>Run Checked From Current</value>
+    </data>
+    <data name="MirrorChyanResourceUpdateShortTip" xml:space="preserve">
+        <value>Resource update {0} detected</value>
+    </data>
+    <data name="ExternalNotificationLarkWebhookUrl" xml:space="preserve">
+        <value>Lark webhook</value>
+    </data>
+    <data name="ExternalNotificationLarkWebhookDescription" xml:space="preserve">
+        <value>After filling in the Webhook address, you do not need to fill in the Lark ID and Bot Token</value>
+    </data>
+    <data name="Unnamed" xml:space="preserve">
+        <value>Unnamed</value>
     </data>
 </root>

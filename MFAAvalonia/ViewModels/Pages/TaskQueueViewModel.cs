@@ -1,5 +1,4 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,17 +12,14 @@ using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.ViewModels.Other;
 using MFAAvalonia.ViewModels.UsersControls;
 using MFAAvalonia.ViewModels.UsersControls.Settings;
-using MFAAvalonia.Views.Windows;
-using SukiUI;
+using Newtonsoft.Json;
 using SukiUI.Dialogs;
-using SukiUI.Enums;
-using SukiUI.Toasts;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Text.Json;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,8 +28,55 @@ namespace MFAAvalonia.ViewModels.Pages;
 
 public partial class TaskQueueViewModel : ViewModelBase
 {
+    private string adbKey = LangKeys.TabADB;
+    private string win32Key = LangKeys.TabWin32;
+    private string adbFallback = "";
+    private string win32Fallback = "";
+
+    private void UpdateControllerName()
+    {
+        Adb = adbKey == LangKeys.TabADB ? adbKey.ToLocalization() : LanguageHelper.GetLocalizedDisplayName(adbKey, adbFallback);
+        Win32 = win32Key == LangKeys.TabWin32 ? win32Key.ToLocalization() : LanguageHelper.GetLocalizedDisplayName(win32Key, win32Fallback);
+    }
+
+    public void InitializeControllerName()
+    {
+        try
+        {
+            var adb = MaaProcessor.Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(MaaControllerTypes.Adb.ToJsonKey(), StringComparison.OrdinalIgnoreCase));
+            var win32 = MaaProcessor.Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(MaaControllerTypes.Win32.ToJsonKey(), StringComparison.OrdinalIgnoreCase));
+            if (adb is { Label: not null } or { Name: not null })
+            {
+                adbKey = adb.Label ?? string.Empty;
+                adbFallback = adb.Name ?? string.Empty;
+            }
+            if (win32 is { Label: not null } or { Name: not null })
+            {
+                win32Key = win32.Label ?? string.Empty;
+                win32Fallback = win32.Name ?? string.Empty;
+            }
+            LanguageHelper.LanguageChanged += (_, _) =>
+            {
+                UpdateControllerName();
+            };
+            UpdateControllerName();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Error(e);
+        }
+    }
+
     protected override void Initialize()
     {
+        try
+        {
+            UpdateControllerName();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Error(e);
+        }
         try
         {
             var col1Str = ConfigurationManager.Current.GetValue(ConfigurationKeys.TaskQueueColumn1Width, DefaultColumn1Width);
@@ -239,9 +282,14 @@ public partial class TaskQueueViewModel : ViewModelBase
         // });
     }
 
-    public const string INFO = "info:";
-    public const string ERROR = "err:";
-    public const string WARN = "warn:";
+
+    public readonly string INFO = "info:";
+    public readonly string[] ERROR = ["err:", "error:"];
+    public readonly string[] WARNING = ["warn:", "warning:"];
+    public readonly string TRACE = "trace:";
+    public readonly string DEBUG = "debug:";
+    public readonly string CRITICAL = "critical:";
+
     public void AddLog(string content,
         IBrush? brush,
         string weight = "Regular",
@@ -249,31 +297,79 @@ public partial class TaskQueueViewModel : ViewModelBase
         bool showTime = true)
     {
         brush ??= Brushes.Black;
-        if (content.StartsWith(INFO))
+
+        var backGroundBrush = Brushes.Transparent;
+        const StringComparison comparison = StringComparison.Ordinal; // 指定匹配规则（避免大小写问题，按需调整）
+
+        if (content.StartsWith(TRACE, comparison))
         {
-            brush = Brushes.Black;
+            brush = Brushes.MediumAquamarine;
+            content = content.Substring(TRACE.Length);
+            changeColor = false;
+        }
+
+        if (content.StartsWith(DEBUG, comparison))
+        {
+            brush = Brushes.DeepSkyBlue;
+            content = content.Substring(DEBUG.Length);
+            changeColor = false;
+        }
+
+        if (content.StartsWith(INFO, comparison))
+        {
+            var color = DispatcherHelper.RunOnMainThread(() => MFAExtensions.FindSukiUiResource<Color>(
+                "SukiMuteText"
+            ));
+
+            if (color != null)
+                brush = DispatcherHelper.RunOnMainThread(() => new SolidColorBrush(color.Value));
+            else
+                brush = Brushes.Black;
             content = content.Substring(INFO.Length);
         }
-        if (content.StartsWith(WARN))
+
+        var warnPrefix = WARNING.FirstOrDefault(prefix =>
+            !string.IsNullOrEmpty(prefix) && content.StartsWith(prefix, comparison)
+        );
+        if (warnPrefix != null)
         {
             brush = Brushes.Orange;
-            content = content.Substring(WARN.Length);
+            content = content.Substring(warnPrefix.Length);
             changeColor = false;
         }
-        if (content.StartsWith(ERROR))
+
+        var errorPrefix = ERROR.FirstOrDefault(prefix =>
+            !string.IsNullOrEmpty(prefix) && content.StartsWith(prefix, comparison)
+        );
+
+        if (errorPrefix != null)
         {
             brush = Brushes.OrangeRed;
-            content = content.Substring(ERROR.Length);
+            content = content.Substring(errorPrefix.Length);
             changeColor = false;
         }
-        Task.Run(() =>
+
+        if (content.StartsWith(CRITICAL, comparison))
         {
-            DispatcherHelper.RunOnMainThread(() =>
+            var color = DispatcherHelper.RunOnMainThread(() => MFAExtensions.FindSukiUiResource<Color>(
+                "SukiLightBorderBrush"
+            ));
+            if (color != null)
+                brush = DispatcherHelper.RunOnMainThread(() => new SolidColorBrush(color.Value));
+            else
+                brush = Brushes.White;
+            backGroundBrush = Brushes.OrangeRed;
+            content = content.Substring(CRITICAL.Length);
+        }
+
+        DispatcherHelper.RunOnMainThread(() =>
+        {
+            LogItemViewModels.Add(new LogItemViewModel(content, brush, weight, "HH':'mm':'ss",
+                showTime: showTime, changeColor: changeColor)
             {
-                LogItemViewModels.Add(new LogItemViewModel(content, brush, weight, "HH':'mm':'ss",
-                    showTime: showTime, changeColor: changeColor));
-                LoggerHelper.Info(content);
+                BackgroundColor = backGroundBrush
             });
+            LoggerHelper.Info(content);
         });
     }
 
@@ -310,6 +406,9 @@ public partial class TaskQueueViewModel : ViewModelBase
     #endregion
 
     #region 连接
+
+    [ObservableProperty] private string _adb = string.Empty;
+    [ObservableProperty] private string _win32 = string.Empty;
 
     [ObservableProperty] private int shouldShow = 0;
     [ObservableProperty] private ObservableCollection<object> _devices = [];
@@ -358,7 +457,8 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
     }
 
-    [ObservableProperty] private MaaControllerTypes _currentController =
+    [ObservableProperty]
+    private MaaControllerTypes _currentController =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.CurrentController, MaaControllerTypes.Adb, MaaControllerTypes.None, new UniversalEnumConverter<MaaControllerTypes>());
 
     partial void OnCurrentControllerChanged(MaaControllerTypes value)
@@ -374,7 +474,6 @@ public partial class TaskQueueViewModel : ViewModelBase
         IsConnected = isConnected;
     }
 
-
     [RelayCommand]
     public void CustomAdb()
     {
@@ -383,7 +482,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         Instances.DialogManager.CreateDialog().WithTitle("AdbEditor").WithViewModel(dialog => new AdbEditorDialogViewModel(deviceInfo, dialog)).Dismiss().ByClickingBackground().TryShow();
     }
 
-   
+
     private CancellationTokenSource? _refreshCancellationTokenSource;
     [RelayCommand]
     private void Refresh()
@@ -442,21 +541,21 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         if (CurrentDevice is AdbDeviceInfo info)
         {
+            LoggerHelper.Info(JsonConvert.SerializeObject(info));
             bool isCurrentPortValid = TryExtractPortFromAdbSerial(info.AdbSerial, out int currentPort);
             int currentDeviceIndex = DeviceDisplayConverter.GetFirstEmulatorIndex(info.Config);
 
-            // 合并条件：在同一个 Where 中完成端口提取和匹配判断（解决作用域问题）
             var matchedDevices = devices
-                .Where(device => 
-                        // 第一步：提取当前设备端口号（必须有效）
-                        TryExtractPortFromAdbSerial(device.AdbSerial, out int devicePort) &&
-                        // 第二步：按规则匹配端口
-                        (currentDeviceIndex != -1 
-                            ? devicePort == currentDeviceIndex  // 原index有效：端口号 == index
-                            : isCurrentPortValid && devicePort == currentPort)  // 原index无效：端口号 == 记忆设备端口
+                .Where(device =>
+                    // 第一步：提取当前设备端口号（必须有效）
+                    TryExtractPortFromAdbSerial(device.AdbSerial, out int devicePort)
+                    &&
+                    // 第二步：按规则匹配端口
+                    (currentDeviceIndex != -1
+                        ? DeviceDisplayConverter.GetFirstEmulatorIndex(device.Config) == currentDeviceIndex && devicePort == currentPort // 原index有效：端口号 == index
+                        : isCurrentPortValid && devicePort == currentPort)
                 )
                 .ToList();
-
             // 多匹配时排序：先比AdbSerial前缀（冒号前），再比设备名称
             if (matchedDevices.Any())
             {
@@ -467,7 +566,6 @@ public partial class TaskQueueViewModel : ViewModelBase
                     int prefixCompare = string.Compare(aPrefix, bPrefix, StringComparison.Ordinal);
                     return prefixCompare != 0 ? prefixCompare : string.Compare(a.Name, b.Name, StringComparison.Ordinal);
                 });
-
                 return devices.IndexOf(matchedDevices.First());
             }
         }
@@ -480,7 +578,7 @@ public partial class TaskQueueViewModel : ViewModelBase
                 TryGetIndexFromConfig(d.Config, out var index) && index == targetNumber ? i : -1)
             .FirstOrDefault(i => i >= 0);
     }
-    
+
     public static int ExtractNumberFromEmulatorConfig(string emulatorConfig)
     {
         var match = Regex.Match(emulatorConfig, @"\d+");
@@ -498,11 +596,12 @@ public partial class TaskQueueViewModel : ViewModelBase
         index = DeviceDisplayConverter.GetFirstEmulatorIndex(configJson);
         return index != -1;
     }
-    
+
     private static bool TryExtractPortFromAdbSerial(string adbSerial, out int port)
     {
         port = -1;
         var parts = adbSerial.Split(':', 2); // 分割为IP和端口（最多分割1次）
+        LoggerHelper.Info(JsonConvert.SerializeObject(parts));
         return parts.Length == 2 && int.TryParse(parts[1], out port);
     }
 
@@ -510,25 +609,25 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         Thread.Sleep(500);
         var windows = MaaProcessor.Toolkit.Desktop.Window.Find().Where(win => !string.IsNullOrWhiteSpace(win.Name)).ToList();
-        var index = CalculateWindowIndex(windows);
-        return (new(windows), index);
+        var (index, filtered) = CalculateWindowIndex(windows);
+        return (new(filtered), index);
     }
 
-    private int CalculateWindowIndex(List<DesktopWindowInfo> windows)
+    private (int index, List<DesktopWindowInfo> afterFiltered) CalculateWindowIndex(List<DesktopWindowInfo> windows)
     {
         var controller = MaaProcessor.Interface?.Controller?
             .FirstOrDefault(c => c.Type?.Equals("win32", StringComparison.OrdinalIgnoreCase) == true);
 
         if (controller?.Win32 == null)
-            return windows.FindIndex(win => !string.IsNullOrWhiteSpace(win.Name));
+            return (windows.FindIndex(win => !string.IsNullOrWhiteSpace(win.Name)), windows);
 
         var filtered = windows.Where(win =>
             !string.IsNullOrWhiteSpace(win.Name)).ToList();
 
         filtered = ApplyRegexFilters(filtered, controller.Win32);
-        return filtered.Count > 0 ? windows.IndexOf(filtered.First()) : 0;
+        return (filtered.Count > 0 ? windows.IndexOf(filtered.First()) : 0, filtered.ToList());
     }
-   
+
 
     private List<DesktopWindowInfo> ApplyRegexFilters(List<DesktopWindowInfo> windows, MaaInterface.MaaResourceControllerWin32 win32)
     {
@@ -588,53 +687,93 @@ public partial class TaskQueueViewModel : ViewModelBase
             var mouse = controller.Win32?.Mouse;
             if (mouse != null)
             {
-                Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = mouse switch
-                {
-                    1 => Win32InputMethod.Seize,
-                    2 => Win32InputMethod.SendMessage,
-                    4 => Win32InputMethod.PostMessage,
-                    8 => Win32InputMethod.LegacyEvent,
-                    16 => Win32InputMethod.PostThreadMessage,
-                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlMouseType
-                };
+                var parsed = ParseWin32InputMethod(mouse);
+                if (parsed != null)
+                    Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = parsed.Value;
             }
             var keyboard = controller.Win32?.Keyboard;
             if (keyboard != null)
             {
-                Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = keyboard switch
-                {
-                    1 => Win32InputMethod.Seize,
-                    2 => Win32InputMethod.SendMessage,
-                    4 => Win32InputMethod.PostMessage,
-                    8 => Win32InputMethod.LegacyEvent,
-                    16 => Win32InputMethod.PostThreadMessage,
-                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
-                };
+                var parsed = ParseWin32InputMethod(keyboard);
+                if (parsed != null)
+                    Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = parsed.Value;
             }
             var input = controller.Win32?.Input;
             if (keyboard == null && mouse == null && input != null)
             {
-                var type = input switch
+                var parsed = ParseWin32InputMethod(input);
+                if (parsed != null)
                 {
-                    1 => Win32InputMethod.Seize,
-                    2 => Win32InputMethod.SendMessage,
-                    4 => Win32InputMethod.PostMessage,
-                    8 => Win32InputMethod.LegacyEvent,
-                    16 => Win32InputMethod.PostThreadMessage,
-                    _ => Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType
-                };
-                Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = type;
-                Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = type;
+                    Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType = parsed.Value;
+                    Instances.ConnectSettingsUserControlModel.Win32ControlMouseType = parsed.Value;
+                }
             }
         }
     }
 
+    /// <summary>
+    /// 解析 Win32InputMethod，支持旧版 long 格式和新版 string 格式
+    /// </summary>
+    private static Win32InputMethod? ParseWin32InputMethod(object? value)
+    {
+        if (value == null) return null;
+
+        // 新版 string 格式（枚举名）
+        if (value is string strValue)
+        {
+            if (Enum.TryParse<Win32InputMethod>(strValue, ignoreCase: true, out var result))
+                return result;
+            return null;
+        }
+
+        // 旧版 long 格式
+        var longValue = Convert.ToInt64(value);
+        return longValue switch
+        {
+            1 => Win32InputMethod.Seize,
+            2 => Win32InputMethod.SendMessage,
+            4 => Win32InputMethod.PostMessage,
+            8 => Win32InputMethod.LegacyEvent,
+            16 => Win32InputMethod.PostThreadMessage,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// 解析 Win32ScreencapMethod，支持旧版 long 格式和新版 string 格式
+    /// </summary>
+    private static Win32ScreencapMethod? ParseWin32ScreencapMethod(object? value)
+    {
+        if (value == null) return null;
+
+        // 新版 string 格式（枚举名）
+        if (value is string strValue)
+        {
+            if (Enum.TryParse<Win32ScreencapMethod>(strValue, ignoreCase: true, out var result))
+                return result;
+            return null;
+        }
+
+        // 旧版 long 格式
+        var longValue = Convert.ToInt64(value);
+        return longValue switch
+        {
+            1 => Win32ScreencapMethod.GDI,
+            2 => Win32ScreencapMethod.FramePool,
+            4 => Win32ScreencapMethod.DXGI_DesktopDup,
+            8 => Win32ScreencapMethod.DXGI_DesktopDup_Window,
+            16 => Win32ScreencapMethod.PrintWindow,
+            32 => Win32ScreencapMethod.ScreenDC,
+            _ => null
+        };
+    }
+
     private void HandleScreenCapSettings(MaaInterface.MaaResourceController controller, bool isAdb)
     {
-        var screenCap = isAdb ? controller.Adb?.ScreenCap : controller.Win32?.ScreenCap;
-        if (screenCap == null) return;
         if (isAdb)
         {
+            var screenCap = controller.Adb?.ScreenCap;
+            if (screenCap == null) return;
             Instances.ConnectSettingsUserControlModel.AdbControlScreenCapType = screenCap switch
             {
                 1 => AdbScreencapMethods.EncodeToFileAndPull,
@@ -649,16 +788,11 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
         else
         {
-            Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType = screenCap switch
-            {
-                1 => Win32ScreencapMethod.GDI,
-                2 => Win32ScreencapMethod.FramePool,
-                4 => Win32ScreencapMethod.DXGI_DesktopDup,
-                8 => Win32ScreencapMethod.DXGI_DesktopDup_Window,
-                16 => Win32ScreencapMethod.PrintWindow,
-                32 => Win32ScreencapMethod.ScreenDC,
-                _ => Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType
-            };
+            var screenCap = controller.Win32?.ScreenCap;
+            if (screenCap == null) return;
+            var parsed = ParseWin32ScreencapMethod(screenCap);
+            if (parsed != null)
+                Instances.ConnectSettingsUserControlModel.Win32ControlScreenCapType = parsed.Value;
         }
     }
 
@@ -667,13 +801,13 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (!hasDevices)
         {
             ToastHelper.Info((
-                isAdb ?  LangKeys.NoEmulatorFound :  LangKeys.NoWindowFound).ToLocalization());
+                isAdb ? LangKeys.NoEmulatorFound : LangKeys.NoWindowFound).ToLocalization());
         }
     }
 
     private void HandleDetectionError(Exception ex, bool isAdb)
     {
-        var targetType = isAdb ?  LangKeys.Emulator :  LangKeys.Window;
+        var targetType = isAdb ? LangKeys.Emulator : LangKeys.Window;
         ToastHelper.Warn(string.Format(
             LangKeys.TaskStackError.ToLocalization(),
             targetType.ToLocalization(),

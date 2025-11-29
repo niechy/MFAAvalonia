@@ -125,7 +125,13 @@ public partial class LogItemViewModel : ViewModelBase
         get => _color;
         set => SetProperty(ref _color, value);
     }
-
+    
+    public IBrush BackgroundColor
+    {
+        get;
+        set => SetProperty(ref field, value);
+    } = Brushes.Transparent;
+    
     private string _weight = "Regular";
 
     public string Weight

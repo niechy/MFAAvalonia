@@ -145,8 +145,12 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
     [ObservableProperty] private bool _larkEnabled;
 
     partial void OnLarkEnabledChanged(bool value) => UpdateEnabledExternalNotificationProviderList(ExternalNotificationHelper.Key.LarkKey, value);
+    // [ObservableProperty] private bool _larkWebhookUsed;
 
-
+    [ObservableProperty] private string _larkWebhookUrl = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationLarkWebhookUrl, string.Empty);
+    
+    partial void OnLarkWebhookUrlChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationLarkWebhookUrl, SimpleEncryptionHelper.Encrypt(value));
+    
     [ObservableProperty] private string _larkId = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationLarkID, string.Empty);
 
     partial void OnLarkIdChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationLarkID, SimpleEncryptionHelper.Encrypt(value));
@@ -198,6 +202,7 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
 
     [ObservableProperty] private string _discordChannelId = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationDiscordChannelId, string.Empty);
     partial void OnDiscordChannelIdChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationDiscordChannelId, SimpleEncryptionHelper.Encrypt(value));
+
     #endregion
 
     #region DiscordWebhook

@@ -8,6 +8,7 @@ using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
 using MFAAvalonia.ViewModels.Other;
 using Newtonsoft.Json.Linq;
+using SukiUI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,6 +17,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace MFAAvalonia.Extensions;
@@ -29,218 +31,298 @@ public static class MFAExtensions
             : "/bin/bash";
     }
 
-    public static Dictionary<TKey, MaaNode> MergeMaaNodes<TKey>(
-        this IEnumerable<KeyValuePair<TKey, MaaNode>>? taskModels,
-        IEnumerable<KeyValuePair<TKey, MaaNode>>? additionalModels) where TKey : notnull
+    /// <summary>
+    /// 解析 Markdown 内容：支持国际化字符串、文件路径、URL 或直接文本
+    /// </summary>
+    /// <param name="input">输入内容（可能是 $key、文件路径、URL 或直接文本）</param>
+    /// <param name="projectDir">项目目录（用于解析相对路径）</param>
+    /// <returns>解析后的 Markdown 文本</returns>
+    /// <summary>
+    /// 可获取内容的文本文件扩展名
+    /// </summary>
+    private static readonly string[] TextFileExtensions = [".md", ".markdown", ".txt", ".text"];
+
+    public async static Task<string> ResolveMarkdownContentAsync(this string? input, string? projectDir = null, bool transform = true)
     {
-
-        if (additionalModels == null)
-            return taskModels?.ToDictionary() ?? new Dictionary<TKey, MaaNode>();
-        return taskModels?
-                .Concat(additionalModels)
-                .GroupBy(pair => pair.Key)
-                .ToDictionary(
-                    group => group.Key,
-                    group =>
-                    {
-                        var mergedModel = group.First().Value;
-                        foreach (var taskModel in group.Skip(1))
-                        {
-                            mergedModel.Merge(taskModel.Value);
-                        }
-                        return mergedModel;
-                    }
-                )
-            ?? new Dictionary<TKey, MaaNode>();
-    }
-
-    public static Dictionary<TKey, JToken> MergeJTokens<TKey>(
-        this IEnumerable<KeyValuePair<TKey, JToken>>? taskModels,
-        IEnumerable<KeyValuePair<TKey, JToken>>? additionalModels) where TKey : notnull
-    {
-
-        if (additionalModels == null)
-            return taskModels?.ToDictionary() ?? new Dictionary<TKey, JToken>();
-        return taskModels?
-                .Concat(additionalModels)
-                .GroupBy(pair => pair.Key)
-                .ToDictionary(
-                    group => group.Key,
-                    group =>
-                    {
-                        var mergedModel = group.First().Value;
-                        foreach (var taskModel in group.Skip(1))
-                        {
-                            mergedModel.Merge(taskModel.Value);
-                        }
-                        return mergedModel;
-                    }
-                )
-            ?? new Dictionary<TKey, JToken>();
-    }
-
-    public static JToken Merge(this JToken? target, JToken? source)
-    {
-        if (target == null) return source;
-        if (source == null) return target;
-
-        // 确保目标和源都是 JObject 类型
-        if (target.Type != JTokenType.Object || source.Type != JTokenType.Object)
-            return target;
-
-        var targetObj = (JObject)target;
-        var sourceObj = (JObject)source;
-
-        // 遍历源对象的所有属性
-        foreach (var property in sourceObj.Properties())
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+        if (string.IsNullOrWhiteSpace(projectDir))
+            projectDir = AppContext.BaseDirectory;
+        try
         {
-            string propName = property.Name;
-            JToken? targetProp = targetObj.Property(propName)?.Value;
-            JToken sourceProp = property.Value;
-            if (propName == "attach")
+            // 1. 国际化处理（以$开头）
+            var content = transform ? LanguageHelper.GetLocalizedString(input) : input;
+
+            // 2. 判断是否为 URL
+            if (Uri.TryCreate(content, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
-                // 仅当双方都是对象类型时才进行第一层字段合并
-                if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
+                // 如果是文本文件 URL，获取内容；否则返回超链接格式
+                var path = uri.AbsolutePath;
+                if (TextFileExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
                 {
-                    JObject targetAttach = (JObject)targetProp;
-                    JObject sourceAttach = (JObject)sourceProp;
-
-                    // 遍历sourceAttach的所有第一层字段，直接覆盖或添加（不递归）
-                    foreach (var attachProp in sourceAttach.Properties())
-                    {
-                        string attachPropName = attachProp.Name;
-                        JToken sourceAttachValue = attachProp.Value;
-
-                        // 目标存在该字段则直接用源覆盖（不递归），否则添加
-                        targetAttach[attachPropName] = sourceAttachValue.DeepClone();
-                    }
-
-                    targetObj[propName] = targetAttach;
+                    return await content.FetchUrlContentAsync();
                 }
-                // 目标不存在attach字段时，直接克隆源的attach
-                else if (targetProp == null)
-                {
-                    targetObj[propName] = sourceProp.DeepClone();
-                }
-                // 若类型不匹配（如一方不是对象），则用源覆盖目标
-                else
-                {
-                    targetObj[propName] = sourceProp.DeepClone();
-                }
-                continue;
+                // 返回 Markdown 超链接格式
+                return $"[{content}]({content})";
             }
-            // if (propName == "attach")
-            // {
-            //     // 仅当双方都是对象类型时才进行字段合并
-            //     if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
-            //     {
-            //         JObject targetAttach = (JObject)targetProp;
-            //         JObject sourceAttach = (JObject)sourceProp;
-            //
-            //         // 遍历sourceAttach的所有字段，逐个合并到targetAttach
-            //         foreach (var attachProp in sourceAttach.Properties())
-            //         {
-            //             string attachPropName = attachProp.Name;
-            //             JToken sourceAttachValue = attachProp.Value;
-            //
-            //             // 目标存在该字段则递归合并，否则直接添加
-            //             if (targetAttach.ContainsKey(attachPropName))
-            //             {
-            //                 targetAttach[attachPropName] = Merge(targetAttach[attachPropName], sourceAttachValue);
-            //             }
-            //             else
-            //             {
-            //                 targetAttach[attachPropName] = sourceAttachValue.DeepClone();
-            //             }
-            //         }
-            //
-            //         targetObj[propName] = targetAttach;
-            //     }
-            //     // 目标不存在attach字段时，直接克隆源的attach
-            //     else if (targetProp == null)
-            //     {
-            //         targetObj[propName] = sourceProp.DeepClone();
-            //     }
-            //     // 若类型不匹配（如一方不是对象），则用源覆盖目标
-            //     else
-            //     {
-            //         targetObj[propName] = sourceProp.DeepClone();
-            //     }
-            //     continue;
-            // }
-            //
-            // 处理 recognition 相关合并逻辑
-            if (propName == "recognition")
+            // 3. 判断是否为文件路径
+            var filePath = MaaInterface.ReplacePlaceholder(content, projectDir);
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
-                if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
-                {
-                    JObject targetRecognition = (JObject)targetProp;
-                    JObject sourceRecognition = (JObject)sourceProp;
-
-                    // 覆盖 type 属性
-                    if (sourceRecognition.ContainsKey("type"))
-                    {
-                        targetRecognition["type"] = sourceRecognition["type"]?.DeepClone() ?? new JValue((string)null);
-                    }
-
-                    // 处理 recognition 内部的 param 属性，递归合并
-                    if (sourceRecognition.ContainsKey("param") && targetRecognition.ContainsKey("param") && targetRecognition["param"]?.Type == JTokenType.Object && sourceRecognition["param"]?.Type == JTokenType.Object)
-                    {
-                        targetRecognition["param"] = Merge(targetRecognition["param"], sourceRecognition["param"]);
-                    }
-                    else if (sourceRecognition.ContainsKey("param") && targetRecognition["param"] == null)
-                    {
-                        targetRecognition["param"] = sourceRecognition["param"]?.DeepClone();
-                    }
-
-                    targetObj[propName] = targetRecognition;
-                }
-                else if (targetProp == null)
-                {
-                    targetObj[propName] = sourceProp.DeepClone();
-                }
-                continue;
+                return await File.ReadAllTextAsync(filePath);
             }
 
-            // 处理 action 相关合并逻辑
-            if (propName == "action")
-            {
-                if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
-                {
-                    JObject targetAction = (JObject)targetProp;
-                    JObject sourceAction = (JObject)sourceProp;
-
-                    // 覆盖 type 属性
-                    if (sourceAction.ContainsKey("type"))
-                    {
-                        targetAction["type"] = sourceAction["type"]?.DeepClone() ?? new JValue((string)null);
-                    }
-
-                    // 处理 action 内部的 param 属性，递归合并
-                    if (sourceAction.ContainsKey("param") && targetAction.ContainsKey("param") && targetAction["param"]?.Type == JTokenType.Object && sourceAction["param"]?.Type == JTokenType.Object)
-                    {
-                        targetAction["param"] = Merge(targetAction["param"], sourceAction["param"]);
-                    }
-                    else if (sourceAction.ContainsKey("param") && targetAction["param"] == null)
-                    {
-                        targetAction["param"] = sourceAction["param"]?.DeepClone();
-                    }
-
-                    targetObj[propName] = targetAction;
-                }
-                else if (targetProp == null)
-                {
-                    targetObj[propName] = sourceProp.DeepClone();
-                }
-                continue;
-            }
-
-            // 其他普通属性直接替换或添加
-            targetObj[propName] = sourceProp.DeepClone();
+            // 4. 直接返回文本（可能是 Markdown）
+            return content;
         }
-
-        return target;
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"解析 Markdown 内容失败: {input}, 错误: {ex.Message}");
+            return string.Empty;
+        }
     }
+
+    /// <summary>
+    /// 从 URL 获取文本内容
+    /// </summary>
+    async private static Task<string> FetchUrlContentAsync(this string url)
+    {
+        try
+        {
+            using var httpClient = VersionChecker.CreateHttpClientWithProxy();
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+            return await httpClient.GetStringAsync(url);
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Warning($"获取 URL 内容失败: {url}, 错误: {ex.Message}");
+            return string.Empty;
+        }
+    }
+    // public static Dictionary<TKey, MaaNode> MergeMaaNodes<TKey>(
+    //     this IEnumerable<KeyValuePair<TKey, MaaNode>>? taskModels,
+    //     IEnumerable<KeyValuePair<TKey, MaaNode>>? additionalModels) where TKey : notnull
+    // {
+    //
+    //     if (additionalModels == null)
+    //         return taskModels?.ToDictionary() ?? new Dictionary<TKey, MaaNode>();
+    //     return taskModels?
+    //             .Concat(additionalModels)
+    //             .GroupBy(pair => pair.Key)
+    //             .ToDictionary(
+    //                 group => group.Key,
+    //                 group =>
+    //                 {
+    //                     var mergedModel = group.First().Value;
+    //                     foreach (var taskModel in group.Skip(1))
+    //                     {
+    //                         mergedModel.Merge(taskModel.Value);
+    //                     }
+    //                     return mergedModel;
+    //                 }
+    //             )
+    //         ?? new Dictionary<TKey, MaaNode>();
+    // }
+
+    public static MaaToken ToMaaToken(
+        this Dictionary<string, JToken>? taskModels)
+    {
+        // 空安全处理：输入为 null 时返回空字典，避免空引用异常
+        var nonNullModels = taskModels ?? new Dictionary<string, JToken>();
+
+        // 转换逻辑：遍历集合，将每个 JToken 转为 MaaToken，构建字典
+        return MaaToken.FromDictionary(nonNullModels);
+    }
+
+
+    // public static Dictionary<TKey, JToken> MergeJTokens<TKey>(
+    //     this IEnumerable<KeyValuePair<TKey, JToken>>? taskModels,
+    //     IEnumerable<KeyValuePair<TKey, JToken>>? additionalModels) where TKey : notnull
+    // {
+    //
+    //     if (additionalModels == null)
+    //         return taskModels?.ToDictionary() ?? new Dictionary<TKey, JToken>();
+    //     return taskModels?
+    //             .Concat(additionalModels)
+    //             .GroupBy(pair => pair.Key)
+    //             .ToDictionary(
+    //                 group => group.Key,
+    //                 group =>
+    //                 {
+    //                     var mergedModel = group.First().Value;
+    //                     foreach (var taskModel in group.Skip(1))
+    //                     {
+    //                         mergedModel.Merge(taskModel.Value);
+    //                     }
+    //                     return mergedModel;
+    //                 }
+    //             )
+    //         ?? new Dictionary<TKey, JToken>();
+    // }
+
+    // public static JToken Merge(this JToken? target, JToken? source)
+    // {
+    //     if (target == null) return source;
+    //     if (source == null) return target;
+    //
+    //     // 确保目标和源都是 JObject 类型
+    //     if (target.Type != JTokenType.Object || source.Type != JTokenType.Object)
+    //         return target;
+    //
+    //     var targetObj = (JObject)target;
+    //     var sourceObj = (JObject)source;
+    //
+    //     // 遍历源对象的所有属性
+    //     foreach (var property in sourceObj.Properties())
+    //     {
+    //         string propName = property.Name;
+    //         JToken? targetProp = targetObj.Property(propName)?.Value;
+    //         JToken sourceProp = property.Value;
+    //         if (propName == "attach")
+    //         {
+    //             // 仅当双方都是对象类型时才进行第一层字段合并
+    //             if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
+    //             {
+    //                 JObject targetAttach = (JObject)targetProp;
+    //                 JObject sourceAttach = (JObject)sourceProp;
+    //
+    //                 // 遍历sourceAttach的所有第一层字段，直接覆盖或添加（不递归）
+    //                 foreach (var attachProp in sourceAttach.Properties())
+    //                 {
+    //                     string attachPropName = attachProp.Name;
+    //                     JToken sourceAttachValue = attachProp.Value;
+    //
+    //                     // 目标存在该字段则直接用源覆盖（不递归），否则添加
+    //                     targetAttach[attachPropName] = sourceAttachValue.DeepClone();
+    //                 }
+    //
+    //                 targetObj[propName] = targetAttach;
+    //             }
+    //             // 目标不存在attach字段时，直接克隆源的attach
+    //             else if (targetProp == null)
+    //             {
+    //                 targetObj[propName] = sourceProp.DeepClone();
+    //             }
+    //             // 若类型不匹配（如一方不是对象），则用源覆盖目标
+    //             else
+    //             {
+    //                 targetObj[propName] = sourceProp.DeepClone();
+    //             }
+    //             continue;
+    //         }
+    //         // if (propName == "attach")
+    //         // {
+    //         //     // 仅当双方都是对象类型时才进行字段合并
+    //         //     if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
+    //         //     {
+    //         //         JObject targetAttach = (JObject)targetProp;
+    //         //         JObject sourceAttach = (JObject)sourceProp;
+    //         //
+    //         //         // 遍历sourceAttach的所有字段，逐个合并到targetAttach
+    //         //         foreach (var attachProp in sourceAttach.Properties())
+    //         //         {
+    //         //             string attachPropName = attachProp.Name;
+    //         //             JToken sourceAttachValue = attachProp.Value;
+    //         //
+    //         //             // 目标存在该字段则递归合并，否则直接添加
+    //         //             if (targetAttach.ContainsKey(attachPropName))
+    //         //             {
+    //         //                 targetAttach[attachPropName] = Merge(targetAttach[attachPropName], sourceAttachValue);
+    //         //             }
+    //         //             else
+    //         //             {
+    //         //                 targetAttach[attachPropName] = sourceAttachValue.DeepClone();
+    //         //             }
+    //         //         }
+    //         //
+    //         //         targetObj[propName] = targetAttach;
+    //         //     }
+    //         //     // 目标不存在attach字段时，直接克隆源的attach
+    //         //     else if (targetProp == null)
+    //         //     {
+    //         //         targetObj[propName] = sourceProp.DeepClone();
+    //         //     }
+    //         //     // 若类型不匹配（如一方不是对象），则用源覆盖目标
+    //         //     else
+    //         //     {
+    //         //         targetObj[propName] = sourceProp.DeepClone();
+    //         //     }
+    //         //     continue;
+    //         // }
+    //         //
+    //         // 处理 recognition 相关合并逻辑
+    //         if (propName == "recognition")
+    //         {
+    //             if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
+    //             {
+    //                 JObject targetRecognition = (JObject)targetProp;
+    //                 JObject sourceRecognition = (JObject)sourceProp;
+    //
+    //                 // 覆盖 type 属性
+    //                 if (sourceRecognition.ContainsKey("type"))
+    //                 {
+    //                     targetRecognition["type"] = sourceRecognition["type"]?.DeepClone() ?? new JValue((string)null);
+    //                 }
+    //
+    //                 // 处理 recognition 内部的 param 属性，递归合并
+    //                 if (sourceRecognition.ContainsKey("param") && targetRecognition.ContainsKey("param") && targetRecognition["param"]?.Type == JTokenType.Object && sourceRecognition["param"]?.Type == JTokenType.Object)
+    //                 {
+    //                     targetRecognition["param"] = Merge(targetRecognition["param"], sourceRecognition["param"]);
+    //                 }
+    //                 else if (sourceRecognition.ContainsKey("param") && targetRecognition["param"] == null)
+    //                 {
+    //                     targetRecognition["param"] = sourceRecognition["param"]?.DeepClone();
+    //                 }
+    //
+    //                 targetObj[propName] = targetRecognition;
+    //             }
+    //             else if (targetProp == null)
+    //             {
+    //                 targetObj[propName] = sourceProp.DeepClone();
+    //             }
+    //             continue;
+    //         }
+    //
+    //         // 处理 action 相关合并逻辑
+    //         if (propName == "action")
+    //         {
+    //             if (targetProp != null && targetProp.Type == JTokenType.Object && sourceProp.Type == JTokenType.Object)
+    //             {
+    //                 JObject targetAction = (JObject)targetProp;
+    //                 JObject sourceAction = (JObject)sourceProp;
+    //
+    //                 // 覆盖 type 属性
+    //                 if (sourceAction.ContainsKey("type"))
+    //                 {
+    //                     targetAction["type"] = sourceAction["type"]?.DeepClone() ?? new JValue((string)null);
+    //                 }
+    //
+    //                 // 处理 action 内部的 param 属性，递归合并
+    //                 if (sourceAction.ContainsKey("param") && targetAction.ContainsKey("param") && targetAction["param"]?.Type == JTokenType.Object && sourceAction["param"]?.Type == JTokenType.Object)
+    //                 {
+    //                     targetAction["param"] = Merge(targetAction["param"], sourceAction["param"]);
+    //                 }
+    //                 else if (sourceAction.ContainsKey("param") && targetAction["param"] == null)
+    //                 {
+    //                     targetAction["param"] = sourceAction["param"]?.DeepClone();
+    //                 }
+    //
+    //                 targetObj[propName] = targetAction;
+    //             }
+    //             else if (targetProp == null)
+    //             {
+    //                 targetObj[propName] = sourceProp.DeepClone();
+    //             }
+    //             continue;
+    //         }
+    //
+    //         // 其他普通属性直接替换或添加
+    //         targetObj[propName] = sourceProp.DeepClone();
+    //     }
+    //
+    //     return target;
+    // }
 
     public static string FormatWith(this string format, params object[] args)
     {
@@ -275,7 +357,9 @@ public static class MFAExtensions
         if (string.IsNullOrWhiteSpace(key)) return string.Empty;
 
         var localizedKey = key.ToLocalization();
-        var processedArgs = Array.ConvertAll(args, a => a.ToLocalization() as object);
+        var processedArgs = transformKey
+            ? Array.ConvertAll(args, a => a.ToLocalization() as object)
+            : Array.ConvertAll(args, a => a as object);
 
         try
         {
@@ -493,5 +577,19 @@ public static class MFAExtensions
 
         result = rawData;
         return true;
+    }
+
+    /// <summary>
+    /// 专为 SukiUI 适配：精准查找 Light/Dark.axaml 中的主题资源
+    /// </summary>
+    public static T? FindSukiUiResource<T>(object resourceKey) where T : struct
+    {
+
+        // 1. 直接通过 SukiUI 提供的 GetInstance() 获取 SukiTheme 实例（最靠谱）
+        var sukiTheme = SukiTheme.GetInstance();
+        var currentThemeVariant = sukiTheme.ActiveBaseTheme; // 当前主题（Light/Dark）
+        var sukiResources = sukiTheme.Resources; // SukiTheme 自身的资源字典（包含 ThemeDictionaries）
+
+        return sukiResources.TryGetResource(resourceKey, currentThemeVariant, out var value) && value is T t ? t : null;
     }
 }

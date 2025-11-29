@@ -180,7 +180,8 @@ public partial class NotificationView : SukiWindow
         };
     }
 
-
+    public NotificationView() : this(2000) { }
+    
     public void SetContent(string title, string message)
     {
         TitleText = title;
@@ -318,8 +319,8 @@ public partial class NotificationView : SukiWindow
                 double physicalWidth = this.Bounds.Width * scaling;
                 double physicalHeight = this.Bounds.Height * scaling;
                 ActualToastHeight = physicalHeight;
-                var targetX = (int)(screen.WorkingArea.Right - physicalWidth - ToastNotification.MarginRight * scaling);
-                var targetY = (int)(screen.WorkingArea.Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
+                var targetX = (int)(GetLatestWorkArea(screen).Right - physicalWidth - ToastNotification.MarginRight * scaling);
+                var targetY = (int)(GetLatestWorkArea(screen).Bottom - physicalHeight - ToastNotification.MarginBottom * scaling);
                 MoveTo(new PixelPoint(targetX, targetY), TimeSpan.FromMilliseconds(100), StartAutoCloseTimer);
             });
         }, noMessage: true);
@@ -366,15 +367,14 @@ public partial class NotificationView : SukiWindow
     // Windows API (已存在)
     [DllImport("user32.dll", SetLastError = true)]
     [SupportedOSPlatform("windows")]
-    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+    private extern static int GetWindowLong(IntPtr hWnd, int nIndex);
 
     [DllImport("user32.dll")]
     [SupportedOSPlatform("windows")]
-    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    private extern static int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     private const int GWL_EX_STYLE = -20;
     private const int WS_EX_APPWINDOW = 0x00040000, WS_EX_TOOLWINDOW = 0x00000080;
-
 
     protected override void OnLoaded(RoutedEventArgs e)
     {
@@ -391,6 +391,15 @@ public partial class NotificationView : SukiWindow
             StartSlideInAnimation, DispatcherPriority.Render);
     }
 
+
+    private void TaskbarMonitor_TaskbarHeightChanged(int newHeight)
+    {
+        DispatcherHelper.RunOnMainThreadAsync(() =>
+        {
+            ToastNotification.Instance.UpdateAllToastPositions();
+        }, DispatcherPriority.SystemIdle);
+    }
+
     [SupportedOSPlatform("windows")]
     private void HookWndProcForWorkAreaChange()
     {
@@ -403,7 +412,7 @@ public partial class NotificationView : SukiWindow
                 LoggerHelper.Warning("无法获取窗口句柄，无法监听工作区变化");
                 return;
             }
-            
+
             // 注册窗口消息钩子，监听 WM_SETTINGCHANGE
             Win32Properties.AddWndProcHookCallback(topLevel, (hwnd, msg, wParam, lParam, ref handled) =>
             {

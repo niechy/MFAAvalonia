@@ -18,7 +18,7 @@
                           Height="50"
                           SelectedIndex="0">
                     <ComboBox.Styles>
-                        <Style Selector="ComboBoxItem:selected /template/ PathIcon#CheckSelected">
+                        <Style Selector="ComboBoxItem:selected /template/ Border#CheckSelected">
                             <Setter Property="IsVisible" Value="False" />
                         </Style>
                     </ComboBox.Styles>
@@ -136,12 +136,13 @@
                                 </Path>
                             </ToggleButton>
                             <Popup Name="PART_Popup"
-
                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
                                    HorizontalOffset="-5"
                                    IsLightDismissEnabled="True"
                                    IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
-                                   PlacementTarget="{TemplateBinding}">
+                                   Placement="Bottom"
+                                   PlacementTarget="{TemplateBinding}"
+                                   InheritsTransform="True">
 
                                 <LayoutTransformControl Name="PART_LayoutTransform" RenderTransformOrigin="50%, 0%"
                                                         Opacity="0">

@@ -36,10 +36,12 @@ public partial class RootViewModel : ViewModelBase
             // var minor = version.Minor >= 0 ? version.Minor : 0;
             // var patch = version.Build >= 0 ? version.Build : 0;
             // return $"v{SemVersion.Parse($"{major}.{minor}.{patch}")}";
-            return "v1.8.3"; // Hardcoded version for now, replace with dynamic versioning later
+            return "v2.0.3"; // Hardcoded version for now, replace with dynamic versioning later
         }
     }
 
+    [ObservableProperty] private string? _windowUpdateInfo = "";
+    
     [ObservableProperty] private string? _resourceName;
 
     [ObservableProperty] private bool _isResourceNameVisible;
@@ -65,10 +67,10 @@ public partial class RootViewModel : ViewModelBase
             Instances.TaskQueueViewModel.ShouldShow = (int)(MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
         }
     }
-    
+
     public void CheckDebug()
     {
-        if (IsDebugMode && _shouldTip && !MaaProcessor.Instance.IsV2)
+        if (IsDebugMode && _shouldTip && !MaaProcessor.Instance.IsV3)
         {
             DispatcherHelper.PostOnMainThread(() =>
             {
@@ -88,15 +90,34 @@ public partial class RootViewModel : ViewModelBase
         if (value)
             CheckDebug();
     }
-
+    private string _resourceNameKey = "";
+    private string _resourceFallbackKey = "";
+    private string _customTitleKey = "";
+    private string _customTitleFallbackKey = "";
     public void ShowResourceName(string name)
     {
         ResourceName = name;
         IsResourceNameVisible = true;
+        
     }
-
+    
+    public void ShowResourceKeyAndFallBack(string? key,string? fallback)
+    {
+        _resourceNameKey = key ?? string.Empty;
+        _resourceFallbackKey = fallback?? string.Empty;
+        UpdateName();
+        LanguageHelper.LanguageChanged += (_,__) => UpdateName();
+        IsResourceNameVisible = true;
+    }
+    
+    public void UpdateName()
+    {
+        ResourceName = LanguageHelper.GetLocalizedDisplayName(_resourceNameKey, _resourceFallbackKey);
+    }
+    
     public void ShowResourceVersion(string version)
     {
+        version = version.StartsWith("v") ? version : "v" + version;
         ResourceVersion = version;
     }
 
@@ -106,7 +127,25 @@ public partial class RootViewModel : ViewModelBase
         IsCustomTitleVisible = true;
         IsResourceNameVisible = false;
     }
-
+    
+    public void ShowCustomTitleAndFallBack(string? key,string? fallback)
+    {
+        _customTitleKey = key?? string.Empty;
+        _customTitleFallbackKey = fallback?? string.Empty;
+        UpdateCustomTitle();
+        LanguageHelper.LanguageChanged += (_,__) => UpdateCustomTitle();
+        if (!string.IsNullOrWhiteSpace(CustomTitle))
+        {
+            IsCustomTitleVisible = true;
+            IsResourceNameVisible = false;
+        }
+    }
+    
+    public void UpdateCustomTitle()
+    {
+        CustomTitle = LanguageHelper.GetLocalizedDisplayName(_customTitleKey,_customTitleFallbackKey);
+    }
+    
     [RelayCommand]
     public void ToggleVisible()
     {
