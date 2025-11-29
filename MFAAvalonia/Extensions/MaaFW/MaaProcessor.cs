@@ -70,7 +70,7 @@ public class MaaProcessor
             if (args.NewValue > 0)
                 Instances.RootViewModel.IsRunning = true;
         };
-        CheckInterface(out _, out _, out _);
+        CheckInterface(out _,out _, out _, out _,out _);
         try
         {
             var @interface = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "interface.json")));
@@ -1337,7 +1337,7 @@ public class MaaProcessor
         public AdbDeviceInfo? Info { get; set; } = null;
     }
 
-    public static bool CheckInterface(out string Name, out string Version, out string CustomTitle)
+    public static bool CheckInterface(out string Name,out string NameFallBack, out string Version, out string CustomTitle, out string CustomTitleFallBack)
     {
 
         if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "interface.json")))
@@ -1395,22 +1395,26 @@ public class MaaProcessor
                 Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, resourceDir));
             JsonHelper.SaveJson(Path.Combine(AppContext.BaseDirectory, "interface.json"),
                 Interface, new MaaInterfaceSelectAdvancedConverter(true), new MaaInterfaceSelectOptionConverter(true));
-            Name = Interface?.Name ?? string.Empty;
+            Name = Interface?.Label ?? string.Empty;
+            NameFallBack = Interface?.Name ?? string.Empty;
             Version = Interface?.Version ?? string.Empty;
-            CustomTitle = Interface?.Title ?? Interface?.CustomTitle ?? string.Empty;
+            CustomTitle = Interface?.Title  ?? string.Empty;
+            CustomTitleFallBack = Interface?.CustomTitle ?? string.Empty;
             return true;
         }
         Name = string.Empty;
         Version = string.Empty;
         CustomTitle = string.Empty;
+        NameFallBack = string.Empty;
+        CustomTitleFallBack = string.Empty;
         return false;
     }
 
-    public static (string Name, string Version, string CustomTitle) ReadInterface()
+    public static (string Key,string Fallback, string Version, string CustomTitle,string CustomFallback) ReadInterface()
     {
-        if (CheckInterface(out string name, out string version, out string customTitle))
+        if (CheckInterface(out string name, out string back, out string version, out string customTitle,out var fallBack))
         {
-            return (name, version, customTitle);
+            return (name,back, version, customTitle,fallBack);
         }
 
         var defaultValue = new MaaInterface();
@@ -1442,22 +1446,23 @@ public class MaaProcessor
                 new MaaInterfaceSelectOptionConverter(false));
 
 
-        return (Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.Title ?? Interface?.CustomTitle ?? string.Empty);
+        return (Interface?.Label ?? string.Empty,Interface?.Name ?? string.Empty, Interface?.Version ?? string.Empty, Interface?.Title ?? string.Empty, Interface?.CustomTitle ?? string.Empty);
 
     }
 
     public bool InitializeData(Collection<DragItemViewModel>? dragItem = null)
     {
-        var (name, version, customTitle) = ReadInterface();
-        if (!string.IsNullOrWhiteSpace(name) && !name.Equals("debug", StringComparison.OrdinalIgnoreCase))
-            Instances.RootViewModel.ShowResourceName(name);
+        var (name,back, version, customTitle,fallback) = ReadInterface();
+        if ((!string.IsNullOrWhiteSpace(name) && !name.Equals("debug", StringComparison.OrdinalIgnoreCase)) || !string.IsNullOrWhiteSpace(back))
+            Instances.RootViewModel.ShowResourceKeyAndFallBack(name,back);
         if (!string.IsNullOrWhiteSpace(version) && !version.Equals("debug", StringComparison.OrdinalIgnoreCase))
         {
             Instances.RootViewModel.ShowResourceVersion(version);
             Instances.VersionUpdateSettingsUserControlModel.ResourceVersion = version;
         }
-        if (!string.IsNullOrWhiteSpace(customTitle))
-            Instances.RootViewModel.ShowCustomTitle(customTitle);
+        
+        if (!string.IsNullOrWhiteSpace(customTitle) || !string.IsNullOrWhiteSpace(fallback))
+            Instances.RootViewModel.ShowCustomTitleAndFallBack(customTitle,fallback);
 
         if (Interface != null)
         {

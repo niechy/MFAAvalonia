@@ -648,7 +648,10 @@ public partial class MaaInterface
 
     [JsonProperty("name")]
     public string? Name { get; set; }
-
+    
+    [JsonProperty("label")]
+    public string? Label { get; set; }
+    
     [JsonProperty("version")]
     public string? Version { get; set; }
 

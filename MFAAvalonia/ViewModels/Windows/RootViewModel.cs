@@ -90,15 +90,34 @@ public partial class RootViewModel : ViewModelBase
         if (value)
             CheckDebug();
     }
-
+    private string _resourceNameKey = "";
+    private string _resourceFallbackKey = "";
+    private string _customTitleKey = "";
+    private string _customTitleFallbackKey = "";
     public void ShowResourceName(string name)
     {
         ResourceName = name;
         IsResourceNameVisible = true;
+        
     }
-
+    
+    public void ShowResourceKeyAndFallBack(string? key,string? fallback)
+    {
+        _resourceNameKey = key ?? string.Empty;
+        _resourceFallbackKey = fallback?? string.Empty;
+        UpdateName();
+        LanguageHelper.LanguageChanged += (_,__) => UpdateName();
+        IsResourceNameVisible = true;
+    }
+    
+    public void UpdateName()
+    {
+        ResourceName = LanguageHelper.GetLocalizedDisplayName(_resourceNameKey, _resourceFallbackKey);
+    }
+    
     public void ShowResourceVersion(string version)
     {
+        version = version.StartsWith("v") ? version : "v" + version;
         ResourceVersion = version;
     }
 
@@ -108,7 +127,25 @@ public partial class RootViewModel : ViewModelBase
         IsCustomTitleVisible = true;
         IsResourceNameVisible = false;
     }
-
+    
+    public void ShowCustomTitleAndFallBack(string? key,string? fallback)
+    {
+        _customTitleKey = key?? string.Empty;
+        _customTitleFallbackKey = fallback?? string.Empty;
+        UpdateCustomTitle();
+        LanguageHelper.LanguageChanged += (_,__) => UpdateCustomTitle();
+        if (!string.IsNullOrWhiteSpace(CustomTitle))
+        {
+            IsCustomTitleVisible = true;
+            IsResourceNameVisible = false;
+        }
+    }
+    
+    public void UpdateCustomTitle()
+    {
+        CustomTitle = LanguageHelper.GetLocalizedDisplayName(_customTitleKey,_customTitleFallbackKey);
+    }
+    
     [RelayCommand]
     public void ToggleVisible()
     {
