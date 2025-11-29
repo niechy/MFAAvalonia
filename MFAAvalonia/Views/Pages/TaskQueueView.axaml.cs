@@ -1626,7 +1626,7 @@ public partial class TaskQueueView : UserControl
                 @"\[size:(\d+)\]", new Dictionary<string, string>
                 {
                     {
-                        "markdown", ""
+                        "markdown",  "<span style='font-size: $1px;'>"
                     },
                     {
                         "html", "<span style='font-size: $1px;'>"
@@ -1638,7 +1638,7 @@ public partial class TaskQueueView : UserControl
                 @"\[align:(left|center|right)\]", new Dictionary<string, string>
                 {
                     {
-                        "markdown", "$1" switch { "center" => "p=.", "right" => "p>.", _ => "p<." }
+                        "markdown", "<div style='text-align: $1;'>"
                     },
                     {
                         "html", "<div style='text-align: $1;'>"
@@ -1660,7 +1660,7 @@ public partial class TaskQueueView : UserControl
                 @"\[/(align)\]", new Dictionary<string, string>
                 {
                     {
-                        "markdown", ""
+                        "markdown", "$1" switch { "align" => "</div>", _ => "</span>" }
                     },
                     {
                         "html", "$1" switch { "align" => "</div>", _ => "</span>" }
@@ -1672,7 +1672,7 @@ public partial class TaskQueueView : UserControl
                 @"\[/(size)\]", new Dictionary<string, string>
                 {
                     {
-                        "markdown", ""
+                        "markdown", "$1" switch { "align" => "</div>", _ => "</span>" }
                     },
                     {
                         "html", "$1" switch { "align" => "</div>", _ => "</span>" }

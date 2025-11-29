@@ -124,58 +124,28 @@
             </suki:GroupBox>
         </suki:GlassCard>
         <!-- 许可�? -->
-        <suki:GlassCard Padding="20,13,30,-13"
+        
+        <suki:GlassCard Padding="22,8,25,8"
                         IsVisible="{Binding HasResourceLicense}">
-            <suki:GroupBox>
-                <suki:GroupBox.Header>
-                    <DockPanel>
-                        <StackPanel Orientation="Horizontal"
-                                    DockPanel.Dock="Left">
+            <DockPanel>
+                <Button Click="ShowLicense_Click" BorderBrush="Transparent"
+                        BorderThickness="0"
+                            Content="{markupExtensions:FluentIcon Icon=Send,
+                                                          IconSize=Size16}"
+                        DockPanel.Dock="Right"
+                        Height="40"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,4,0"/>
+                <StackPanel HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
                             <ContentControl Content="{markupExtensions:FluentIcon Icon=Certificate, IconSize=Size20}" />
                             <TextBlock Text="{markup:I18n {x:Static helper:LangKeys.LicenseInfo}}"
                                        FontSize="16"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center" />
-                        </StackPanel>
-                        <ToggleButton Name="LicenseToggle"
-                                      IsChecked="False"
-                                      DockPanel.Dock="Right"
-                                      HorizontalAlignment="Right"
-                                      Background="Transparent"
-                                      BorderThickness="0">
-                            <Panel>
-                                <ContentControl Content="{markupExtensions:FluentIcon Icon=ChevronDown, IconSize=Size16}"
-                                                Foreground="{DynamicResource SukiText}"
-                                                IsVisible="{Binding !IsChecked, ElementName=LicenseToggle}" />
-                                <ContentControl Content="{markupExtensions:FluentIcon Icon=ChevronUp, IconSize=Size16}"
-                                                Foreground="{DynamicResource SukiText}"
-                                                IsVisible="{Binding IsChecked, ElementName=LicenseToggle}" />
-                            </Panel>
-                        </ToggleButton>
-                    </DockPanel>
-                </suki:GroupBox.Header>
-                <Border MaxHeight="500"
-                        Padding="10,5"
-                        Margin="0,0,0,20"
-                        IsVisible="{Binding IsChecked, ElementName=LicenseToggle}">
-                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto">
-                        <full:MarkdownScrollViewer Markdown="{Binding ResourceLicense}"
-                                                   VerticalAlignment="Top">
-                            <full:MarkdownScrollViewer.Engine>
-                                <extensions:MarkdownExtension />
-                            </full:MarkdownScrollViewer.Engine>
-                            <full:MarkdownScrollViewer.Plugins>
-                                <StaticResource ResourceKey="MdXamlPlugin" />
-                            </full:MarkdownScrollViewer.Plugins>
-                            <full:MarkdownScrollViewer.Styles>
-                                <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
-                                <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
-                            </full:MarkdownScrollViewer.Styles>
-                        </full:MarkdownScrollViewer>
-                    </ScrollViewer>
-                </Border>
-            </suki:GroupBox>
+                </StackPanel>
+            </DockPanel>
         </suki:GlassCard>
         <suki:GlassCard Padding="25,8,25,8">
             <DockPanel>

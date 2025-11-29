@@ -1067,6 +1067,9 @@
     <data name="AgentStartFailed" xml:space="preserve">
         <value>Agent啟動失敗</value>
     </data>
+    <data name="AgentExecutableNotFound" xml:space="preserve">
+        <value>Agent 可執行文件不存在: {0}</value>
+    </data>
     <data name="Optional" xml:space="preserve">
         <value>可選</value>
     </data>

@@ -812,9 +812,8 @@ public class MaaProcessor
                     // 检查可执行文件是否存在
                     if (!File.Exists(executablePath))
                     {
-                        var errorMsg = $"Agent 可执行文件不存在: {executablePath}";
+                        var errorMsg = LangKeys.AgentExecutableNotFound.ToLocalizationFormatted(false, executablePath);
                         LoggerHelper.Error(errorMsg);
-                        ToastHelper.Error(LangKeys.AgentStartFailed.ToLocalization(), errorMsg, duration: 10);
                         throw new FileNotFoundException(errorMsg, executablePath);
                     }
 
@@ -889,6 +888,7 @@ public class MaaProcessor
                 {
                     LoggerHelper.Error($"{LangKeys.AgentStartFailed.ToLocalization()}: {ex}");
                     ToastHelper.Error(LangKeys.AgentStartFailed.ToLocalization(), ex.Message);
+                    return (null, InvalidResource);
                 }
 
                 _agentClient?.LinkStart();

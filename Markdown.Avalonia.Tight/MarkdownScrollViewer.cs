@@ -321,27 +321,105 @@ namespace Markdown.Avalonia
             if (_wrapper.Document is null && String.IsNullOrEmpty(Markdown))
                 return;
 
-            _document = _engine.TransformElement(Markdown ?? "");
-            _document.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
-
-            var ofst = _viewer.Offset;
-
-            if (_wrapper.Document?.Control is Control oldContentControl)
+            try
             {
-                oldContentControl.SizeChanged -= OnViewportSizeChanged;
+                _document = _engine.TransformElement(Markdown ?? "");
+                _document.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+
+                var ofst = _viewer.Offset;
+
+                if (_wrapper.Document?.Control is Control oldContentControl)
+                {
+                    oldContentControl.SizeChanged -= OnViewportSizeChanged;
+                }
+
+                _wrapper.Document = _document;
+
+                if (_wrapper.Document?.Control is Control newContentControl)
+                {
+                    newContentControl.SizeChanged += OnViewportSizeChanged;
+                }
+
+                _headerRects = null;
+
+                if (SaveScrollValueWhenContentUpdated)
+                    _viewer.Offset = ofst;
             }
-
-            _wrapper.Document = _document;
-
-            if (_wrapper.Document?.Control is Control newContentControl)
+            catch (StackOverflowException ex)
             {
-                newContentControl.SizeChanged += OnViewportSizeChanged;
+                // 处理堆栈溢出异常（通常是由于 Markdown 内容深度嵌套导致的）
+                System.Diagnostics.Debug.WriteLine($"Markdown 解析堆栈溢出: {ex.Message}");
+                CreateErrorDocument("Markdown 内容解析失败：内容嵌套过深或格式有问题");
             }
+            catch (RegexMatchTimeoutException ex)
+            {
+                // 处理正则表达式超时异常
+                System.Diagnostics.Debug.WriteLine($"Markdown 正则表达式匹配超时: {ex.Message}");
+                CreateErrorDocument("Markdown 内容解析失败：内容格式复杂，解析超时");
+            }
+            catch (OutOfMemoryException ex)
+            {
+                // 处理内存溢出异常（可能是由于大量递归或复杂正则导致的）
+                System.Diagnostics.Debug.WriteLine($"Markdown 解析内存溢出: {ex.Message}");
+                CreateErrorDocument("Markdown 内容解析失败：内容过大或格式过于复杂");
+            }
+            catch (Exception ex)
+            {
+                // 处理其他解析异常
+                System.Diagnostics.Debug.WriteLine($"Markdown 解析失败: {ex.Message}\n{ex.StackTrace}");
+                var errorMsg = ex.Message.Length > 100 ? ex.Message.Substring(0, 100) + "..." : ex.Message;
+                CreateErrorDocument($"Markdown 内容解析失败: {errorMsg}");
+            }
+        }
 
-            _headerRects = null;
+        private void CreateErrorDocument(string errorMessage)
+        {
+            try
+            {
+                // 创建一个简单的文本块来显示错误消息
+                var errorTextBlock = new TextBlock
+                {
+                    Text = errorMessage,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    Foreground = Brushes.Red
+                };
 
-            if (SaveScrollValueWhenContentUpdated)
-                _viewer.Offset = ofst;
+                var errorBorder = new Border
+                {
+                    Child = errorTextBlock,
+                    Background = Brushes.Transparent,
+                    Padding = new Thickness(10)
+                };
+
+                // 使用 UnBlockElement 包装错误控件，然后创建 DocumentRootElement
+                var errorElement = new UnBlockElement(errorBorder);
+                var errorDocument = new DocumentRootElement(new[] { errorElement });
+                
+                var ofst = _viewer.Offset;
+
+                if (_wrapper.Document?.Control is Control oldContentControl)
+                {
+                    oldContentControl.SizeChanged -= OnViewportSizeChanged;
+                }
+
+                _wrapper.Document = errorDocument;
+
+                if (_wrapper.Document?.Control is Control newContentControl)
+                {
+                    newContentControl.SizeChanged += OnViewportSizeChanged;
+                }
+
+                _headerRects = null;
+
+                if (SaveScrollValueWhenContentUpdated)
+                    _viewer.Offset = ofst;
+            }
+            catch
+            {
+                // 如果创建错误文档也失败，至少清空内容避免崩溃
+                _wrapper.Document = null;
+            }
         }
 
         private IMarkdownEngine2 _engine;
