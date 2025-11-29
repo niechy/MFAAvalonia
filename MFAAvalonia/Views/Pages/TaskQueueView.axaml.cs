@@ -466,7 +466,7 @@ public partial class TaskQueueView : UserControl
                     Width = new GridLength(4, GridUnitType.Star)
                 }
             },
-            Margin = new Thickness(8, 0, 5, 5)
+            Margin = new Thickness(10, 6, 10, 6)
         };
 
         var textBlock = new TextBlock
@@ -486,7 +486,7 @@ public partial class TaskQueueView : UserControl
             Value = source.InterfaceItem.RepeatCount ?? 1,
             VerticalAlignment = VerticalAlignment.Center,
             MinWidth = 150,
-            Margin = new Thickness(0, 5, 5, 5),
+            Margin = new Thickness(0, 4, 0, 4),
             Increment = 1,
             Minimum = -1,
         };
@@ -647,14 +647,14 @@ public partial class TaskQueueView : UserControl
                         Width = new GridLength(4, GridUnitType.Star)
                     }
                 },
-                Margin = new Thickness(8, 0, 5, 5)
+                Margin = new Thickness(10, 6, 10, 6)
             };
 
             // 创建AutoCompleteBox
             var autoCompleteBox = new AutoCompleteBox
             {
                 MinWidth = 150,
-                Margin = new Thickness(0, 5, 5, 5),
+                Margin = new Thickness(0, 4, 0, 4),
                 Text = defaultValue,
                 IsTextCompletionEnabled = true,
                 FilterMode = AutoCompleteFilterMode.Custom,
@@ -860,7 +860,9 @@ public partial class TaskQueueView : UserControl
         MaaInterface.MaaInterfaceOption interfaceOption,
         DragItemViewModel source)
     {
-        var container = new StackPanel();
+        var container = new StackPanel() {
+            Margin = new Thickness(0, 8, 0, 0)
+        };
 
         // 确保 Data 字典已初始化
         option.Data ??= new Dictionary<string, string?>();
@@ -886,14 +888,14 @@ public partial class TaskQueueView : UserControl
                     new ColumnDefinition { Width = new GridLength(7, GridUnitType.Star) },
                     new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) }
                 },
-                Margin = new Thickness(8, 0, 5, 5)
+                Margin = new Thickness(10, 6, 10, 6)
             };
 
             // 创建输入框
             var textBox = new TextBox
             {
                 MinWidth = 150,
-                Margin = new Thickness(0, 5, 5, 5),
+                Margin = new Thickness(0, 4, 0, 4),
                 Text = currentValue
             };
             if (!string.IsNullOrWhiteSpace(input.PatternMsg))
@@ -1039,7 +1041,7 @@ public partial class TaskQueueView : UserControl
             {
                 FontSize = 14,
                 FontWeight = FontWeight.SemiBold,
-                Margin = new Thickness(2, 2, 5, 2)
+                Margin = new Thickness(10, 8, 5, 4)
             };
             headerText.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(interfaceOption.DisplayName, interfaceOption.Name));
             headerText.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
@@ -1057,7 +1059,7 @@ public partial class TaskQueueView : UserControl
         // 优先使用 Description
         if (!string.IsNullOrWhiteSpace(description))
         {
-            return description.ResolveMarkdownContentAsync(transform:false).Result;
+            return description.ResolveMarkdownContentAsync(transform: false).Result;
         }
 
         // 没有 Description 则使用 Document
@@ -1091,7 +1093,7 @@ public partial class TaskQueueView : UserControl
         // 子配置项容器
         var subOptionsContainer = new StackPanel
         {
-            Margin = new Thickness(16, 0, 0, 0) // 缩进显示子配置项
+            Margin = new Thickness(0) // 由 Border 的 Padding 控制间距
         };
 
         var button = new ToggleSwitch
@@ -1103,6 +1105,7 @@ public partial class TaskQueueView : UserControl
             },
             MaxHeight = 60,
             MaxWidth = 100,
+            Margin = new Thickness(0, 4, 0, 4),
             HorizontalAlignment = HorizontalAlignment.Right,
             Tag = option.Name,
             VerticalAlignment = VerticalAlignment.Center
@@ -1160,11 +1163,13 @@ public partial class TaskQueueView : UserControl
         button.Bind(ToolTip.TipProperty, new ResourceBindingWithFallback(option.DisplayName, option.Name));
         var textBlock = new TextBlock
         {
-            Margin = new Thickness(8, 0, 5, 0),
+            FontSize = 14,
+            Margin = new Thickness(10, 0, 5, 0),
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
         textBlock.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(option.DisplayName, option.Name));
+        textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiLowText"));
 
         var grid = new Grid
         {
@@ -1183,7 +1188,7 @@ public partial class TaskQueueView : UserControl
                     Width = GridLength.Auto
                 }
             },
-            Margin = new Thickness(0, 0, 0, 5)
+            Margin = new Thickness(0, 6, 10, 6)
         };
         var stackPanel = new StackPanel
         {
@@ -1209,7 +1214,24 @@ public partial class TaskQueueView : UserControl
 
         // 将主 grid 和子配置项容器添加到外层容器
         outerContainer.Children.Add(grid);
-        outerContainer.Children.Add(subOptionsContainer);
+
+        // 用 Border 包装子选项容器，添加左边框线以增强视觉层次
+        var primaryColor = SukiTheme.GetInstance()?.ActiveColorTheme?.Primary;
+        var subOptionsBorder = new Border
+        {
+            BorderBrush = primaryColor.HasValue ? new SolidColorBrush(primaryColor.Value) : Brushes.Gray,
+            BorderThickness = new Thickness(2, 0, 0, 0),
+            Margin = new Thickness(12, 2, 0, 2),
+            Padding = new Thickness(4, -12, 0, 2),
+            Child = subOptionsContainer,
+            Opacity = 0.8
+        };
+        subOptionsBorder.Bind(IsVisibleProperty, new Binding("Children.Count")
+        {
+            Source = subOptionsContainer,
+            Converter = new FuncValueConverter<int, bool>(count => count > 0)
+        });
+        outerContainer.Children.Add(subOptionsBorder);
 
         // 返回包装后的 Grid
         var wrapperGrid = new Grid();
@@ -1238,13 +1260,13 @@ public partial class TaskQueueView : UserControl
                     Width = new GridLength(4, GridUnitType.Star)
                 }
             },
-            Margin = new Thickness(8, 0, 5, 5)
+            Margin = new Thickness(10, 6, 10, 6)
         };
 
         // 子配置项容器
         var subOptionsContainer = new StackPanel
         {
-            Margin = new Thickness(16, 0, 0, 0) // 缩进显示子配置项
+            Margin = new Thickness(0) // 由 Border 的 Padding 控制间距
         };
 
         // 初始化所有 Case 的显示名称
@@ -1263,7 +1285,7 @@ public partial class TaskQueueView : UserControl
             {
                 "LimitWidth"
             },
-            Margin = new Thickness(0, 5, 5, 5),
+            Margin = new Thickness(0, 4, 0, 4),
             ItemsSource = interfaceOption.Cases,
             ItemTemplate = new FuncDataTemplate<MaaInterface.MaaInterfaceOptionCase>((caseOption, b) =>
             {
@@ -1465,7 +1487,24 @@ public partial class TaskQueueView : UserControl
 
         // 将主 grid 和子配置项容器添加到外层容器
         outerContainer.Children.Add(grid);
-        outerContainer.Children.Add(subOptionsContainer);
+
+        // 用 Border 包装子选项容器，添加左边框线以增强视觉层次
+        var primaryColor2 = SukiTheme.GetInstance()?.ActiveColorTheme?.Primary;
+        var subOptionsBorder = new Border
+        {
+            BorderBrush = primaryColor2.HasValue ? new SolidColorBrush(primaryColor2.Value) : Brushes.Gray,
+            BorderThickness = new Thickness(2, 0, 0, 0),
+            Margin = new Thickness(12, 2, 0, 2),
+            Padding = new Thickness(4, -10, 0, 2),
+            Child = subOptionsContainer,
+            Opacity = 0.8
+        };
+        subOptionsBorder.Bind(IsVisibleProperty, new Binding("Children.Count")
+        {
+            Source = subOptionsContainer,
+            Converter = new FuncValueConverter<int, bool>(count => count > 0)
+        });
+        outerContainer.Children.Add(subOptionsBorder);
 
         // 返回包装后的 Grid
         var wrapperGrid = new Grid();

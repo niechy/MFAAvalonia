@@ -1,6 +1,5 @@
 ﻿<Styles
     xmlns="https://github.com/avaloniaui"
-    xmlns:icons="clr-namespace:SukiUI.Content"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:suki="https://github.com/kikipoulet/SukiUI">
     <Design.PreviewWith>
@@ -38,14 +37,15 @@
                     Name="BorderBasicStyle"
                     Padding="5,0">
                     <DockPanel>
-                        <PathIcon
-                            Data="{x:Static icons:Icons.Check}"
-                            DockPanel.Dock="Right"
-                            Foreground="{DynamicResource SukiPrimaryColor}"
-                            Height="12"
+                        <Border
+                            DockPanel.Dock="Left"
+                            Width="3"
+                            Height="16"
+                            CornerRadius="1.5"
+                            Background="{DynamicResource SukiPrimaryColor}"
                             Margin="0,0,3,0"
-                            Name="CheckSelected"
-                            Width="12" />
+                            VerticalAlignment="Center"
+                            Name="CheckSelected" />
                         <ContentPresenter
                             Content="{TemplateBinding Content}"
                             ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -62,11 +62,11 @@
         </Setter>
     </Style>
 
-    <Style Selector="ComboBoxItem /template/ PathIcon#CheckSelected">
+    <Style Selector="ComboBoxItem /template/ Border#CheckSelected">
         <Setter Property="IsVisible" Value="False" />
     </Style>
 
-    <Style Selector="ComboBoxItem:selected /template/ PathIcon#CheckSelected">
+    <Style Selector="ComboBoxItem:selected /template/ Border#CheckSelected">
         <Setter Property="IsVisible" Value="True" />
     </Style>
 
