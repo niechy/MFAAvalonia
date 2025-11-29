@@ -43,14 +43,14 @@ public partial class MFATask : ObservableObject
             {
                 token.ThrowIfCancellationRequested();
                 if (Type == MFATaskType.MAAFW)
-                    RootView.AddLogByKeys("TaskStart", null, true, Name ?? string.Empty);
+                    RootView.AddLogByKeys(LangKeys.TaskStart, null, true, LanguageHelper.GetLocalizedString(Name));
                 await Action();
             }
             return MFATaskStatus.SUCCEEDED;
         }
         catch (MaaJobStatusException)
         {
-            LoggerHelper.Error($"Task {Name} failed to run");
+            LoggerHelper.Error($"Task {LanguageHelper.GetLocalizedString(Name)} failed to run");
             return MFATaskStatus.FAILED;
         }
         catch (OperationCanceledException)

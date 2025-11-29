@@ -346,7 +346,9 @@ public static class MFAExtensions
         if (string.IsNullOrWhiteSpace(key)) return string.Empty;
 
         var localizedKey = key.ToLocalization();
-        var processedArgs = Array.ConvertAll(args, a => a.ToLocalization() as object);
+        var processedArgs = transformKey 
+            ? Array.ConvertAll(args, a => a.ToLocalization() as object)
+            : Array.ConvertAll(args, a => a as object);
 
         try
         {

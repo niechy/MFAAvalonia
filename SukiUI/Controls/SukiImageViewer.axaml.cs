@@ -295,8 +295,7 @@ public class SukiImageViewer : TemplatedControl
         base.OnPointerWheelChanged(e);
         if (_image == null)
             return;
-
-        var mousePos = e.GetPosition(this);
+        
         var oldScale = Scale;
         double newScale = e.Delta.Y > 0 ? oldScale * 1.1 : oldScale / 1.1;
         newScale = Math.Max(newScale, _sourceMinScale);
