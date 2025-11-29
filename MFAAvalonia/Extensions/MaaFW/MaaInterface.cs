@@ -68,7 +68,7 @@ public partial class MaaInterface
         private void UpdateDisplayName()
         {
             DisplayName = LanguageHelper.GetLocalizedDisplayName(Label, Name ?? string.Empty);
-            DisplayDescription = LanguageHelper.GetLocalizedString(Description);
+            DisplayDescription = LanguageHelper.GetLocalizedString(Description.ResolveMarkdownContentAsync().Result);
             HasDescription = !string.IsNullOrWhiteSpace(DisplayDescription);
         }
 
@@ -544,10 +544,9 @@ public partial class MaaInterface
         private void UpdateDisplayName()
         {
             DisplayName = LanguageHelper.GetLocalizedDisplayName(Label, Name ?? string.Empty);
-            DisplayDescription = LanguageHelper.GetLocalizedString(Description);
+            DisplayDescription = LanguageHelper.GetLocalizedString(Description.ResolveMarkdownContentAsync().Result);
 
             HasDescription = !string.IsNullOrWhiteSpace(DisplayDescription);
-            LoggerHelper.Info($"DisplayDescription:{DisplayDescription},HasDescription: {HasDescription}");
         }
     }
 
@@ -714,64 +713,7 @@ public partial class MaaInterface
     [JsonProperty("license")]
     public string? License { get; set; }
 
-    /// <summary>
-    /// 解析 Markdown 内容：支持国际化字符串、文件路径、URL 或直接文本
-    /// </summary>
-    /// <param name="input">输入内容（可能是 $key、文件路径、URL 或直接文本）</param>
-    /// <param name="projectDir">项目目录（用于解析相对路径）</param>
-    /// <returns>解析后的 Markdown 文本</returns>
-    public static async Task<string> ResolveMarkdownContentAsync(string? input, string? projectDir)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-            return string.Empty;
-
-        try
-        {
-            // 1. 国际化处理（以$开头）
-            var content = LanguageHelper.GetLocalizedString(input);
-
-            // 2. 判断是否为 URL
-            if (Uri.TryCreate(content, UriKind.Absolute, out var uri) &&
-                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
-            {
-                return await FetchUrlContentAsync(content);
-            }
-
-            // 3. 判断是否为文件路径
-            var filePath = ReplacePlaceholder(content, projectDir, checkIfPath: true);
-            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
-            {
-                return await File.ReadAllTextAsync(filePath);
-            }
-
-            // 4. 直接返回文本（可能是 Markdown）
-            return content;
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"解析 Markdown 内容失败: {input}, 错误: {ex.Message}");
-            return string.Empty;
-        }
-    }
-
-    /// <summary>
-    /// 从 URL 获取文本内容
-    /// </summary>
-    private static async Task<string> FetchUrlContentAsync(string url)
-    {
-        try
-        {
-            using var httpClient = VersionChecker.CreateHttpClientWithProxy();
-            httpClient.Timeout = TimeSpan.FromSeconds(10);
-            return await httpClient.GetStringAsync(url);
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Warning($"获取 URL 内容失败: {url}, 错误: {ex.Message}");
-            return string.Empty;
-        }
-    }
-
+    
     /// <summary>
     /// 替换单个字符串中的 {PROJECT_DIR} 占位符，并标准化为当前系统的路径格式
     /// </summary>

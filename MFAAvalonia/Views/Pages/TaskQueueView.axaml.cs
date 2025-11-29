@@ -1057,7 +1057,7 @@ public partial class TaskQueueView : UserControl
         // 优先使用 Description
         if (!string.IsNullOrWhiteSpace(description))
         {
-            return description;
+            return description.ResolveMarkdownContentAsync(transform:false).Result;
         }
 
         // 没有 Description 则使用 Document

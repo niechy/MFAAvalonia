@@ -17,6 +17,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace MFAAvalonia.Extensions;
@@ -30,6 +31,64 @@ public static class MFAExtensions
             : "/bin/bash";
     }
 
+     /// <summary>
+    /// 解析 Markdown 内容：支持国际化字符串、文件路径、URL 或直接文本
+    /// </summary>
+    /// <param name="input">输入内容（可能是 $key、文件路径、URL 或直接文本）</param>
+    /// <param name="projectDir">项目目录（用于解析相对路径）</param>
+    /// <returns>解析后的 Markdown 文本</returns>
+    public async static Task<string> ResolveMarkdownContentAsync(this string? input, string? projectDir = null,bool transform = true)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+        if (projectDir ==null)
+            projectDir = AppContext.BaseDirectory;
+        try
+        {
+            // 1. 国际化处理（以$开头）
+            var content = transform ? LanguageHelper.GetLocalizedString(input) : input;
+
+            // 2. 判断是否为 URL
+            if (Uri.TryCreate(content, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                return await content.FetchUrlContentAsync();
+            }
+
+            // 3. 判断是否为文件路径
+            var filePath = MaaInterface.ReplacePlaceholder(content, projectDir, checkIfPath: true);
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                return await File.ReadAllTextAsync(filePath);
+            }
+
+            // 4. 直接返回文本（可能是 Markdown）
+            return content;
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"解析 Markdown 内容失败: {input}, 错误: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 从 URL 获取文本内容
+    /// </summary>
+    async  private static Task<string> FetchUrlContentAsync(this string url)
+    {
+        try
+        {
+            using var httpClient = VersionChecker.CreateHttpClientWithProxy();
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+            return await httpClient.GetStringAsync(url);
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Warning($"获取 URL 内容失败: {url}, 错误: {ex.Message}");
+            return string.Empty;
+        }
+    }
     // public static Dictionary<TKey, MaaNode> MergeMaaNodes<TKey>(
     //     this IEnumerable<KeyValuePair<TKey, MaaNode>>? taskModels,
     //     IEnumerable<KeyValuePair<TKey, MaaNode>>? additionalModels) where TKey : notnull
