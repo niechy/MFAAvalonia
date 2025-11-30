@@ -625,7 +625,7 @@ public partial class TaskQueueViewModel : ViewModelBase
             !string.IsNullOrWhiteSpace(win.Name)).ToList();
 
         filtered = ApplyRegexFilters(filtered, controller.Win32);
-        return (filtered.Count > 0 ? windows.IndexOf(filtered.First()) : 0, filtered.ToList());
+        return (filtered.Count > 0 ? filtered.IndexOf(filtered.First()) : 0, filtered.ToList());
     }
 
 
