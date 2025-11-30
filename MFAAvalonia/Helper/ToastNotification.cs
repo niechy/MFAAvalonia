@@ -15,7 +15,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-
 namespace MFAAvalonia.Helper;
 
 public class ToastNotification
@@ -31,14 +30,18 @@ public class ToastNotification
     public const int ToastSpacing = 16; // 两个Toast之间的间距
     public const int MarginRight = 2; // 最底部Toast距离屏幕底部的间距
 
+    // 音频引擎单例（避免重复初始化 DllImportResolver）
+    private static MiniAudioEngine? _sharedEngine;
+    private static readonly Lock _engineLock = new();
+    private static bool _engineInitFailed;
+
     private ToastNotification()
     {
         try
         {
             // 订阅原生事件：任何屏幕变化（任务栏隐藏/显示、分辨率/缩放变化）都会触发
             Instances.RootView.Screens.Changed += (s, e) =>
-            {
-                DispatcherHelper.PostOnMainThread(() =>
+            {DispatcherHelper.PostOnMainThread(() =>
                 {
                     UpdateAllToastPositions();
                 });
@@ -50,7 +53,7 @@ public class ToastNotification
         }
     }
     
-    public static void Show(string title, string content = "", int duration = 40000, bool sound = true)
+    public static void Show(string title, string content = "", int duration = 4000, bool sound = true)
     {
         DispatcherHelper.PostOnMainThread(() =>
         {
@@ -153,6 +156,41 @@ public class ToastNotification
         });
     }
 
+    /// <summary>
+    /// 获取或创建共享的音频引擎实例
+    /// </summary>
+    private static MiniAudioEngine? GetOrCreateEngine()
+    {
+        if (_engineInitFailed) return null;
+        
+        lock (_engineLock)
+        {
+            if (_engineInitFailed) return null;
+            
+            if (_sharedEngine != null)
+            {
+                return _sharedEngine;
+            }
+
+            try
+            {
+                _sharedEngine = new MiniAudioEngine();
+                return _sharedEngine;
+            }
+            catch (TypeInitializationException ex)
+            {
+                _engineInitFailed = true;
+                LoggerHelper.Error($"音频引擎初始化失败（DllImportResolver 冲突）：{ex.InnerException?.Message ?? ex.Message}", ex);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _engineInitFailed = true;
+                LoggerHelper.Error($"音频引擎初始化失败：{ex.Message}", ex);
+                return null;
+            }
+        }
+    }
 
     public static void PlayNotificationSound(bool enable = true)
     {
@@ -178,15 +216,20 @@ public class ToastNotification
                 return;
             }
 
-            MiniAudioEngine? engine = null;
+            // 步骤3：获取共享引擎实例（避免重复初始化 DllImportResolver）
+            var engine = GetOrCreateEngine();
+            if (engine == null)
+            {
+                LoggerHelper.Warning("音频引擎不可用，跳过播放提示音");
+                return;
+            }
+
             AudioPlaybackDevice? playbackDevice = null;
             SoundPlayer? player = null;
             StreamDataProvider? dataProvider = null;
 
             try
             {
-                // 步骤3：初始化 MiniAudio 引擎（原生逻辑：自动初始化后端）
-                engine = new MiniAudioEngine();
                 // 步骤4：解析音频格式（优先自动解析，失败则用预设）
                 stream.Seek(0, SeekOrigin.Begin);
                 AudioFormat audioFormat = AudioFormat.Dvd; // 默认兜底
@@ -237,8 +280,7 @@ public class ToastNotification
                 player.Play();
 
                 // 步骤12：等待播放完成（避免 Task 提前结束释放资源）
-                while (!isPlaybackCompleted
-                       && player.State == PlaybackState.Playing
+                while (!isPlaybackCompleted&& player.State == PlaybackState.Playing
                        && playbackDevice.IsRunning)
                 {
                     await Task.Delay(50);
@@ -264,14 +306,26 @@ public class ToastNotification
             }
             finally
             {
-                // 原生资源释放顺序：先停播放器→再停设备→最后释放引擎
+                // 原生资源释放顺序：先停播放器→再停设备（注意：不释放共享引擎）
                 player?.Stop();
                 playbackDevice?.Stop();
                 player?.Dispose();
                 dataProvider?.Dispose();
                 playbackDevice?.Dispose();
-                engine?.Dispose();
+                // 注意：不要释放 engine，它是共享的单例
             }
         }, "播放音频");
+    }
+
+    /// <summary>
+    /// 释放共享音频引擎（应在应用程序退出时调用）
+    /// </summary>
+    public static void DisposeAudioEngine()
+    {
+        lock (_engineLock)
+        {
+            _sharedEngine?.Dispose();
+            _sharedEngine = null;
+        }
     }
 }

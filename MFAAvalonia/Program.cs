@@ -140,6 +140,10 @@ sealed class Program
             {
                 try
                 {
+                    // 跳过会自己设置 DllImportResolver 的程序集（如 SoundFlow）
+                    if (ShouldSkipAssembly(assembly))
+                        continue;
+                    
                     NativeLibrary.SetDllImportResolver(assembly, resolver);
                 }
                 catch
@@ -153,6 +157,10 @@ sealed class Program
             {
                 try
                 {
+                    // 跳过会自己设置 DllImportResolver 的程序集（如 SoundFlow）
+                    if (ShouldSkipAssembly(args.LoadedAssembly))
+                        return;
+                    
                     NativeLibrary.SetDllImportResolver(args.LoadedAssembly, resolver);
                 }
                 catch
@@ -164,6 +172,31 @@ sealed class Program
         }
         catch (Exception)
         {
+        }
+    }
+
+    /// <summary>
+    /// 判断是否应该跳过为该程序集设置 DllImportResolver
+    /// 某些库（如 SoundFlow）会在自己的静态构造函数中设置解析器，
+    /// 如果我们先设置了，它们再设置时会抛出 InvalidOperationException
+    /// </summary>
+    private static bool ShouldSkipAssembly(Assembly assembly)
+    {
+        try
+        {
+            var assemblyName = assembly.GetName().Name;
+            if (string.IsNullOrEmpty(assemblyName))
+                return false;
+
+            // 跳过 SoundFlow 相关程序集，它们会自己设置 DllImportResolver
+            if (assemblyName.StartsWith("SoundFlow", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
+        catch
+        {
+            return false;
         }
     }
 
