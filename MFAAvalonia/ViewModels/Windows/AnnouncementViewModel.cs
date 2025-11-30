@@ -29,7 +29,7 @@ public partial class AnnouncementViewModel : ViewModelBase
 {
     public static readonly string AnnouncementFolder = "Announcement";
     private static List<AnnouncementItem> _publicAnnouncementItems = new();
-    public static readonly AvaloniaList<AnnouncementItem> AnnouncementItems = new();
+    [ObservableProperty] private AvaloniaList<AnnouncementItem> _announcementItems = new();
     [ObservableProperty] private AnnouncementItem? _selectedAnnouncement;
     [ObservableProperty] private string _announcementContent; // 绑定到 MarkdownScrollViewer.Markdown
     [ObservableProperty]
