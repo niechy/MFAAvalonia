@@ -3084,21 +3084,173 @@ public class MaaProcessor
     /// <summary>
     /// 安全地终止 Agent 进程
     /// </summary>
-    private void SafeKillAgentProcess()
+    /// <summary>
+    /// 强制终止 Agent 进程（用于窗口关闭等紧急情况）
+    /// </summary>
+    /// <param name="forceKill">是否使用强制终止模式</param>
+    private void SafeKillAgentProcess(bool forceKill = false)
+    {
+        if (_agentProcess == null)
+            return;
+
+        try
+        {
+            // 如果进程已退出，直接清理
+            if (_agentProcess.HasExited)
+            {
+                _agentProcess.Dispose();
+                _agentProcess = null;
+                return;
+            }
+
+            // 尝试正常终止
+            try
+            {
+                _agentProcess.Kill();
+
+                // 等待进程退出（最多等待 2 秒）
+                if (!_agentProcess.WaitForExit(2000))
+                {
+                    LoggerHelper.Warning("Agent 进程未在 2 秒内退出，尝试强制终止");
+                    forceKill = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Warning($"正常终止 Agent 进程失败: {ex.Message}，尝试强制终止");
+                forceKill = true;
+            }
+
+            // 如果需要强制终止
+            if (forceKill && !_agentProcess.HasExited)
+            {
+                ForceKillAgentProcess();
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"终止 Agent 进程时发生错误: {ex.Message}", ex);
+        }
+        finally
+        {
+            try
+            {
+                _agentProcess?.Dispose();
+            }
+            catch { }
+            _agentProcess = null;
+        }
+    }
+
+    /// <summary>
+    /// 强制终止 Agent 进程（使用平台特定的方法）
+    /// </summary>
+    public void ForceKillAgentProcess()
+    {
+        if (_agentProcess == null || _agentProcess.HasExited)
+            return;
+
+        try
+        {
+            var processId = _agentProcess.Id;
+            var processName = _agentProcess.ProcessName;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Windows: 使用 taskkill /F
+                ForceKillProcessWindows(processId, processName);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                     RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // Unix: 使用 kill -9
+                ForceKillProcessUnix(processId);
+            }
+
+            // 再次等待进程退出
+            _agentProcess.WaitForExit(1000);
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"强制终止 Agent 进程失败: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Windows 平台强制终止进程
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    private void ForceKillProcessWindows(int processId, string processName)
     {
         try
         {
-            if (_agentProcess is { HasExited: false })
+            // 方法 1: 使用 taskkill /F
+            var psi = new ProcessStartInfo
             {
-                _agentProcess.Kill();
+                FileName = "taskkill",
+                Arguments = $"/F /PID {processId}",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using var process = Process.Start(psi);
+            process?.WaitForExit(2000);
+
+            LoggerHelper.Info($"已使用 taskkill 强制终止 Agent 进程 (PID: {processId})");
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Warning($"taskkill 失败，尝试备用方法: {ex.Message}");
+
+            // 方法 2: 使用 WMI 终止进程
+            try
+            {
+                using var searcher = new ManagementObjectSearcher(
+                    $"SELECT * FROM Win32_Process WHERE ProcessId = {processId}");
+
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    obj.InvokeMethod("Terminate", null);
+                    LoggerHelper.Info($"已使用 WMI 强制终止 Agent 进程 (PID: {processId})");
+                }
+            }
+            catch (Exception wmiEx)
+            {
+                LoggerHelper.Error($"WMI 终止进程失败: {wmiEx.Message}");
             }
         }
-        catch (InvalidOperationException)
+    }
+
+    /// <summary>
+    /// Unix 平台强制终止进程
+    /// </summary>
+    [SupportedOSPlatform("linux")]
+    [SupportedOSPlatform("macos")]
+    private void ForceKillProcessUnix(int processId)
+    {
+        try
         {
-            // 进程未启动或已退出，忽略
+            var psi = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"-c \"kill -9 {processId}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using var process = Process.Start(psi);
+            process?.WaitForExit(2000);
+
+            LoggerHelper.Info($"已使用 kill -9 强制终止 Agent 进程 (PID: {processId})");
         }
-        _agentProcess?.Dispose();
-        _agentProcess = null;
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"kill -9 失败: {ex.Message}");
+        }
     }
 
     private bool ShouldProcessStop(bool finished)
