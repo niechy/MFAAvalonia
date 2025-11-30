@@ -906,7 +906,7 @@ public partial class TaskQueueView : UserControl
     {
         var container = new StackPanel()
         {
-            Margin = new Thickness(0, 0, 0, 0)
+            Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(0, 0, 0, 0) : new Thickness(10, 3, 10, 3)
         };
 
         // 确保 Data 字典已初始化
@@ -948,7 +948,7 @@ public partial class TaskQueueView : UserControl
                         {
                             Width = new GridLength(6, GridUnitType.Star)
                         }
-                    },
+                    }, Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(10, 6, 10, 6) : new Thickness(0, 3, 0, 3) 
                 };
 
                 // 创建输入框
@@ -1127,7 +1127,7 @@ public partial class TaskQueueView : UserControl
             {
                 FontSize = 14,
                 FontWeight = FontWeight.SemiBold,
-                Margin = new Thickness(10, 8, 5, 4)
+                Margin = new Thickness(-2, 4, 5, 4)
             };
             headerText.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(interfaceOption.DisplayName, interfaceOption.Name));
             headerText.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
