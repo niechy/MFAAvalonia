@@ -8,7 +8,7 @@ public static class ToastHelper
 {
     public static SukiToastBuilder CreateToastByType(NotificationType toastType, string title = "", string content = "", int duration = 3)
     {
-        if (_duration <= 0)
+        if (duration <= 0)
         {
             return Instances.ToastManager.CreateToast()
            .WithTitle(title)
