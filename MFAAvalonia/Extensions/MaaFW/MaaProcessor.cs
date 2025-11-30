@@ -449,7 +449,7 @@ public class MaaProcessor
                 LoggerHelper.Info($"Agent Identifier: {identifier}");
                 try
                 {
-                    _agentClient = MaaAgentClient.Create(identifier, maaResource);
+                    _agentClient = MaaAgentClient.Create(identifier, tasker);
                     _agentClient.AttachDisposeToResource();
                     _agentClient.Releasing += (_, _) => LoggerHelper.Info("退出Agent进程");
 
@@ -500,14 +500,12 @@ public class MaaProcessor
                         WindowStyle = ProcessWindowStyle.Hidden,
                         CreateNoWindow = true
                     };
+                    _agentClient?.LinkStart(startInfo, token);
+                    _agentProcess = _agentClient.AgentServerProcess;
 
-                    _agentProcess = new Process
+                    _agentProcess?.OutputDataReceived += (sender, args) =>
                     {
-                        StartInfo = startInfo
-                    };
 
-                    _agentProcess.OutputDataReceived += (sender, args) =>
-                    {
                         if (!string.IsNullOrEmpty(args.Data))
                         {
                             var outData = args.Data;
@@ -526,7 +524,7 @@ public class MaaProcessor
                         }
                     };
 
-                    _agentProcess.ErrorDataReceived += (sender, args) =>
+                    _agentProcess?.ErrorDataReceived += (sender, args) =>
                     {
                         if (!string.IsNullOrEmpty(args.Data))
                         {
@@ -549,7 +547,6 @@ public class MaaProcessor
                     LoggerHelper.Info(
                         $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
-                    _agentProcess.Start();
                     _agentProcess.BeginOutputReadLine();
                     _agentProcess.BeginErrorReadLine();
 
@@ -563,7 +560,6 @@ public class MaaProcessor
                     return (null, InvalidResource);
                 }
 
-                _agentClient?.LinkStart();
                 _agentStarted = true;
             }
             // RegisterCustomRecognitionsAndActions(tasker);
@@ -1127,9 +1123,9 @@ public class MaaProcessor
     private void LoadTasks(List<MaaInterface.MaaInterfaceTask> tasks, IList<DragItemViewModel>? oldDrags = null)
     {
         _taskLoader ??= new TaskLoader(Interface);
-        _taskLoader.LoadTasks(tasks,TasksSource, ref FirstTask, oldDrags);
+        _taskLoader.LoadTasks(tasks, TasksSource, ref FirstTask, oldDrags);
     }
-    
+
     private string? _tempResourceVersion;
     public void AppendVersionLog(string? resourceVersion)
     {

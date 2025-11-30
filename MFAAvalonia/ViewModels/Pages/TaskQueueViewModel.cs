@@ -318,7 +318,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (content.StartsWith(INFO, comparison))
         {
             var color = DispatcherHelper.RunOnMainThread(() => MFAExtensions.FindSukiUiResource<Color>(
-                "SukiMuteText"
+                "SukiText"
             ));
 
             if (color != null)
