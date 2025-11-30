@@ -147,6 +147,7 @@ public partial class RootView : SukiWindow
             LoggerHelper.Info("MFA Closed!");
 
             MaaProcessor.Instance.SetTasker();
+            MaaProcessor.Instance.ForceKillAgentProcess();
             LoggerHelper.DisposeLogger();
             GlobalHotkeyService.Shutdown();
             Program.ReleaseMutex();
@@ -283,6 +284,10 @@ public partial class RootView : SukiWindow
                             ToastHelper.Info(MaaProcessor.Interface.Message);
                         }
 
+                        if (!string.IsNullOrWhiteSpace(MaaProcessor.Interface?.Welcome))
+                        {
+                            AnnouncementViewModel.AddAnnouncement(LanguageHelper.GetLocalizedString(MaaProcessor.Interface.Welcome));
+                        }
                     }));
 
                 TaskManager.RunTaskAsync(async () =>

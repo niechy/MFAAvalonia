@@ -661,6 +661,9 @@ public partial class MaaInterface
     [JsonProperty("__mfa_min_version")]
     public string? MFAMinVersion { get; set; }
 
+    [JsonProperty("welcome")]
+    public string? Welcome { get; set; }
+    
     [JsonProperty("message")]
     public string? Message { get; set; }
 
