@@ -317,14 +317,6 @@ public partial class TaskQueueViewModel : ViewModelBase
 
         if (content.StartsWith(INFO, comparison))
         {
-            var color = DispatcherHelper.RunOnMainThread(() => MFAExtensions.FindSukiUiResource<Color>(
-                "SukiText"
-            ));
-
-            if (color != null)
-                brush = DispatcherHelper.RunOnMainThread(() => new SolidColorBrush(color.Value));
-            else
-                brush = Brushes.Black;
             content = content.Substring(INFO.Length);
         }
 
