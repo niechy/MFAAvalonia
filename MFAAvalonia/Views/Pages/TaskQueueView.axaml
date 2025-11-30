@@ -445,7 +445,7 @@
             </interaction:Interaction.Behaviors>
         </GridSplitter>
         <!-- 右侧列 -->
-        <Grid Grid.Column="4">
+        <Grid Grid.Column="4" >
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -544,7 +544,7 @@
                         <!-- 设备选择器 -->
                         <Grid x:Name="DeviceSelectorPanel"
                               HorizontalAlignment="Stretch"
-                              MinWidth="200">
+                              MinWidth="300">
                             <TextBlock x:Name="DeviceSelectorLabel"
                                        FontSize="12"
                                        Foreground="{DynamicResource SukiLowText}"
@@ -556,7 +556,7 @@
                                       Classes="LimitWidth"
                                       IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                                       ItemsSource="{Binding Devices}"
-                                      MinWidth="150"
+                                      MinWidth="100"
                                       HorizontalAlignment="Stretch"
                                       SelectedValue="{Binding CurrentDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                 <ToolTip.Tip>

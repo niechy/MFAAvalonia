@@ -142,11 +142,10 @@ public partial class TaskQueueView : UserControl
             case 2: // 三行布局：RadioButton在上，DeviceSelector在下（垂直）
                 ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
                 ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-
                 var visibleCount = (AdbRadioButton.IsVisible ? 1 : 0) + (Win32RadioButton.IsVisible ? 1 : 0);
                 for (var i = 0; i < Math.Max(visibleCount, 1); i++)
-                    ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-
+                    ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+              
                 var c = 0;
                 if (AdbRadioButton.IsVisible)
                 {
