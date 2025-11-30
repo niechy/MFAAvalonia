@@ -145,7 +145,7 @@ public partial class TaskQueueView : UserControl
                 var visibleCount = (AdbRadioButton.IsVisible ? 1 : 0) + (Win32RadioButton.IsVisible ? 1 : 0);
                 for (var i = 0; i < Math.Max(visibleCount, 1); i++)
                     ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-              
+
                 var c = 0;
                 if (AdbRadioButton.IsVisible)
                 {
@@ -947,7 +947,8 @@ public partial class TaskQueueView : UserControl
                         {
                             Width = new GridLength(6, GridUnitType.Star)
                         }
-                    }, Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(10, 6, 10, 6) : new Thickness(0, 3, 0, 3) 
+                    },
+                    Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(10, 6, 10, 6) : new Thickness(0, 3, 0, 3)
                 };
 
                 // 创建输入框
