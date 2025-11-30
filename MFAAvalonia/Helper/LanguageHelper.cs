@@ -190,13 +190,12 @@ public static class LanguageHelper
             return string.Empty;
         if (key.StartsWith("$"))
         {
-    
             var key1 = key.Substring(1);
             return GetLocalizedStrings().ContainsKey(key1) ? GetLocalizedStrings()[key1] : GetLocalizedStrings().ContainsKey(key) ? GetLocalizedStrings()[key] : key;
         }
         return GetLocalizedStrings().GetValueOrDefault(key, key);
     }
-    
+
     public static string GetLocalizedDisplayName(string? displayName, string? fallbackName)
     {
         if (string.IsNullOrEmpty(displayName))
@@ -204,19 +203,23 @@ public static class LanguageHelper
             return LanguageHelper.GetLocalizedString(fallbackName) ?? fallbackName ?? string.Empty;
         }
 
-        var localized = LanguageHelper.GetLocalizedString(displayName);
-
-        if (string.IsNullOrEmpty(localized) || localized == displayName)
+        if (displayName.StartsWith("$"))
         {
-            if (fallbackName != displayName && !string.IsNullOrEmpty(fallbackName))
-            {
-                return LanguageHelper.GetLocalizedString(fallbackName) ?? fallbackName;
-            }
-            return displayName;
-        }
+            var localized = LanguageHelper.GetLocalizedString(displayName);
 
-        return localized;
+            if (string.IsNullOrEmpty(localized) || localized == displayName)
+            {
+                if (fallbackName != displayName && !string.IsNullOrEmpty(fallbackName))
+                {
+                    return LanguageHelper.GetLocalizedString(fallbackName) ?? fallbackName;
+                }
+                return displayName;
+            }
+            return localized;
+        }
+        return displayName;
     }
+    
     /// <summary>
     /// 创建一个资源绑定，当语言切换时自动更新
     /// </summary>
