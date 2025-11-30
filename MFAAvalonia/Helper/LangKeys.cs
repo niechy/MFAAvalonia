@@ -427,4 +427,8 @@ public static class LangKeys
 	public static readonly string ExternalNotificationLarkWebhookUrl = "ExternalNotificationLarkWebhookUrl";
 	public static readonly string ExternalNotificationLarkWebhookDescription = "ExternalNotificationLarkWebhookDescription";
 	public static readonly string Unnamed = "Unnamed";
+	public static readonly string CdkExpireInDays = "CdkExpireInDays";
+	public static readonly string CdkExpireInHours = "CdkExpireInHours";
+	public static readonly string CdkExpireInMinutes = "CdkExpireInMinutes";
+	public static readonly string CdkExpireInSeconds = "CdkExpireInSeconds";
 }

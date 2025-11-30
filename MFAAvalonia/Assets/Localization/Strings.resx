@@ -1270,4 +1270,16 @@
     <data name="Unnamed" xml:space="preserve">
         <value>未命名</value>
     </data>
+    <data name="CdkExpireInDays" xml:space="preserve">
+        <value>CDK 还有 {0} 天过期</value>
+    </data>
+    <data name="CdkExpireInHours" xml:space="preserve">
+        <value>CDK 还有 {0} 小时过期</value>
+    </data>
+    <data name="CdkExpireInMinutes" xml:space="preserve">
+        <value>CDK 还有 {0} 分钟过期</value>
+    </data>
+    <data name="CdkExpireInSeconds" xml:space="preserve">
+        <value>CDK 还有 {0} 秒过期</value>
+    </data>
 </root>

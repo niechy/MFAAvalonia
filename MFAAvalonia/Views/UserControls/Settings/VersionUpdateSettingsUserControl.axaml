@@ -149,20 +149,26 @@
                     <suki:PasswordBox
                         DockPanel.Dock="Right"
                         HorizontalAlignment="Center"
-                        Password="{Binding CdkPassword}"
-                        Width="215" />
+                        Password="{Binding CdkPassword}"  Width="215" />
                     <Button DockPanel.Dock="Right"
                             BorderBrush="Transparent"
                             BorderThickness="0"
                             Command="{x:Static utilities:UrlUtilities.OpenLink}"
                             CommandParameter="{x:Static helper:MFAUrls.PurchaseLink}"
-                            Height="40"
+                            Height="40" Cursor="Hand"
                             HorizontalAlignment="Center"
                             Margin="0,0,4,0">
                         <TextBlock
                             FontSize="14" Foreground="{DynamicResource SukiPrimaryColor}"
                             Text="{markup:I18n {x:Static helper:LangKeys.PurchaseLink}}" />
                     </Button>
+                    <TextBlock DockPanel.Dock="Right"
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding CdkTextVisible}"
+                               Foreground="{Binding CdkExpireColor}"
+                               Text="{Binding CdkExpireText}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0" />
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
                         <TextBlock
                             FontSize="16"

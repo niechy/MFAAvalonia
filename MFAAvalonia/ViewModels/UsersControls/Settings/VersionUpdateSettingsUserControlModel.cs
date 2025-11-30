@@ -1,7 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MaaFramework.Binding.Interop.Native;
 using MFAAvalonia.Configuration;
+using MFAAvalonia.Extensions;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.Converters;
@@ -31,14 +33,77 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
             MaaFwVersion = "v5.0.0";
             LoggerHelper.Error(e);
         }
+        LanguageHelper.LanguageChanged += (_, _) =>  UpdateCdkExpireDisplay();
         base.Initialize();
     }
-    
+
     [ObservableProperty] private string _maaFwVersion = "";
     [ObservableProperty] private string _mfaVersion = RootViewModel.Version;
     [ObservableProperty] private string _resourceVersion = string.Empty;
     [ObservableProperty] private bool _showResourceVersion;
+    [ObservableProperty] private long _cdkExpiredTime = 0;
+    [ObservableProperty] private bool _cdkTextVisible = false;
+    [ObservableProperty] private string _cdkExpireText = string.Empty;
+    [ObservableProperty] private IBrush _cdkExpireColor = Brushes.MediumSeaGreen;
 
+    partial void OnCdkExpiredTimeChanged(long value)
+    {
+        UpdateCdkExpireDisplay();
+    }
+
+    private void UpdateCdkExpireDisplay()
+    {
+        if (_cdkExpiredTime <= 0)
+        {
+            CdkExpireText = string.Empty;
+            CdkTextVisible = false;
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var remaining = _cdkExpiredTime - now;
+
+        if (remaining <= 0)
+        {
+            CdkExpireText = LangKeys.MirrorCdkExpired.ToLocalization();
+            CdkExpireColor =  Brushes.Red;
+            CdkTextVisible = true;
+            return;
+        }
+
+        // 小于1天显示黄色
+        if (remaining < 86400)
+        {
+            CdkExpireColor = Brushes.Orange;
+        }
+        else
+        {
+            CdkExpireColor =  Brushes.MediumSeaGreen;
+        }
+
+        // 根据时间长短显示不同单位
+        if (remaining >= 86400) // >= 1天
+        {
+            var days = remaining / 86400;
+            CdkExpireText = string.Format(LangKeys.CdkExpireInDays.ToLocalization(), days);
+        }
+        else if (remaining >= 3600) // >= 1小时
+        {
+            var hours = remaining / 3600;
+            CdkExpireText = string.Format(LangKeys.CdkExpireInHours.ToLocalization(), hours);
+        }
+        else if (remaining >= 60) // >= 1分钟
+        {
+            var minutes = remaining / 60;
+            CdkExpireText = string.Format(LangKeys.CdkExpireInMinutes.ToLocalization(), minutes);
+        }
+        else // 秒
+        {
+            CdkExpireText = string.Format(LangKeys.CdkExpireInSeconds.ToLocalization(), remaining);
+        }
+        CdkTextVisible = true;
+    }
+    
     partial void OnResourceVersionChanged(string value)
     {
         ShowResourceVersion = !string.IsNullOrWhiteSpace(value);
@@ -66,28 +131,28 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
         new(LangKeys.BetaVersion),
         new(LangKeys.StableVersion),
     ];
-    
+
     [ObservableProperty] private int _uIUpdateChannelIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.UIUpdateChannelIndex, 2);
 
     partial void OnUIUpdateChannelIndexChanged(int value)
     {
         ConfigurationManager.Current.SetValue(ConfigurationKeys.UIUpdateChannelIndex, value);
     }
-    
+
     public ObservableCollection<LocalizationViewModel> ResourceUpdateChannelList =>
     [
         new(LangKeys.AlphaVersion),
         new(LangKeys.BetaVersion),
         new(LangKeys.StableVersion),
     ];
-    
+
     [ObservableProperty] private int _resourceUpdateChannelIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.ResourceUpdateChannelIndex, 2);
 
     partial void OnResourceUpdateChannelIndexChanged(int value)
     {
         ConfigurationManager.Current.SetValue(ConfigurationKeys.ResourceUpdateChannelIndex, value);
     }
-    
+
     [ObservableProperty] private string _gitHubToken = SimpleEncryptionHelper.Decrypt(ConfigurationManager.Current.GetValue(ConfigurationKeys.GitHubToken, string.Empty));
 
     partial void OnGitHubTokenChanged(string value) => HandlePropertyChanged(ConfigurationKeys.GitHubToken, SimpleEncryptionHelper.Encrypt(value));
@@ -139,13 +204,13 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
     {
         VersionChecker.UpdateResourceAsync();
     }
-    
+
     [RelayCommand]
     private void RedownloadResource()
     {
         VersionChecker.UpdateResourceAsync("v0.0.0");
     }
-    
+
     [RelayCommand]
     private void CheckResourceUpdate()
     {

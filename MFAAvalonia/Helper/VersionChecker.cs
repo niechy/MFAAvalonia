@@ -63,6 +63,8 @@ public static class VersionChecker
             CheckVersion = ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableCheckVersion, true),
         };
 
+        AddCDKCheckTask();
+        
         if (config.AutoUpdateResource && !GetResourceVersion().Contains("debug", StringComparison.OrdinalIgnoreCase))
         {
             AddResourceUpdateTask(config.AutoUpdateMFA);
@@ -110,7 +112,14 @@ public static class VersionChecker
             Name = "更新软件"
         });
     }
-
+    private static void AddCDKCheckTask()
+    {
+        Queue.Enqueue(new ValueType.MFATask
+        {
+            Action = async () => CheckForCDK(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0),
+            Name = "查询CDK"
+        });
+    }
     private static void AddResourceUpdateTask(bool autoUpdateMFA)
     {
         Queue.Enqueue(new ValueType.MFATask
@@ -140,7 +149,17 @@ public static class VersionChecker
                 .WithActionButton(LangKeys.Ok.ToLocalization(), dialog => { }, true).TryShow();
         }
     }
-
+    public static void CheckForCDK(bool isGithub = true)
+    {
+        if (isGithub) return;
+        try
+        {
+            GetDownloadUrlFromMirror("v0.0.0", "MFAAvalonia", CDK(), out _, out _, out _, out _, onlyCheck: false);
+        }
+        catch (Exception)
+        { }
+    }
+    
     public static void CheckForResourceUpdates(bool isGithub = true)
     {
         Instances.RootViewModel.SetUpdating(true);
@@ -171,7 +190,7 @@ public static class VersionChecker
             if (isGithub)
                 GetLatestVersionAndDownloadUrlFromGithub(out var downloadUrl, out latestVersion, out sha256, strings[0], strings[1], true, currentVersion: resourceVersion);
             else
-                GetDownloadUrlFromMirror(resourceVersion, GetResourceID(), CDK(), out _, out latestVersion, out sha256, onlyCheck: true, currentVersion: resourceVersion);
+                GetDownloadUrlFromMirror(resourceVersion, GetResourceID(), CDK(), out _, out latestVersion, out sha256, out _, onlyCheck: true, currentVersion: resourceVersion);
 
             if (string.IsNullOrWhiteSpace(latestVersion))
             {
@@ -227,7 +246,7 @@ public static class VersionChecker
             if (isGithub)
                 GetLatestVersionAndDownloadUrlFromGithub(out _, out latestVersion, out sha256);
             else
-                GetDownloadUrlFromMirror(localVersion, "MFAAvalonia", CDK(), out _, out latestVersion, out sha256, isUI: true, onlyCheck: true);
+                GetDownloadUrlFromMirror(localVersion, "MFAAvalonia", CDK(), out _, out latestVersion, out sha256, out _, isUI: true, onlyCheck: true);
             var mirrocS = false;
             if (IsNewVersionAvailable(latestVersion, GetMaxVersion()))
             {
@@ -326,12 +345,13 @@ public static class VersionChecker
         string latestVersion = string.Empty;
         string downloadUrl = string.Empty;
         string sha256 = string.Empty;
+        var isFull = true;
         try
         {
             if (isGithub)
                 GetLatestVersionAndDownloadUrlFromGithub(out downloadUrl, out latestVersion, out sha256, strings[0], strings[1], currentVersion: localVersion);
             else
-                GetDownloadUrlFromMirror(localVersion, GetResourceID(), CDK(), out downloadUrl, out latestVersion, out sha256, currentVersion: localVersion);
+                GetDownloadUrlFromMirror(localVersion, GetResourceID(), CDK(), out downloadUrl, out latestVersion, out sha256, out isFull, currentVersion: localVersion);
         }
         catch (Exception ex)
         {
@@ -463,8 +483,10 @@ public static class VersionChecker
             var targetPath = Path.Combine(wpfDir, "interface.json");
             file.CopyTo(targetPath, true);
         }
-
-        if (isGithub || currentVersion.Equals("v0.0.0", StringComparison.OrdinalIgnoreCase))
+        var changesPath = Path.Combine(tempExtractDir, "changes.json");
+        if (File.Exists(changesPath))
+            isFull = false;
+        if (isGithub || isFull || currentVersion.Equals("v0.0.0", StringComparison.OrdinalIgnoreCase))
         {
             if (Directory.Exists(resourcePath))
             {
@@ -509,8 +531,6 @@ public static class VersionChecker
         }
         else
         {
-            var changesPath = Path.Combine(tempExtractDir, "changes.json");
-
             if (File.Exists(changesPath))
             {
                 var changes = await File.ReadAllTextAsync(changesPath);
@@ -977,7 +997,7 @@ public static class VersionChecker
                 if (isGithub)
                     GetLatestVersionAndDownloadUrlFromGithub(out downloadUrl, out latestVersion, out sha256);
                 else
-                    GetDownloadUrlFromMirror(GetLocalVersion(), "MFAAvalonia", CDK(), out downloadUrl, out latestVersion, out sha256, isUI: true);
+                    GetDownloadUrlFromMirror(GetLocalVersion(), "MFAAvalonia", CDK(), out downloadUrl, out latestVersion, out sha256, out _, isUI: true);
             }
             catch (Exception ex)
             {
@@ -1446,7 +1466,7 @@ public static class VersionChecker
             string downloadUrl = string.Empty, latestVersion = string.Empty, sha256 = string.Empty;
             try
             {
-                GetDownloadUrlFromMirror(currentVersion, resId, CDK(), out downloadUrl, out latestVersion, out sha256, "MFA", true);
+                GetDownloadUrlFromMirror(currentVersion, resId, CDK(), out downloadUrl, out latestVersion, out sha256, out _, "MFA", true);
             }
             catch (Exception ex)
             {
@@ -1886,10 +1906,11 @@ public static class VersionChecker
         out string url,
         out string latestVersion,
         out string sha256,
+        out bool isFull,
         string userAgent = "MFA",
         bool isUI = false,
         bool onlyCheck = false,
-        string currentVersion = "v0.0.0"
+        string currentVersion = "v0.0.0",bool showResponse = false
     )
     {
         var versionType = isUI ? Instances.VersionUpdateSettingsUserControlModel.UIUpdateChannelIndex.ToVersionType() : Instances.VersionUpdateSettingsUserControlModel.ResourceUpdateChannelIndex.ToVersionType();
@@ -1950,6 +1971,23 @@ public static class VersionChecker
             url = data["url"]?.ToString() ?? string.Empty;
             latestVersion = data["version_name"]?.ToString() ?? string.Empty;
             sha256 = data["sha256"]?.ToString() ?? string.Empty;
+            var updateType = data["update_type"]?.ToString() ?? string.Empty;
+            isFull = updateType.Equals("full", StringComparison.OrdinalIgnoreCase);
+
+            // 解析并存储 CDK 过期时间戳
+            if (data["cdk_expired_time"] != null && long.TryParse(data["cdk_expired_time"]?.ToString(), out var cdkExpiredTime))
+            {
+                Instances.VersionUpdateSettingsUserControlModel.CdkExpiredTime = cdkExpiredTime;
+                LoggerHelper.Info($"CDK 过期时间戳: {cdkExpiredTime}");
+            }
+
+            if (showResponse)
+            {
+                // 记录从 mirror 返回的关键信息
+                LoggerHelper.Info($"Mirror返回信息: {jsonResponse}");
+                LoggerHelper.Info($"更新类型: {updateType}, 是否全量更新: {isFull}");
+            }
+
             if (IsNewVersionAvailable(latestVersion, currentVersion))
             {
                 if (onlyCheck && !isUI && data != null)
