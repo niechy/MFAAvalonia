@@ -13,6 +13,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
+using System.ComponentModel.DataAnnotations;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
@@ -62,114 +63,154 @@ public partial class TaskQueueView : UserControl
         MaaProcessor.Instance.InitializeData();
         InitializeDeviceSelectorLayout();
     }
-    
+
     private int _currentLayoutMode = -1;
-    
-    private void InitializeDeviceSelectorLayout()
+    private int _currentSelectorMode = -1;
+
+    public void InitializeDeviceSelectorLayout()
     {
         ConnectionGrid.SizeChanged += (_, _) => UpdateConnectionLayout();
-        AdbRadioButton.PropertyChanged += (_, e) => { if (e.Property.Name == "IsVisible") UpdateConnectionLayout(); };
-        Win32RadioButton.PropertyChanged += (_, e) => { if (e.Property.Name == "IsVisible") UpdateConnectionLayout(); };
+        DeviceSelectorPanel.SizeChanged += (_, _) => UpdateDeviceSelectorLayout();
+        AdbRadioButton.PropertyChanged += (_, e) =>
+        {
+            if (e.Property.Name == "IsVisible") UpdateConnectionLayout();
+        };
+        Win32RadioButton.PropertyChanged += (_, e) =>
+        {
+            if (e.Property.Name == "IsVisible") UpdateConnectionLayout();
+        };
+        UpdateConnectionLayout();
     }
-    
+
     private void UpdateConnectionLayout()
     {
         var totalWidth = ConnectionGrid.Bounds.Width;
         if (totalWidth <= 0) return;
-        
+
         // 计算可见RadioButton的宽度
         var adbWidth = AdbRadioButton.IsVisible ? AdbRadioButton.MinWidth + 8 : 0;
         var win32Width = Win32RadioButton.IsVisible ? Win32RadioButton.MinWidth + 8 : 0;
         var radioButtonsWidth = adbWidth + win32Width;
         var selectorMinWidth = DeviceSelectorPanel.MinWidth;
-        
-        // 决定布局模式：0=一行，1=两行，2=三行
+
+        // 决定布局模式：0=一行，1=两行（DeviceSelector水平），2=三行（DeviceSelector垂直）
+        // 一行：RadioButton(Auto) + RadioButton(Auto) + DeviceSelector(*)
+        // 两行：RadioButton在上，DeviceSelector在下（水平布局）
+        // 三行：RadioButton在上，DeviceSelector在下（垂直布局）
         int newMode;
-        if (totalWidth >= radioButtonsWidth + selectorMinWidth + 50) // 留50px余量
+        if (totalWidth >= radioButtonsWidth + selectorMinWidth + 20)
             newMode = 0; // 一行布局
-        else if (totalWidth >= Math.Max(radioButtonsWidth, selectorMinWidth))
-            newMode = 1; // 两行布局
+        else if (totalWidth >= selectorMinWidth + 20)
+            newMode = 1; // 两行布局，DeviceSelector水平
         else
-            newMode = 2; // 三行布局
-        
+            newMode = 2; // 三行布局，DeviceSelector垂直
+
         if (newMode == _currentLayoutMode) return;
         _currentLayoutMode = newMode;
-        
+
         ConnectionGrid.ColumnDefinitions.Clear();
         ConnectionGrid.RowDefinitions.Clear();
-        
+        Grid.SetColumnSpan(DeviceSelectorPanel, 1);
+
         switch (newMode)
         {
-            case 0: // 一行布局：[Adb][Win32][ComboBox────────]
+            case 0: // 一行布局：[Adb][Win32][Label][ComboBox────────]
                 if (AdbRadioButton.IsVisible)
                     ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
                 if (Win32RadioButton.IsVisible)
                     ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
                 ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-                
+
                 var col = 0;
-                if (AdbRadioButton.IsVisible) { Grid.SetColumn(AdbRadioButton, col); Grid.SetRow(AdbRadioButton, 0); col++; }
-                if (Win32RadioButton.IsVisible) { Grid.SetColumn(Win32RadioButton, col); Grid.SetRow(Win32RadioButton, 0); col++; }
+                if (AdbRadioButton.IsVisible)
+                {
+                    Grid.SetColumn(AdbRadioButton, col);
+                    Grid.SetRow(AdbRadioButton, 0);
+                    col++;
+                }
+                if (Win32RadioButton.IsVisible)
+                {
+                    Grid.SetColumn(Win32RadioButton, col);
+                    Grid.SetRow(Win32RadioButton, 0);
+                    col++;
+                }
                 Grid.SetColumn(DeviceSelectorPanel, col);
                 Grid.SetRow(DeviceSelectorPanel, 0);
                 break;
-                
-            case 1: // 两行布局：RadioButton在上，ComboBox在下
+
+            case 1: // 两行布局：RadioButton在上，DeviceSelector在下（水平）
+            case 2: // 三行布局：RadioButton在上，DeviceSelector在下（垂直）
                 ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
                 ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-                
+
                 var visibleCount = (AdbRadioButton.IsVisible ? 1 : 0) + (Win32RadioButton.IsVisible ? 1 : 0);
                 for (var i = 0; i < Math.Max(visibleCount, 1); i++)
-                    ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-                
+                    ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+
                 var c = 0;
-                if (AdbRadioButton.IsVisible) { Grid.SetColumn(AdbRadioButton, c++); Grid.SetRow(AdbRadioButton, 0); }
-                if (Win32RadioButton.IsVisible) { Grid.SetColumn(Win32RadioButton, c); Grid.SetRow(Win32RadioButton, 0); }
+                if (AdbRadioButton.IsVisible)
+                {
+                    Grid.SetColumn(AdbRadioButton, c++);
+                    Grid.SetRow(AdbRadioButton, 0);
+                }
+                if (Win32RadioButton.IsVisible)
+                {
+                    Grid.SetColumn(Win32RadioButton, c);
+                    Grid.SetRow(Win32RadioButton, 0);
+                }
                 Grid.SetColumn(DeviceSelectorPanel, 0);
                 Grid.SetColumnSpan(DeviceSelectorPanel, Math.Max(visibleCount, 1));
                 Grid.SetRow(DeviceSelectorPanel, 1);
                 break;
-                
-            case 2: // 三行布局：每个控件一行
-                ConnectionGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-                var row = 0;
-                if (AdbRadioButton.IsVisible)
-                {
-                    ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-                    Grid.SetColumn(AdbRadioButton, 0); Grid.SetRow(AdbRadioButton, row++);
-                }
-                if (Win32RadioButton.IsVisible)
-                {
-                    ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-                    Grid.SetColumn(Win32RadioButton, 0); Grid.SetRow(Win32RadioButton, row++);
-                }
-                ConnectionGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-                Grid.SetColumn(DeviceSelectorPanel, 0);
-                Grid.SetColumnSpan(DeviceSelectorPanel, 1);
-                Grid.SetRow(DeviceSelectorPanel, row);
-                break;
         }
-        
-        // 设备选择器内部响应式：宽度不足时切换为上下布局
-        UpdateDeviceSelectorOrientation();
+
+        // 强制更新设备选择器内部布局
+        _currentSelectorMode = -1;
+        UpdateDeviceSelectorLayout();
     }
-    
-    private void UpdateDeviceSelectorOrientation()
+
+    private void UpdateDeviceSelectorLayout()
     {
-        var selectorWidth = DeviceSelectorPanel.Bounds.Width;
-        if (selectorWidth <= 0) selectorWidth = ConnectionGrid.Bounds.Width;
-        
-        const double verticalThreshold = 280;
-        var useVertical = selectorWidth > 0 && selectorWidth < verticalThreshold;
-        
-        var newOrientation = useVertical ? Avalonia.Layout.Orientation.Vertical : Avalonia.Layout.Orientation.Horizontal;
-        if (DeviceSelectorPanel.Orientation != newOrientation)
+        // 只有在三行布局模式（_currentLayoutMode == 2）时才使用垂直布局
+        // 其他情况都使用水平布局
+        int newMode = _currentLayoutMode == 2 ? 1 : 0;
+
+        if (newMode == _currentSelectorMode) return;
+        _currentSelectorMode = newMode;
+
+        DeviceSelectorPanel.ColumnDefinitions.Clear();
+        DeviceSelectorPanel.RowDefinitions.Clear();
+
+        switch (newMode)
         {
-            DeviceSelectorPanel.Orientation = newOrientation;
-            DeviceSelectorLabel.Margin = useVertical ? new Thickness(0, 0, 0, 5) : new Thickness(0, 0, 8, 0);
-            DeviceComboBox.HorizontalAlignment = useVertical 
-                ? Avalonia.Layout.HorizontalAlignment.Stretch 
-                : Avalonia.Layout.HorizontalAlignment.Left;
+            case 0: // 水平布局：[Label][ComboBox────────]
+                DeviceSelectorPanel.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                DeviceSelectorPanel.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+
+                Grid.SetColumn(DeviceSelectorLabel, 0);
+                Grid.SetRow(DeviceSelectorLabel, 0);
+                Grid.SetColumn(DeviceComboBox, 1);
+                Grid.SetRow(DeviceComboBox, 0);
+
+                // 水平布局：恢复原始 margin（左侧无边距，右侧8px）
+                DeviceSelectorLabel.Margin = new Thickness(0, 2, 8, 0);
+                DeviceComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+                break;
+
+            case 1: // 垂直布局：Label在上，ComboBox在下（仅在三行模式）
+                DeviceSelectorPanel.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                DeviceSelectorPanel.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                DeviceSelectorPanel.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+
+                Grid.SetColumn(DeviceSelectorLabel, 0);
+                Grid.SetRow(DeviceSelectorLabel, 0);
+                Grid.SetColumn(DeviceComboBox, 0);
+                Grid.SetRow(DeviceComboBox, 1);
+
+                // 垂直布局：Label 左侧边距增加，与 ComboBox 对齐
+                DeviceSelectorLabel.Margin = new Thickness(5, 0, 0, 5);
+                DeviceComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+                break;
         }
     }
 
@@ -462,14 +503,14 @@ public partial class TaskQueueView : UserControl
             {
                 new ColumnDefinition
                 {
-                    Width = new GridLength(7, GridUnitType.Star)
+                    Width = new GridLength(5, GridUnitType.Star)
                 },
                 new ColumnDefinition
                 {
-                    Width = new GridLength(4, GridUnitType.Star)
+                    Width = new GridLength(6, GridUnitType.Star)
                 }
             },
-            Margin = new Thickness(10, 6, 10, 6)
+            Margin = new Thickness(10, 3, 10, 3)
         };
 
         var textBlock = new TextBlock
@@ -488,8 +529,8 @@ public partial class TaskQueueView : UserControl
         {
             Value = source.InterfaceItem.RepeatCount ?? 1,
             VerticalAlignment = VerticalAlignment.Center,
-            MinWidth = 150,
-            Margin = new Thickness(0, 4, 0, 4),
+            MinWidth = 120,
+            Margin = new Thickness(0, 2, 0, 2),
             Increment = 1,
             Minimum = -1,
         };
@@ -511,7 +552,7 @@ public partial class TaskQueueView : UserControl
             double totalMinWidth = currentGrid.Children.Sum(c => c.MinWidth);
             double availableWidth = currentGrid.Bounds.Width - currentGrid.Margin.Left - currentGrid.Margin.Right;
 
-            if (availableWidth < totalMinWidth)
+            if (availableWidth < totalMinWidth * 0.8)
             {
                 // 切换为上下结构（两行）
                 currentGrid.ColumnDefinitions.Clear();
@@ -537,11 +578,11 @@ public partial class TaskQueueView : UserControl
                 currentGrid.ColumnDefinitions.Clear();
                 currentGrid.ColumnDefinitions.Add(new ColumnDefinition
                 {
-                    Width = new GridLength(7, GridUnitType.Star)
+                    Width = new GridLength(5, GridUnitType.Star)
                 });
                 currentGrid.ColumnDefinitions.Add(new ColumnDefinition
                 {
-                    Width = new GridLength(4, GridUnitType.Star)
+                    Width = new GridLength(6, GridUnitType.Star)
                 });
 
                 Grid.SetRow(textBlock, 0);
@@ -643,21 +684,21 @@ public partial class TaskQueueView : UserControl
                 {
                     new ColumnDefinition
                     {
-                        Width = new GridLength(7, GridUnitType.Star)
+                        Width = new GridLength(5, GridUnitType.Star)
                     },
                     new ColumnDefinition
                     {
-                        Width = new GridLength(4, GridUnitType.Star)
+                        Width = new GridLength(6, GridUnitType.Star)
                     }
                 },
-                Margin = new Thickness(10, 6, 10, 6)
+                Margin = new Thickness(10, 3, 10, 3)
             };
 
             // 创建AutoCompleteBox
             var autoCompleteBox = new AutoCompleteBox
             {
-                MinWidth = 150,
-                Margin = new Thickness(0, 4, 0, 4),
+                MinWidth = 120,
+                Margin = new Thickness(0, 2, 0, 2),
                 Text = defaultValue,
                 IsTextCompletionEnabled = true,
                 FilterMode = AutoCompleteFilterMode.Custom,
@@ -787,7 +828,7 @@ public partial class TaskQueueView : UserControl
 
                 var totalMinWidth = currentGrid.Children.Sum(c => c.MinWidth);
                 var availableWidth = currentGrid.Bounds.Width;
-                if (availableWidth < totalMinWidth)
+                if (availableWidth < totalMinWidth * 0.8)
                 {
                     currentGrid.ColumnDefinitions.Clear();
                     currentGrid.RowDefinitions.Clear();
@@ -810,11 +851,11 @@ public partial class TaskQueueView : UserControl
                     currentGrid.ColumnDefinitions.Clear();
                     currentGrid.ColumnDefinitions.Add(new ColumnDefinition
                     {
-                        Width = new GridLength(7, GridUnitType.Star)
+                        Width = new GridLength(5, GridUnitType.Star)
                     });
                     currentGrid.ColumnDefinitions.Add(new ColumnDefinition
                     {
-                        Width = new GridLength(4, GridUnitType.Star)
+                        Width = new GridLength(6, GridUnitType.Star)
                     });
                     Grid.SetRow(stackPanel, 0);
                     Grid.SetRow(autoCompleteBox, 0);
@@ -837,15 +878,15 @@ public partial class TaskQueueView : UserControl
         {
             control = CreateInputControl(option, interfaceOption, source);
         }
-        else if (interfaceOption.IsSwitch)
+        else if (interfaceOption.IsSwitch && interfaceOption.Cases.ShouldSwitchButton(out var yes, out var no))
         {
-            // type 为 "switch" 时，强制使用 ToggleSwitch（cases[0] 为开，cases[1] 为关）
-            control = CreateToggleControl(option, 0, 1, interfaceOption, source);
+            // type 为 "switch" 时，强制使用 ToggleSwitch
+            control = CreateToggleControl(option, yes, no, interfaceOption, source);
         }
-        else if (interfaceOption.Cases.ShouldSwitchButton(out var yes, out var no))
+        else if (interfaceOption.Cases.ShouldSwitchButton(out var yes1, out var no1))
         {
             // 向后兼容：cases 名称为 yes/no 时也使用 ToggleSwitch
-            control = CreateToggleControl(option, yes, no, interfaceOption, source);
+            control = CreateToggleControl(option, yes1, no1, interfaceOption, source);
         }
         else
         {
@@ -863,8 +904,9 @@ public partial class TaskQueueView : UserControl
         MaaInterface.MaaInterfaceOption interfaceOption,
         DragItemViewModel source)
     {
-        var container = new StackPanel() {
-            Margin = new Thickness(0, 8, 0, 0)
+        var container = new StackPanel()
+        {
+            Margin = new Thickness(0, 0, 0, 0)
         };
 
         // 确保 Data 字典已初始化
@@ -884,160 +926,201 @@ public partial class TaskQueueView : UserControl
                 option.Data[input.Name] = currentValue;
             }
 
-            var grid = new Grid
-            {
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition { Width = new GridLength(7, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) }
-                },
-                Margin = new Thickness(10, 6, 10, 6)
-            };
-
-            // 创建输入框
-            var textBox = new TextBox
-            {
-                MinWidth = 150,
-                Margin = new Thickness(0, 4, 0, 4),
-                Text = currentValue
-            };
-            if (!string.IsNullOrWhiteSpace(input.PatternMsg))
-                textBox.Bind(TextBox.WatermarkProperty, new ResourceBinding(input.PatternMsg));
-            // 绑定启用状态
-            textBox.Bind(IsEnabledProperty, new Binding("Idle")
-            {
-                Source = Instances.RootViewModel
-            });
-
-            // 验证和保存
-            var fieldName = input.Name;
-            var verifyPattern = input.Verify;
-            var patternMsg = input.PatternMsg;
             var pipelineType = input.PipelineType?.ToLower() ?? "string";
 
-            textBox.TextChanged += (_, _) =>
+            // 对于 bool 类型，使用 ToggleSwitch
+            if (pipelineType == "bool")
             {
-                var text = textBox.Text ?? string.Empty;
-
-                // 类型验证
-                if (pipelineType == "int" && !IsValidIntegerInput(text))
+                var toggleGrid = CreateBoolInputControl(input, currentValue, option, interfaceOption);
+                container.Children.Add(toggleGrid);
+            }
+            else
+            {
+                var grid = new Grid
                 {
-                    textBox.Text = FilterToInteger(text);
-                    if (textBox.CaretIndex > textBox.Text.Length)
+                    ColumnDefinitions =
                     {
-                        textBox.CaretIndex = textBox.Text.Length;
-                    }
-                    return;
-                }
+                        new ColumnDefinition
+                        {
+                            Width = new GridLength(5, GridUnitType.Star)
+                        },
+                        new ColumnDefinition
+                        {
+                            Width = new GridLength(6, GridUnitType.Star)
+                        }
+                    },
+                };
 
-                // 正则验证
-                if (!string.IsNullOrEmpty(verifyPattern))
+                // 创建输入框
+                var textBox = new TextBox
                 {
-                    try
+                    MinWidth = 120,
+                    Margin = new Thickness(0, 2, 0, 2),
+                    Text = currentValue
+                };
+                Grid.SetColumn(textBox, 1);
+
+                if (!string.IsNullOrWhiteSpace(input.PatternMsg))
+                    textBox.Bind(TextBox.WatermarkProperty, new ResourceBinding(input.PatternMsg));
+
+                // 绑定启用状态
+                textBox.Bind(IsEnabledProperty, new Binding("Idle")
+                {
+                    Source = Instances.RootViewModel
+                });
+// 验证和保存
+                var fieldName = input.Name;
+                var verifyPattern = input.Verify;
+
+                textBox.TextChanged += (_, _) =>
+                {
+                    var text = textBox.Text ?? string.Empty;
+
+                    // 类型验证
+                    if (pipelineType == "int" && !IsValidIntegerInput(text))
                     {
-                        var regex = new Regex(verifyPattern);
-                        if (!regex.IsMatch(text))
+                        textBox.Text = FilterToInteger(text);
+                        if (textBox.CaretIndex > textBox.Text.Length)
                         {
-                            // 可以在这里添加视觉反馈，比如红色边框
-                            // textBox.Classes.Add("error");
+                            textBox.CaretIndex = textBox.Text.Length;
                         }
-                        else
+                        return;
+                    }
+
+                    // 正则验证 - 使用DataValidationErrors
+                    if (!string.IsNullOrEmpty(verifyPattern))
+                    {
+                        try
                         {
-                            // textBox.Classes.Remove("error");
+                            var regex = new Regex(verifyPattern);
+                            if (!regex.IsMatch(text))
+                            {
+                                // 设置验证错误
+                                var errorMessage = !string.IsNullOrWhiteSpace(input.PatternMsg)
+                                    ? LanguageHelper.GetLocalizedString(input.PatternMsg)
+                                    : "Invalid input";
+
+                                DataValidationErrors.SetErrors(textBox, new[]
+                                {
+                                    errorMessage
+                                });
+                            }
+                            else
+                            {
+                                // 清除验证错误
+                                DataValidationErrors.ClearErrors(textBox);
+                            }
+                        }
+                        catch
+                        {
+                            /* 正则出错时忽略 */
                         }
                     }
-                    catch { /* 正则出错时忽略 */ }
-                }
 
-                option.Data[fieldName] = text;
+                    option.Data[fieldName] = text;
 
-                // 生成 pipeline override
+                    // 生成 pipeline override
+                    if (interfaceOption.PipelineOverride != null)
+                    {
+                        option.PipelineOverride = interfaceOption.GenerateProcessedPipeline(
+                            option.Data.Where(kv => kv.Value != null)
+                                .ToDictionary(kv => kv.Key, kv => kv.Value!));
+                    }
+
+                    SaveConfiguration();
+                };
+
+                SaveConfiguration();
+
+
+                // 初始化 pipeline override
                 if (interfaceOption.PipelineOverride != null)
                 {
                     option.PipelineOverride = interfaceOption.GenerateProcessedPipeline(
                         option.Data.Where(kv => kv.Value != null)
                             .ToDictionary(kv => kv.Key, kv => kv.Value!));
                 }
+                Grid.SetColumn(textBox, 1);
 
-                SaveConfiguration();
-            };
-
-            // 初始化 pipeline override
-            if (interfaceOption.PipelineOverride != null)
-            {
-                option.PipelineOverride = interfaceOption.GenerateProcessedPipeline(
-                    option.Data.Where(kv => kv.Value != null)
-                        .ToDictionary(kv => kv.Key, kv => kv.Value!));
-            }
-
-            Grid.SetColumn(textBox, 1);
-
-            // 标签 - 使用 ResourceBindingWithFallback 支持语言动态切换
-            var textBlock = new TextBlock
-            {
-                FontSize = 14,
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
-            textBlock.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(input.DisplayName, input.Name));
-            textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiLowText"));
-
-            var stackPanel = new StackPanel
-            {
-                MinWidth = 180,
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
-
-            Grid.SetColumn(stackPanel, 0);
-            stackPanel.Children.Add(textBlock);
-            var tooltipText = GetTooltipText(input.Description, null);
-            if (!string.IsNullOrWhiteSpace(tooltipText))
-            {
-                var docBlock = new TooltipBlock();
-                docBlock.Bind(TooltipBlock.TooltipTextProperty, new ResourceBinding(tooltipText));
-                stackPanel.Children.Add(docBlock);
-            }
-            // 布局自适应
-            grid.Children.Add(textBox);
-            grid.Children.Add(stackPanel);
-            grid.SizeChanged += (sender, e) =>
-            {
-                var currentGrid = sender as Grid;
-                if (currentGrid == null) return;
-
-                var totalMinWidth = currentGrid.Children.Sum(c => c.MinWidth);
-                var availableWidth = currentGrid.Bounds.Width;
-
-                if (availableWidth < totalMinWidth)
+                // 标签 - 使用 ResourceBindingWithFallback 支持语言动态切换
+                var textBlock = new TextBlock
                 {
-                    currentGrid.ColumnDefinitions.Clear();
-                    currentGrid.RowDefinitions.Clear();
-                    currentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                    currentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                    Grid.SetRow(stackPanel, 0);
-                    Grid.SetRow(textBox, 1);
-                    Grid.SetColumn(stackPanel, 0);
-                    Grid.SetColumn(textBox, 0);
-                }
-                else
-                {
-                    currentGrid.RowDefinitions.Clear();
-                    currentGrid.ColumnDefinitions.Clear();
-                    currentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(7, GridUnitType.Star) });
-                    currentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) });
-                    Grid.SetRow(stackPanel, 0);
-                    Grid.SetRow(textBox, 0);
-                    Grid.SetColumn(stackPanel, 0);
-                    Grid.SetColumn(textBox, 1);
-                }
-            };
+                    FontSize = 14,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                };
+                textBlock.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(input.DisplayName, input.Name));
+                textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiLowText"));
 
-            container.Children.Add(grid);
+                var stackPanel = new StackPanel
+                {
+                    MinWidth = 180,
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                };
+
+                Grid.SetColumn(stackPanel, 0);
+                stackPanel.Children.Add(textBlock);
+                var tooltipText = GetTooltipText(input.Description, null);
+                if (!string.IsNullOrWhiteSpace(tooltipText))
+                {
+                    var docBlock = new TooltipBlock();
+                    docBlock.Bind(TooltipBlock.TooltipTextProperty, new ResourceBinding(tooltipText));
+                    stackPanel.Children.Add(docBlock);
+                }
+                // 布局自适应
+                grid.Children.Add(textBox);
+                grid.Children.Add(stackPanel);
+                grid.SizeChanged += (sender, e) =>
+                {
+                    var currentGrid = sender as Grid;
+                    if (currentGrid == null) return;
+
+                    var totalMinWidth = currentGrid.Children.Sum(c => c.MinWidth);
+                    var availableWidth = currentGrid.Bounds.Width;
+
+                    if (availableWidth < totalMinWidth * 0.8)
+                    {
+                        currentGrid.ColumnDefinitions.Clear();
+                        currentGrid.RowDefinitions.Clear();
+                        currentGrid.RowDefinitions.Add(new RowDefinition
+                        {
+                            Height = GridLength.Auto
+                        });
+                        currentGrid.RowDefinitions.Add(new RowDefinition
+                        {
+                            Height = GridLength.Auto
+                        });
+                        Grid.SetRow(stackPanel, 0);
+                        Grid.SetRow(textBox, 1);
+                        Grid.SetColumn(stackPanel, 0);
+                        Grid.SetColumn(textBox, 0);
+                    }
+                    else
+                    {
+                        currentGrid.RowDefinitions.Clear();
+                        currentGrid.ColumnDefinitions.Clear();
+                        currentGrid.ColumnDefinitions.Add(new ColumnDefinition
+                        {
+                            Width = new GridLength(5, GridUnitType.Star)
+                        });
+                        currentGrid.ColumnDefinitions.Add(new ColumnDefinition
+                        {
+                            Width = new GridLength(6, GridUnitType.Star)
+                        });
+                        Grid.SetRow(stackPanel, 0);
+                        Grid.SetRow(textBox, 0);
+                        Grid.SetColumn(stackPanel, 0);
+                        Grid.SetColumn(textBox, 1);
+                    }
+                };
+
+                container.Children.Add(grid);
+            }
         }
 
-        // 添加主标签（option 名称）- 多个输入字段时显示，使用绑定支持语言动态切换
+        // 添加主标签（option 名称）- 只有在多个输入字段时才显示
         if (interfaceOption.Inputs.Count > 1)
         {
             var headerText = new TextBlock
@@ -1055,7 +1138,110 @@ public partial class TaskQueueView : UserControl
     }
 
     /// <summary>
-    /// 获取 tooltip 文本：优先使用 Description，没有则使用 Document
+    /// 创建 bool 类型的 input 控件（使用 ToggleSwitch）
+    /// </summary>
+    private Grid CreateBoolInputControl(
+        MaaInterface.MaaInterfaceOptionInput input,
+        string currentValue,
+        MaaInterface.MaaInterfaceSelectOption option,
+        MaaInterface.MaaInterfaceOption interfaceOption)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition
+                {
+                    Width = GridLength.Auto
+                },
+                new ColumnDefinition
+                {
+                    Width = new GridLength(1, GridUnitType.Star)
+                },
+                new ColumnDefinition
+                {
+                    Width = GridLength.Auto
+                }
+            },
+            Margin = new Thickness(0, 6, 10, 6)
+        };
+
+        // 解析当前值为 bool
+        bool isChecked = currentValue.Equals("true", StringComparison.OrdinalIgnoreCase) || currentValue == "1";
+
+        var toggleSwitch = new ToggleSwitch
+        {
+            IsChecked = isChecked,
+            Classes =
+            {
+                "Switch"
+            },
+            MaxHeight = 60,
+            MaxWidth = 100,
+            Margin = new Thickness(0, 2, 0, 2),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        toggleSwitch.Bind(IsEnabledProperty, new Binding("Idle")
+        {
+            Source = Instances.RootViewModel
+        });
+
+        toggleSwitch.Bind(ToolTip.TipProperty, new ResourceBindingWithFallback(input.DisplayName, input.Name));
+
+        var fieldName = input.Name;
+        toggleSwitch.IsCheckedChanged += (_, _) =>
+        {
+            var boolValue = toggleSwitch.IsChecked == true;
+            option.Data[fieldName] = boolValue.ToString().ToLower();
+
+            // 生成 pipeline override
+            if (interfaceOption.PipelineOverride != null)
+            {
+                option.PipelineOverride = interfaceOption.GenerateProcessedPipeline(
+                    option.Data.Where(kv => kv.Value != null)
+                        .ToDictionary(kv => kv.Key, kv => kv.Value!));
+            }
+
+            SaveConfiguration();
+        };
+
+        // 标签
+        var textBlock = new TextBlock
+        {
+            FontSize = 14,
+            Margin = new Thickness(10, 0, 5, 0),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        textBlock.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(input.DisplayName, input.Name));
+        textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiLowText"));
+
+        var stackPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        stackPanel.Children.Add(textBlock);
+
+        // 添加 tooltip
+        var tooltipText = GetTooltipText(input.Description, null);
+        if (!string.IsNullOrWhiteSpace(tooltipText))
+        {
+            var docBlock = new TooltipBlock();
+            docBlock.Bind(TooltipBlock.TooltipTextProperty, new ResourceBinding(tooltipText));
+            stackPanel.Children.Add(docBlock);
+        }
+
+        Grid.SetColumn(stackPanel, 0);
+        Grid.SetColumn(toggleSwitch, 2);
+        grid.Children.Add(stackPanel);
+        grid.Children.Add(toggleSwitch);
+
+        return grid;
+    }
     /// </summary>
     private static string? GetTooltipText(string? description, List<string>? document)
     {
@@ -1256,14 +1442,14 @@ public partial class TaskQueueView : UserControl
             {
                 new ColumnDefinition
                 {
-                    Width = new GridLength(7, GridUnitType.Star)
+                    Width = new GridLength(5, GridUnitType.Star)
                 },
                 new ColumnDefinition
                 {
-                    Width = new GridLength(4, GridUnitType.Star)
+                    Width = new GridLength(6, GridUnitType.Star)
                 }
             },
-            Margin = new Thickness(10, 6, 10, 6)
+            Margin = new Thickness(10, 3, 10, 3)
         };
 
         // 子配置项容器
@@ -1283,12 +1469,12 @@ public partial class TaskQueueView : UserControl
 
         var combo = new ComboBox
         {
-            MinWidth = 150,
+            MinWidth = 120,
             Classes =
             {
                 "LimitWidth"
             },
-            Margin = new Thickness(0, 4, 0, 4),
+            Margin = new Thickness(0, 2, 0, 2),
             ItemsSource = interfaceOption.Cases,
             ItemTemplate = new FuncDataTemplate<MaaInterface.MaaInterfaceOptionCase>((caseOption, b) =>
             {
@@ -1296,8 +1482,14 @@ public partial class TaskQueueView : UserControl
                 {
                     ColumnDefinitions =
                     {
-                        new ColumnDefinition { Width = GridLength.Star },
-                        new ColumnDefinition { Width = new GridLength(40) }
+                        new ColumnDefinition
+                        {
+                            Width = GridLength.Star
+                        },
+                        new ColumnDefinition
+                        {
+                            Width = new GridLength(40)
+                        }
                     }
                 };
 
@@ -1327,8 +1519,14 @@ public partial class TaskQueueView : UserControl
                 {
                     ColumnDefinitions =
                     {
-                        new ColumnDefinition { Width = GridLength.Star },
-                        new ColumnDefinition { Width = new GridLength(40) }
+                        new ColumnDefinition
+                        {
+                            Width = GridLength.Star
+                        },
+                        new ColumnDefinition
+                        {
+                            Width = new GridLength(40)
+                        }
                     }
                 };
 
@@ -1448,7 +1646,7 @@ public partial class TaskQueueView : UserControl
             // 计算所有列的 MinWidth 总和
             var totalMinWidth = currentGrid.Children.Sum(c => c.MinWidth);
             var availableWidth = currentGrid.Bounds.Width;
-            if (availableWidth < totalMinWidth)
+            if (availableWidth < totalMinWidth * 0.8)
             {
                 // 切换为上下结构（两行）
                 currentGrid.ColumnDefinitions.Clear();
@@ -1470,17 +1668,17 @@ public partial class TaskQueueView : UserControl
             else
             {
                 // 恢复左右结构（两列）
+                // 恢复左右结构（两列）
                 currentGrid.RowDefinitions.Clear();
                 currentGrid.ColumnDefinitions.Clear();
                 currentGrid.ColumnDefinitions.Add(new ColumnDefinition
                 {
-                    Width = new GridLength(7, GridUnitType.Star)
+                    Width = new GridLength(5, GridUnitType.Star)
                 });
                 currentGrid.ColumnDefinitions.Add(new ColumnDefinition
                 {
-                    Width = new GridLength(4, GridUnitType.Star)
+                    Width = new GridLength(6, GridUnitType.Star)
                 });
-
                 Grid.SetRow(stackPanel, 0);
                 Grid.SetRow(combo, 0);
                 Grid.SetColumn(stackPanel, 0);
@@ -1576,10 +1774,10 @@ public partial class TaskQueueView : UserControl
         {
             control = CreateInputControl(subOption, subInterfaceOption, source);
         }
-        else if (subInterfaceOption.IsSwitch)
+        else if (subInterfaceOption.IsSwitch && subInterfaceOption.Cases.ShouldSwitchButton(out var yes1, out var no1))
         {
-            // type 为 "switch" 时，强制使用 ToggleSwitch（cases[0] 为开，cases[1] 为关）
-            control = CreateToggleControl(subOption, 0, 1, subInterfaceOption, source);
+            // type 为 "switch" 时，强制使用 ToggleSwitch
+            control = CreateToggleControl(subOption, yes1, no1, subInterfaceOption, source);
         }
         else if (subInterfaceOption.Cases.ShouldSwitchButton(out var yes, out var no))
         {
@@ -1626,7 +1824,7 @@ public partial class TaskQueueView : UserControl
                 @"\[size:(\d+)\]", new Dictionary<string, string>
                 {
                     {
-                        "markdown",  "<span style='font-size: $1px;'>"
+                        "markdown", "<span style='font-size: $1px;'>"
                     },
                     {
                         "html", "<span style='font-size: $1px;'>"

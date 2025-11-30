@@ -188,6 +188,12 @@ public static class LanguageHelper
     {
         if (key == null)
             return string.Empty;
+        if (key.StartsWith("$"))
+        {
+    
+            var key1 = key.Substring(1);
+            return GetLocalizedStrings().ContainsKey(key1) ? GetLocalizedStrings()[key1] : GetLocalizedStrings().ContainsKey(key) ? GetLocalizedStrings()[key] : key;
+        }
         return GetLocalizedStrings().GetValueOrDefault(key, key);
     }
     

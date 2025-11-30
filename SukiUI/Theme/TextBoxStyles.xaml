@@ -183,7 +183,7 @@
 
                     </suki:GlassCard>
                     
-                    <DataValidationErrors>
+                    <DataValidationErrors Margin="0,0,10,0">
 
                         <Grid Margin="{TemplateBinding Padding}"
                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"

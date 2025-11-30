@@ -277,52 +277,75 @@ sealed class Program
     }
 
     /// <summary>
-    /// 清理同目录中与 libs 文件夹重复的动态库文件，防止新旧版本冲突
+    /// 清理同目录中与 libs 文件夹和 runtimes 文件夹重复的动态库文件，防止新旧版本冲突
     /// </summary>
     private static void CleanupDuplicateLibraries(string baseDirectory, string? lib)
     {
         try
         {
+            // 收集所有需要排除的库文件名（来自 libs 和 runtimes）
+            var duplicateFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // 1. 收集 libs 文件夹中的所有动态库文件
             lib ??= "libs";
             var libsPath = Path.Combine(baseDirectory, lib);
-            if (!Directory.Exists(libsPath))
-                return;
-
-            // 获取 libs 文件夹中的所有动态库文件
-            var libsFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var libsDirectoryInfo = new DirectoryInfo(libsPath);
-            var libsFileInfos = libsDirectoryInfo.GetFiles()
-                .Where(f => f.Extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) ||
-                           f.Extension.Equals(".so", StringComparison.OrdinalIgnoreCase) ||
-                           f.Extension.Equals(".dylib", StringComparison.OrdinalIgnoreCase));
-
-            foreach (var fileInfo in libsFileInfos)
+            if (Directory.Exists(libsPath))
             {
-                // 使用文件名（不包含路径）作为键，支持跨平台比较
-                libsFiles.Add(fileInfo.Name);
+                var libsDirectoryInfo = new DirectoryInfo(libsPath);
+                var libsFileInfos = libsDirectoryInfo.GetFiles()
+                    .Where(f => IsNativeLibrary(f.Extension));
+
+                foreach (var fileInfo in libsFileInfos)
+                {
+                    duplicateFiles.Add(fileInfo.Name);
+                }
             }
 
-            if (libsFiles.Count == 0)
+            // 2. 收集 runtimes 文件夹及其子目录中的所有动态库文件
+            var runtimesPath = Path.Combine(baseDirectory, "runtimes");
+            if (Directory.Exists(runtimesPath))
+            {
+                try
+                {
+                    // 递归搜索 runtimes 目录下的所有动态库文件
+                    var runtimeFiles = Directory.EnumerateFiles(runtimesPath, "*", SearchOption.AllDirectories)
+                        .Where(f => IsNativeLibrary(Path.GetExtension(f)));
+
+                    foreach (var filePath in runtimeFiles)
+                    {
+                        var fileName = Path.GetFileName(filePath);
+                        duplicateFiles.Add(fileName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        LoggerHelper.Warning($"Failed to enumerate runtimes folder: {ex.Message}");
+                    }
+                    catch { }
+                }
+            }
+
+            if (duplicateFiles.Count == 0)
                 return;
 
-            // 检查同目录中的文件
+            // 3. 检查并删除同目录中的重复文件
             var baseDirectoryInfo = new DirectoryInfo(baseDirectory);
             var baseFileInfos = baseDirectoryInfo.GetFiles()
-                .Where(f => f.Extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) ||
-                           f.Extension.Equals(".so", StringComparison.OrdinalIgnoreCase) ||
-                           f.Extension.Equals(".dylib", StringComparison.OrdinalIgnoreCase));
+                .Where(f => IsNativeLibrary(f.Extension));
 
             foreach (var fileInfo in baseFileInfos)
             {
-                // 如果同目录中的文件在 libs 中也存在，删除同目录中的文件
-                if (libsFiles.Contains(fileInfo.Name))
+                // 如果同目录中的文件在 libs 或 runtimes 中也存在，删除同目录中的文件
+                if (duplicateFiles.Contains(fileInfo.Name))
                 {
                     try
                     {
                         fileInfo.Delete();
                         try
                         {
-                            LoggerHelper.Info($"Deleted duplicate library file: {fileInfo.Name} (found in libs folder)");
+                            LoggerHelper.Info($"Deleted duplicate library file: {fileInfo.Name} (found in libs or runtimes folder)");
                         }
                         catch
                         {
@@ -356,6 +379,16 @@ sealed class Program
                 // LoggerHelper 可能还未初始化
             }
         }
+    }
+
+    /// <summary>
+    /// 判断文件扩展名是否为原生库文件
+    /// </summary>
+    private static bool IsNativeLibrary(string extension)
+    {
+        return extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".so", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".dylib", StringComparison.OrdinalIgnoreCase);
     }
 
 
