@@ -1498,6 +1498,7 @@ public partial class TaskQueueView : UserControl
                     TextWrapping = TextWrapping.NoWrap,
                     VerticalAlignment = VerticalAlignment.Center
                 };
+                textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
                 textBlock.Bind(TextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 textBlock.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 ToolTip.SetShowDelay(textBlock, 100);
@@ -1535,6 +1536,7 @@ public partial class TaskQueueView : UserControl
                     TextWrapping = TextWrapping.NoWrap,
                     VerticalAlignment = VerticalAlignment.Center
                 };
+                textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
                 textBlock.Bind(TextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 textBlock.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 ToolTip.SetShowDelay(textBlock, 100);
