@@ -22,17 +22,16 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
-using System.Management;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 using Brushes = Avalonia.Media.Brushes;
 using MaaAgentClient = MaaFramework.Binding.MaaAgentClient;
-using MaaContext = MaaFramework.Binding.MaaContext;
 using MaaController = MaaFramework.Binding.MaaController;
 using MaaGlobal = MaaFramework.Binding.MaaGlobal;
 using MaaResource = MaaFramework.Binding.MaaResource;
@@ -56,8 +55,6 @@ public class MaaProcessor
     public static MaaToolkit Toolkit { get; } = new(true);
 
     public static MaaGlobal Global { get; } = new();
-
-    private static MaaInterface? _interface;
 
     // public Dictionary<string, MaaNode> BaseNodes = new();
     //
@@ -120,10 +117,10 @@ public class MaaProcessor
 
     public static MaaInterface? Interface
     {
-        get => _interface;
+        get => field;
         private set
         {
-            _interface = value;
+            field = value;
 
             foreach (var customResource in value?.Resource ?? Enumerable.Empty<MaaInterface.MaaInterfaceResource>())
             {
@@ -173,7 +170,7 @@ public class MaaProcessor
     /// <summary>
     /// 异步加载 Contact 和 Description 内容
     /// </summary>
-    private static async Task LoadContactAndDescriptionAsync(MaaInterface maaInterface)
+    async private static Task LoadContactAndDescriptionAsync(MaaInterface maaInterface)
     {
         var projectDir = AppContext.BaseDirectory;
 
@@ -255,6 +252,8 @@ public class MaaProcessor
     public ObservableCollection<DragItemViewModel> TasksSource { get; private set; } =
         [];
     public AutoInitDictionary AutoInitDictionary { get; } = new();
+    private FocusHandler? _focusHandler;
+    private TaskLoader? _taskLoader;
 
     private MaaAgentClient? _agentClient;
     private bool _agentStarted;
@@ -293,334 +292,7 @@ public class MaaProcessor
         }
         return path;
     }
-    public static string FindPythonPath(string? program)
-    {
-        if (program != "python")
-        {
-            return program;
-        }
 
-        // 根据不同操作系统执行不同的查找逻辑
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            return FindPythonPathOnWindows(program);
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            return FindPythonPathOnMacOS(program);
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            return FindPythonPathOnLinux(program);
-        }
-        else
-        {
-            // 未知操作系统，尝试通用查找
-            return FindPythonPathGeneric(program);
-        }
-    }
-
-    private static string FindPythonPathOnWindows(string program)
-    {
-        // 先检查 PATH 环境变量
-        var pathEnv = Environment.GetEnvironmentVariable("PATH");
-        if (!string.IsNullOrEmpty(pathEnv))
-        {
-            foreach (var dir in pathEnv.Split(Path.PathSeparator))
-            {
-                try
-                {
-                    var fullPath = Path.Combine(dir, $"{program}.exe");
-                    if (File.Exists(fullPath))
-                    {
-                        return fullPath;
-                    }
-                }
-                catch
-                {
-                    /* 忽略错误目录 */
-                }
-            }
-        }
-
-        // 尝试查找 Python 安装目录 (常见位置)
-        var pythonDirs = new[]
-        {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Python"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Python")
-        };
-
-        foreach (var baseDir in pythonDirs)
-        {
-            if (Directory.Exists(baseDir))
-            {
-                try
-                {
-                    // 优先选择版本号最高的目录
-                    var pythonDir = Directory.GetDirectories(baseDir)
-                        .OrderByDescending(d => d)
-                        .FirstOrDefault();
-
-                    if (pythonDir != null)
-                    {
-                        var pythonPath = Path.Combine(pythonDir, $"{program}.exe");
-                        if (File.Exists(pythonPath))
-                        {
-                            return pythonPath;
-                        }
-                    }
-                }
-                catch
-                {
-                    /* 忽略错误 */
-                }
-            }
-        }
-
-        // 尝试查找 Anaconda/Miniconda
-        var condaDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "anaconda3");
-        if (Directory.Exists(condaDir))
-        {
-            var condaPythonPath = Path.Combine(condaDir, $"{program}.exe");
-            if (File.Exists(condaPythonPath))
-            {
-                return condaPythonPath;
-            }
-        }
-
-        return program; // 未找到，返回原程序名
-    }
-
-    private static string FindPythonPathOnMacOS(string program)
-    {
-        // 检查 PATH 环境变量
-        var pathEnv = Environment.GetEnvironmentVariable("PATH");
-        if (!string.IsNullOrEmpty(pathEnv))
-        {
-            foreach (var dir in pathEnv.Split(Path.PathSeparator))
-            {
-                try
-                {
-                    var fullPath = Path.Combine(dir, program);
-                    if (File.Exists(fullPath) && IsExecutable(fullPath))
-                    {
-                        return fullPath;
-                    }
-                }
-                catch
-                {
-                    /* 忽略错误目录 */
-                }
-            }
-        }
-
-        // 检查 Homebrew 安装位置
-        var homebrewDir = "/usr/local/bin";
-        var homebrewPath = Path.Combine(homebrewDir, program);
-        if (File.Exists(homebrewPath) && IsExecutable(homebrewPath))
-        {
-            return homebrewPath;
-        }
-
-        // 检查 Python.org 安装位置
-        var pythonOrgDir = "/Library/Frameworks/Python.framework/Versions";
-        if (Directory.Exists(pythonOrgDir))
-        {
-            try
-            {
-                // 选择最新版本
-                var versions = Directory.GetDirectories(pythonOrgDir)
-                    .Select(Path.GetFileName)
-                    .Where(v => v.StartsWith("3")) // 优先选择 Python 3
-                    .OrderByDescending(v => new Version(v))
-                    .ToList();
-
-                foreach (var version in versions)
-                {
-                    var pythonPath = Path.Combine(pythonOrgDir, version, "bin", program);
-                    if (File.Exists(pythonPath) && IsExecutable(pythonPath))
-                    {
-                        return pythonPath;
-                    }
-                }
-            }
-            catch
-            {
-                /* 忽略错误 */
-            }
-        }
-
-        return program; // 未找到，返回原程序名
-    }
-
-    private static string FindPythonPathOnLinux(string program)
-    {
-        // 检查 PATH 环境变量
-        var pathEnv = Environment.GetEnvironmentVariable("PATH");
-        if (!string.IsNullOrEmpty(pathEnv))
-        {
-            foreach (var dir in pathEnv.Split(Path.PathSeparator))
-            {
-                try
-                {
-                    var fullPath = Path.Combine(dir, program);
-                    if (File.Exists(fullPath) && IsExecutable(fullPath))
-                    {
-                        return fullPath;
-                    }
-                }
-                catch
-                {
-                    /* 忽略错误目录 */
-                }
-            }
-        }
-
-        // 检查常见的 Python 安装位置
-        var commonDirs = new[]
-        {
-            "/usr/bin",
-            "/usr/local/bin",
-            "/opt/python/bin"
-        };
-
-        foreach (var dir in commonDirs)
-        {
-            var fullPath = Path.Combine(dir, program);
-            if (File.Exists(fullPath) && IsExecutable(fullPath))
-            {
-                return fullPath;
-            }
-        }
-
-        return program; // 未找到，返回原程序名
-    }
-
-    private static string FindPythonPathGeneric(string program)
-    {
-        // 通用查找逻辑，适用于其他操作系统
-        var pathEnv = Environment.GetEnvironmentVariable("PATH");
-        if (!string.IsNullOrEmpty(pathEnv))
-        {
-            foreach (var dir in pathEnv.Split(Path.PathSeparator))
-            {
-                try
-                {
-                    var fullPath = Path.Combine(dir, program);
-                    if (File.Exists(fullPath))
-                    {
-                        return fullPath;
-                    }
-                }
-                catch
-                {
-                    /* 忽略错误目录 */
-                }
-            }
-        }
-
-        return program; // 未找到，返回原程序名
-    }
-
-    // 检查文件是否具有可执行权限 (仅适用于 Unix-like 系统)
-    private static bool IsExecutable(string path)
-    {
-        try
-        {
-            // 在 Windows 上不需要检查可执行权限
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return true;
-            }
-
-            // 使用 Linux/macOS 的 file 命令检查文件类型
-            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "file",
-                Arguments = $"--brief --mime-type \"{path}\"",
-                RedirectStandardOutput = true,
-                UseShellExecute = false
-            });
-
-            if (process != null)
-            {
-                process.WaitForExit();
-                var output = process.StandardOutput.ReadToEnd().Trim();
-                return output.Contains("executable") || output.Contains("application/x-executable");
-            }
-
-            return false;
-        }
-        catch
-        {
-            // 如果检查失败，默认认为文件存在即可执行
-            return File.Exists(path);
-        }
-    }
-    public static WriteableBitmap? DrawRectangleOnBitmap(Bitmap bitmap, int x, int y, int width, int height)
-    {
-        using (var context = new RenderTargetBitmap(
-                   new PixelSize(bitmap.PixelSize.Width, bitmap.PixelSize.Height),
-                   new Vector(96, 96)))
-        {
-            using (var drawingContext = context.CreateDrawingContext(false))
-            {
-                // 绘制原始位图
-                drawingContext.DrawImage(bitmap, new Rect(new Size(bitmap.PixelSize.Width, bitmap.PixelSize.Height)));
-
-                // 定义黄绿色画笔
-                var pen = new Pen(
-                    Brushes.YellowGreen,
-                    1,
-                    null,
-                    PenLineCap.Square,
-                    PenLineJoin.Miter);
-
-                // 绘制矩形框
-                drawingContext.DrawRectangle(
-                    null,
-                    pen,
-                    new Rect(x, y, width, height));
-            }
-
-            // 将绘制结果复制回原始位图
-            using (var writableBitmap = new WriteableBitmap(
-                       context.PixelSize,
-                       context.Dpi,
-                       PixelFormat.Bgra8888,
-                       AlphaFormat.Premul))
-            {
-                using (var buffer = writableBitmap.Lock())
-                {
-                    context.CopyPixels(
-                        new PixelRect(0, 0, context.PixelSize.Width, context.PixelSize.Height),
-                        buffer.Address,
-                        buffer.RowBytes * buffer.Size.Height,
-                        buffer.RowBytes);
-                }
-
-                // 转换回原始格式
-                using (var tempBitmap = new WriteableBitmap(
-                           bitmap.PixelSize,
-                           bitmap.Dpi,
-                           PixelFormat.Bgra8888,
-                           AlphaFormat.Premul))
-                {
-                    using (var tempBuffer = tempBitmap.Lock())
-                    {
-                        writableBitmap.CopyPixels(
-                            new PixelRect(0, 0, writableBitmap.PixelSize.Width, writableBitmap.PixelSize.Height),
-                            tempBuffer.Address,
-                            tempBuffer.RowBytes * tempBuffer.Size.Height,
-                            tempBuffer.RowBytes);
-                    }
-
-                    return writableBitmap;
-
-                }
-            }
-        }
-    }
     private bool IsPathLike(string? input)
     {
         if (string.IsNullOrEmpty(input)) return false;
@@ -807,7 +479,7 @@ public class MaaProcessor
                         })
                         .Select(ConvertPath).ToList();
 
-                    var executablePath = FindPythonPath(program);
+                    var executablePath = PythonPathFinder.FindPythonPath(program);
 
                     // 检查可执行文件是否存在
                     if (!File.Exists(executablePath))
@@ -970,7 +642,9 @@ public class MaaProcessor
 
                 if (jObject.ContainsKey("focus"))
                 {
-                    DisplayFocus(jObject, args.Message, args.Details);
+                    _focusHandler ??= new FocusHandler(AutoInitDictionary);
+                    _focusHandler.UpdateDictionary(AutoInitDictionary);
+                    _focusHandler.DisplayFocus(jObject, args.Message, args.Details);
                 }
             };
 
@@ -989,316 +663,6 @@ public class MaaProcessor
         {
             LoggerHelper.Error("Initialization tasker error", e);
             return (null, InvalidResource);
-        }
-    }
-
-#pragma warning disable CS0649 // 
-    private class Focus
-    {
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
-        [JsonProperty("start")]
-        public List<string>? Start;
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
-        [JsonProperty("succeeded")]
-        public List<string>? Succeeded;
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
-        [JsonProperty("failed")]
-        public List<string>? Failed;
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
-        [JsonProperty("toast")]
-        public List<string>? Toast;
-        [JsonProperty("aborted")] public bool? Aborted;
-    }
-
-    public static (string Text, string? Color) ParseColorText(string input)
-    {
-        var match = Regex.Match(input.Trim(), @"\[color:(?<color>.*?)\](?<text>.*?)\[/color\]", RegexOptions.IgnoreCase);
-
-        if (match.Success)
-        {
-            string color = match.Groups["color"].Value.Trim();
-            string text = match.Groups["text"].Value;
-            return (text, color);
-        }
-
-        return (input, null);
-
-    }
-
-    private void DisplayFocus(JObject taskModel, string message, string detail)
-    {
-        try
-        {
-
-            if (taskModel["focus"] == null)
-                return;
-
-            var focusToken = taskModel["focus"];
-            var focus = new Focus();
-            JObject newProtocolFocus = null;
-
-            // 解析focus内容，同时提取新旧协议数据
-            if (focusToken.Type == JTokenType.String)
-            {
-                // 旧协议：字符串形式（等价于start）
-                focus.Start = new List<string>
-                {
-                    focusToken.Value<string>()
-                };
-            }
-            else if (focusToken.Type == JTokenType.Object)
-            {
-                var focusObj = focusToken as JObject;
-                // 提取旧协议字段（start/succeeded/failed/toast等）
-                focus = focusObj.ToObject<Focus>();
-                // 提取新协议字段（消息类型为键的条目）
-                newProtocolFocus = new JObject(
-                    focusObj.Properties()
-                        .Select(prop => new JProperty(prop.Name, prop.Value))
-                );
-            }
-
-            // 处理详情数据（用于新协议占位符替换）
-            JObject detailsObj = null;
-            if (!string.IsNullOrEmpty(detail))
-            {
-                try
-                {
-                    detailsObj = JObject.Parse(detail);
-                }
-                catch
-                {
-                    // 忽略详情解析错误
-                }
-            }
-
-            // 1. 处理新协议（如果有）
-            if (newProtocolFocus is { HasValues: true } && newProtocolFocus.TryGetValue(message, out var templateToken))
-            {
-                // 处理字符串数组类型
-                if (templateToken.Type == JTokenType.Array)
-                {
-                    foreach (var item in templateToken.Children())
-                    {
-                        if (item.Type == JTokenType.String)
-                        {
-                            var template = item.Value<string>();
-                            var displayText = ReplacePlaceholders(template, detailsObj);
-                            var (text, color) = ParseColorText(displayText);
-                            RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
-                        }
-                    }
-                }
-                // 处理单个字符串类型
-                else if (templateToken.Type == JTokenType.String)
-                {
-                    var template = templateToken.Value<string>();
-                    var displayText = ReplacePlaceholders(template, detailsObj);
-                    var (text, color) = ParseColorText(displayText);
-                    RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
-                }
-            }
-
-
-            // 2. 处理旧协议（如果有）
-            switch (message)
-            {
-                case MaaMsg.Node.Action.Succeeded:
-                    if (focus.Succeeded != null)
-                    {
-                        foreach (var line in focus.Succeeded)
-                        {
-                            var (text, color) = ParseColorText(line);
-                            RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
-                        }
-                    }
-                    break;
-                case MaaMsg.Node.Action.Failed:
-                    if (focus.Failed != null)
-                    {
-                        foreach (var line in focus.Failed)
-                        {
-                            var (text, color) = ParseColorText(line);
-                            RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
-                        }
-                    }
-                    break;
-                case MaaMsg.Node.Action.Starting:
-                    if (focus.Aborted == true)
-                    {
-                        Status = MFATask.MFATaskStatus.FAILED;
-                    }
-                    if (focus.Toast is { Count: > 0 })
-                    {
-                        var (title, _) = ParseColorText(focus.Toast[0]);
-                        var (content, _) = focus.Toast.Count >= 2 ? ParseColorText(focus.Toast[1]) : ("", "");
-                        ToastNotification.Show(HandleStringsWithVariables(title), HandleStringsWithVariables(content));
-
-                    }
-                    if (focus.Start != null)
-                    {
-                        foreach (var line in focus.Start)
-                        {
-                            var (text, color) = ParseColorText(line);
-                            RootView.AddLog(HandleStringsWithVariables(text), color == null ? null : BrushHelper.ConvertToBrush(color));
-                        }
-                    }
-                    break;
-            }
-        }
-        catch (Exception e)
-        {
-            LoggerHelper.Error(e);
-        }
-    }
-
-    // 辅助方法：替换模板中的占位符
-    private string ReplacePlaceholders(string template, JObject? details)
-    {
-        if (details == null)
-            return template;
-
-        string result = template;
-        foreach (var prop in details.Properties())
-        {
-            result = result.Replace($"{{{prop.Name}}}", prop.Value?.ToString() ?? string.Empty);
-        }
-        return result;
-    }
-    // private void DisplayFocus(MaaNode taskModel, string message)
-    // {
-    //     switch (message)
-    //     {
-    //         case MaaMsg.Node.Action.Succeeded:
-    //             if (taskModel.FocusSucceeded != null)
-    //             {
-    //                 for (int i = 0; i < taskModel.FocusSucceeded.Count; i++)
-    //                 {
-    //                     IBrush brush = null;
-    //                     var tip = taskModel.FocusSucceeded[i];
-    //                     try
-    //                     {
-    //                         if (taskModel.FocusSucceededColor != null && taskModel.FocusSucceededColor.Count > i)
-    //                             brush = BrushHelper.ConvertToBrush(taskModel.FocusSucceededColor[i]);
-    //                     }
-    //                     catch (Exception e)
-    //                     {
-    //                         LoggerHelper.Error(e);
-    //                     }
-    //
-    //                     RootView.AddLog(HandleStringsWithVariables(tip), brush);
-    //                 }
-    //             }
-    //             break;
-    //         case MaaMsg.Node.Action.Failed:
-    //             if (taskModel.FocusFailed != null)
-    //             {
-    //                 for (int i = 0; i < taskModel.FocusFailed.Count; i++)
-    //                 {
-    //                     IBrush brush = null;
-    //                     var tip = taskModel.FocusFailed[i];
-    //                     try
-    //                     {
-    //                         if (taskModel.FocusFailedColor != null && taskModel.FocusFailedColor.Count > i)
-    //                             brush = BrushHelper.ConvertToBrush(taskModel.FocusFailedColor[i]);
-    //                     }
-    //                     catch (Exception e)
-    //                     {
-    //                         LoggerHelper.Error(e);
-    //                     }
-    //
-    //                     RootView.AddLog(HandleStringsWithVariables(tip), brush);
-    //                 }
-    //             }
-    //             break;
-    //         case MaaMsg.Node.Action.Starting:
-    //             if (!string.IsNullOrWhiteSpace(taskModel.FocusToast))
-    //             {
-    //                 ToastNotification.Show(taskModel.FocusToast);
-    //             }
-    //             if (taskModel.FocusTip != null)
-    //             {
-    //                 for (int i = 0; i < taskModel.FocusTip.Count; i++)
-    //                 {
-    //                     IBrush? brush = null;
-    //                     var tip = taskModel.FocusTip[i];
-    //                     try
-    //                     {
-    //                         if (taskModel.FocusTipColor != null && taskModel.FocusTipColor.Count > i)
-    //                         {
-    //                             brush = BrushHelper.ConvertToBrush(taskModel.FocusTipColor[i]);
-    //                         }
-    //                     }
-    //                     catch (Exception e)
-    //                     {
-    //                         LoggerHelper.Error(e);
-    //                     }
-    //                     RootView.AddLog(HandleStringsWithVariables(tip), brush);
-    //                 }
-    //             }
-    //             break;
-    //     }
-    // }
-    public static string HandleStringsWithVariables(string content)
-    {
-        try
-        {
-            return Regex.Replace(content, @"\{(\+\+|\-\-)?(\w+)(\+\+|\-\-)?([\+\-\*/]\w+)?\}", match =>
-            {
-                var prefix = match.Groups[1].Value;
-                var counterKey = match.Groups[2].Value;
-                var suffix = match.Groups[3].Value;
-                var operation = match.Groups[4].Value;
-
-                int value = Instance.AutoInitDictionary.GetValueOrDefault(counterKey, 0);
-
-                // 前置操作符7
-                if (prefix == "++")
-                {
-                    value = ++Instance.AutoInitDictionary[counterKey];
-                }
-                else if (prefix == "--")
-                {
-                    value = --Instance.AutoInitDictionary[counterKey];
-                }
-
-                // 后置操作符
-                if (suffix == "++")
-                {
-                    value = Instance.AutoInitDictionary[counterKey]++;
-                }
-                else if (suffix == "--")
-                {
-                    value = Instance.AutoInitDictionary[counterKey]--;
-                }
-
-                // 算术操作
-                if (!string.IsNullOrEmpty(operation))
-                {
-                    string operationType = operation[0].ToString();
-                    string operandKey = operation.Substring(1);
-
-                    if (Instance.AutoInitDictionary.TryGetValue(operandKey, out var operandValue))
-                    {
-                        value = operationType switch
-                        {
-                            "+" => value + operandValue,
-                            "-" => value - operandValue,
-                            "*" => value * operandValue,
-                            "/" => value / operandValue,
-                            _ => value
-                        };
-                    }
-                }
-
-                return value.ToString();
-            });
-        }
-        catch (Exception e)
-        {
-            LoggerHelper.Error(e);
-            ErrorView.ShowException(e);
-            return content;
         }
     }
 
@@ -1348,35 +712,6 @@ public class MaaProcessor
                 Config.DesktopWindow.ScreenCap, Config.DesktopWindow.Mouse, Config.DesktopWindow.KeyBoard,
                 Config.DesktopWindow.Link,
                 Config.DesktopWindow.Check);
-    }
-
-    public class MaaFWConfiguration
-    {
-        public AdbDeviceCoreConfig AdbDevice { get; set; } = new();
-        public DesktopWindowCoreConfig DesktopWindow { get; set; } = new();
-    }
-
-    public class DesktopWindowCoreConfig
-    {
-        public string Name { get; set; } = string.Empty;
-        public nint HWnd { get; set; }
-
-        public Win32InputMethod Mouse { get; set; } = Win32InputMethod.SendMessage;
-        public Win32InputMethod KeyBoard { get; set; } = Win32InputMethod.SendMessage;
-        public Win32ScreencapMethod ScreenCap { get; set; } = Win32ScreencapMethod.FramePool;
-        public LinkOption Link { get; set; } = LinkOption.Start;
-        public CheckStatusOption Check { get; set; } = CheckStatusOption.ThrowIfNotSucceeded;
-    }
-
-    public class AdbDeviceCoreConfig
-    {
-        public string Name { get; set; } = string.Empty;
-        public string AdbPath { get; set; } = "adb";
-        public string AdbSerial { get; set; } = "";
-        public string Config { get; set; } = "{}";
-        public AdbInputMethods Input { get; set; } = AdbInputMethods.Default;
-        public AdbScreencapMethods ScreenCap { get; set; } = AdbScreencapMethods.Default;
-        public AdbDeviceInfo? Info { get; set; } = null;
     }
 
     public static bool CheckInterface(out string Name, out string NameFallBack, out string Version, out string CustomTitle, out string CustomTitleFallBack)
@@ -1509,7 +844,7 @@ public class MaaProcessor
                             error = LangKeys.FileLoadFailed.ToLocalizationFormatted(false, interfaceFileName);
                             RootView.AddLog($"error:{error}");
                             ToastHelper.Error(
-                               error,
+                                error,
                                 e.Message,
                                 duration: 10);
                         }
@@ -1791,269 +1126,10 @@ public class MaaProcessor
 
     private void LoadTasks(List<MaaInterface.MaaInterfaceTask> tasks, IList<DragItemViewModel>? oldDrags = null)
     {
-        var currentTasks = ConfigurationManager.Current.GetValue(ConfigurationKeys.CurrentTasks, new List<string>());
-        if (currentTasks.Count <= 0 || currentTasks.Any(t => t.Contains(OLD_SEPARATOR) && !t.Contains(NEW_SEPARATOR)))
-        {
-            currentTasks.Clear();
-            currentTasks.AddRange(tasks
-                .Select(t => $"{t.Name}{NEW_SEPARATOR}{t.Entry}")
-                .Distinct()
-                .ToList());
-            ConfigurationManager.Current.SetValue(ConfigurationKeys.CurrentTasks, currentTasks);
-        }
-
-        var items = ConfigurationManager.Current.GetValue(ConfigurationKeys.TaskItems, new List<MaaInterface.MaaInterfaceTask>()) ?? [];
-        var drags = (oldDrags?.ToList() ?? []).Union(items.Select(interfaceItem => new DragItemViewModel(interfaceItem))).ToList();
-
-        if (FirstTask)
-        {
-            InitializeResources();
-            FirstTask = false;
-        }
-
-        var (updateList, removeList) = SynchronizeTaskItems(ref currentTasks, drags, tasks);
-        ConfigurationManager.Current.SetValue(ConfigurationKeys.CurrentTasks, currentTasks);
-        updateList.RemoveAll(d => removeList.Contains(d));
-
-        UpdateViewModels(updateList, tasks);
+        _taskLoader ??= new TaskLoader(Interface);
+        _taskLoader.LoadTasks(tasks,TasksSource, ref FirstTask, oldDrags);
     }
-
-    private void InitializeResources()
-    {
-        var resources = Interface?.Resources.Values.Count > 0
-            ? Interface.Resources.Values.ToList()
-            :
-            [
-                new MaaInterface.MaaInterfaceResource
-                {
-                    Name = "Default",
-                    Path = [ResourceBase]
-                }
-            ];
-
-        // 初始化每个资源的显示名称并注册语言变化监听
-        foreach (var resource in resources)
-        {
-            resource.InitializeDisplayName();
-        }
-
-        Instances.TaskQueueViewModel.CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(resources);
-        Instances.TaskQueueViewModel.CurrentResource = ConfigurationManager.Current.GetValue(ConfigurationKeys.Resource, string.Empty);
-        if (Instances.TaskQueueViewModel.CurrentResources.Count > 0 && Instances.TaskQueueViewModel.CurrentResources.All(r => r.Name != Instances.TaskQueueViewModel.CurrentResource))
-            Instances.TaskQueueViewModel.CurrentResource = Instances.TaskQueueViewModel.CurrentResources[0].Name ?? "Default";
-    }
-
-    private (List<DragItemViewModel> updateList, List<DragItemViewModel> removeList) SynchronizeTaskItems(ref List<string> currentTasks,
-        IList<DragItemViewModel> drags,
-        List<MaaInterface.MaaInterfaceTask> tasks)
-    {
-        var currentTaskSet = new HashSet<(string Name, string Entry)>(
-            currentTasks
-                .Select(t => t.Split(NEW_SEPARATOR, 2))
-                .Where(parts => parts.Length == 2)
-                .Select(parts => (parts[0], parts[1]))
-        );
-
-        var newDict = tasks
-            .GroupBy(t => (t.Name, t.Entry)) // 按键分组
-            .ToDictionary(
-                group => group.Key, // 键为 (Name, Entry)
-                group => group.Last() // 值取分组中的最后一个元素
-            ); // 使用 (Name, Entry) 作为键
-        var removeList = new List<DragItemViewModel>();
-        var updateList = new List<DragItemViewModel>();
-
-        if (drags.Count == 0)
-            return (updateList, removeList);
-
-        foreach (var oldItem in drags)
-        {
-            // 使用 InterfaceItem.Name 而不是 oldItem.Name，因为后者是本地化后的显示名称
-            if (newDict.TryGetValue((oldItem.InterfaceItem?.Name, oldItem.InterfaceItem?.Entry), out var newItem))
-            {
-                UpdateExistingItem(oldItem, newItem);
-                updateList.Add(oldItem);
-            }
-            else
-            {
-                var sameNameTasks = tasks.Where(t => t.Entry == oldItem.InterfaceItem?.Entry).ToList();
-                if (sameNameTasks.Any())
-                {
-                    var firstTask = sameNameTasks.First();
-                    UpdateExistingItem(oldItem, firstTask, tasks.Any(t => t.Name == firstTask.Name));
-                    updateList.Add(oldItem);
-                }
-                else
-                {
-                    removeList.Add(oldItem);
-                }
-            }
-        }
-
-        foreach (var task in tasks)
-        {
-            var key = (task.Name, task.Entry);
-            if (!currentTaskSet.Contains(key))
-            {
-                // 创建新的DragItemViewModel并添加到updateList
-                var newDragItem = new DragItemViewModel(task);
-                updateList.Add(newDragItem);
-
-                currentTasks.Add($"{task.Name}:{task.Entry}");
-            }
-        }
-
-        return (updateList, removeList);
-    }
-
-    private void UpdateExistingItem(DragItemViewModel oldItem, MaaInterface.MaaInterfaceTask newItem, bool updateName = false)
-    {
-        if (oldItem.InterfaceItem == null) return;
-        if (updateName)
-            oldItem.InterfaceItem.Name = newItem.Name;
-        else
-        {
-            if (oldItem.InterfaceItem.Name != newItem.Name)
-                return;
-        }
-        oldItem.InterfaceItem.Entry = newItem.Entry;
-        oldItem.InterfaceItem.Label = newItem.Label;
-        oldItem.InterfaceItem.PipelineOverride = newItem.PipelineOverride;
-        oldItem.InterfaceItem.Description = newItem.Description;
-        oldItem.InterfaceItem.Document = newItem.Document;
-        oldItem.InterfaceItem.Repeatable = newItem.Repeatable;
-
-        if (newItem.Advanced != null)
-        {
-            var tempDict = oldItem.InterfaceItem.Advanced?.ToDictionary(t => t.Name) ?? new Dictionary<string, MaaInterface.MaaInterfaceSelectAdvanced>();
-            var maaInterfaceSelectAdvanceds = JsonConvert.DeserializeObject<List<MaaInterface.MaaInterfaceSelectAdvanced>>(JsonConvert.SerializeObject(newItem.Advanced));
-            oldItem.InterfaceItem.Advanced = maaInterfaceSelectAdvanceds.Select(opt =>
-            {
-                if (tempDict.TryGetValue(opt.Name ?? string.Empty, out var existing))
-                {
-                    opt.Data = existing.Data;
-                }
-                return opt;
-            }).ToList();
-        }
-        else
-        {
-            oldItem.InterfaceItem.Advanced = null;
-        }
-
-        if (newItem.Option != null)
-        {
-            var tempDict = oldItem.InterfaceItem.Option?.ToDictionary(t => t.Name) ?? new Dictionary<string, MaaInterface.MaaInterfaceSelectOption>();
-            var maaInterfaceSelectOptions = JsonConvert.DeserializeObject<List<MaaInterface.MaaInterfaceSelectOption>>(JsonConvert.SerializeObject(newItem.Option));
-            oldItem.InterfaceItem.Option = maaInterfaceSelectOptions.Select(opt =>
-            {
-                if (tempDict.TryGetValue(opt.Name ?? string.Empty, out var existing))
-                {
-                    // 复制 Index（用于 select/switch 类型）
-                    if ((Interface?.Option?.TryGetValue(opt.Name ?? string.Empty, out var interfaceOption) ?? false) && interfaceOption.Cases is { Count: > 0 })
-                        opt.Index = Math.Min(existing.Index ?? 0, interfaceOption.Cases.Count - 1);
-
-                    // 复制 Data（用于 input 类型）
-                    if (existing.Data != null && existing.Data.Count > 0)
-                    {
-                        opt.Data = existing.Data;
-                    }
-
-                    // 复制 SubOptions（子选项）
-                    if (existing.SubOptions != null && existing.SubOptions.Count > 0)
-                    {
-                        opt.SubOptions = MergeSubOptions(existing.SubOptions);
-                    }
-                }
-                else
-                {
-                    SetDefaultOptionValue(opt);
-                }
-                return opt;
-            }).ToList();
-        }
-        else
-        {
-            oldItem.InterfaceItem.Option = null;
-        }
-    }
-
-    /// <summary>
-    /// 递归合并子选项
-    /// </summary>
-    private List<MaaInterface.MaaInterfaceSelectOption> MergeSubOptions(List<MaaInterface.MaaInterfaceSelectOption> existingSubOptions)
-    {
-        return existingSubOptions.Select(subOpt =>
-        {
-            var newSubOpt = new MaaInterface.MaaInterfaceSelectOption
-            {
-                Name = subOpt.Name,
-                Index = subOpt.Index,
-                Data = subOpt.Data != null && subOpt.Data.Count > 0
-                    ? new Dictionary<string, string?>(subOpt.Data)
-                    : null
-            };
-
-            // 验证并修正 Index
-            if ((Interface?.Option?.TryGetValue(subOpt.Name ?? string.Empty, out var subInterfaceOption) ?? false)
-                && subInterfaceOption.Cases is { Count: > 0 })
-            {
-                newSubOpt.Index = Math.Min(subOpt.Index ?? 0, subInterfaceOption.Cases.Count - 1);
-            }
-
-            // 递归处理嵌套子选项
-            if (subOpt.SubOptions != null && subOpt.SubOptions.Count > 0)
-            {
-                newSubOpt.SubOptions = MergeSubOptions(subOpt.SubOptions);
-            }
-
-            return newSubOpt;
-        }).ToList();
-    }
-
-    public void SetDefaultOptionValue(MaaInterface.MaaInterfaceSelectOption option)
-    {
-        if (!(Interface?.Option?.TryGetValue(option.Name ?? string.Empty, out var interfaceOption) ?? false)) return;
-
-        // 设置 select/switch 类型的默认索引
-        var defaultIndex = interfaceOption.Cases?
-                .FindIndex(c => c.Name == interfaceOption.DefaultCase)
-            ?? -1;
-        if (defaultIndex != -1) option.Index = defaultIndex;
-
-        // 初始化 input 类型的 Data 字典
-        if (interfaceOption.IsInput && interfaceOption.Inputs != null)
-        {
-            option.Data ??= new Dictionary<string, string?>();
-            foreach (var input in interfaceOption.Inputs)
-            {
-                if (!string.IsNullOrEmpty(input.Name) && !option.Data.ContainsKey(input.Name))
-                {
-                    option.Data[input.Name] = input.Default ?? string.Empty;
-                }
-            }
-        }
-    }
-
-    private void UpdateViewModels(IList<DragItemViewModel> drags, List<MaaInterface.MaaInterfaceTask> tasks)
-    {
-        var newItems = tasks.Select(t => new DragItemViewModel(t)).ToList();
-
-        foreach (var item in newItems)
-        {
-            if (item.InterfaceItem?.Option != null && !drags.Any())
-            {
-                item.InterfaceItem.Option.ForEach(SetDefaultOptionValue);
-            }
-        }
-
-        TasksSource.AddRange(newItems);
-
-        if (!Instances.TaskQueueViewModel.TaskItemViewModels.Any())
-        {
-            Instances.TaskQueueViewModel.TaskItemViewModels = new ObservableCollection<DragItemViewModel>(drags.Any() ? drags : newItems);
-        }
-    }
+    
     private string? _tempResourceVersion;
     public void AppendVersionLog(string? resourceVersion)
     {
@@ -2150,191 +1226,19 @@ public class MaaProcessor
 
     public async Task RestartAdb()
     {
-        var adbPath = Config.AdbDevice.AdbPath;
-
-        if (string.IsNullOrEmpty(adbPath))
-        {
-            return;
-        }
-
-        ProcessStartInfo processStartInfo = new ProcessStartInfo
-        {
-            FileName = MFAExtensions.GetFallbackCommand(),
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true,
-            UseShellExecute = false,
-        };
-
-        Process process = new Process
-        {
-            StartInfo = processStartInfo,
-        };
-
-        process.Start();
-        await process.StandardInput.WriteLineAsync($"{adbPath} kill-server");
-        await process.StandardInput.WriteLineAsync($"{adbPath} start-server");
-        await process.StandardInput.WriteLineAsync("exit");
-        await process.WaitForExitAsync();
+        await ProcessHelper.RestartAdbAsync(Config.AdbDevice.AdbPath);
     }
 
     public async Task ReconnectByAdb()
     {
-        var adbPath = Config.AdbDevice.AdbPath;
-        var address = Config.AdbDevice.AdbSerial;
-
-        if (string.IsNullOrEmpty(adbPath) || adbPath == "adb")
-        {
-            return;
-        }
-
-        ProcessStartInfo processStartInfo = new ProcessStartInfo
-        {
-            FileName = MFAExtensions.GetFallbackCommand(),
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true,
-            UseShellExecute = false,
-        };
-
-        var process = new Process
-        {
-            StartInfo = processStartInfo,
-        };
-
-        process.Start();
-        await process.StandardInput.WriteLineAsync($"{adbPath} disconnect {address}");
-        await process.StandardInput.WriteLineAsync("exit");
-        await process.WaitForExitAsync();
+        await ProcessHelper.ReconnectByAdbAsync(Config.AdbDevice.AdbPath, Config.AdbDevice.AdbSerial);
     }
+
 
     public async Task HardRestartAdb()
     {
-        var adbPath = Config.AdbDevice.AdbPath;
-        if (string.IsNullOrEmpty(adbPath)) return;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            WindowsKillAdbProcesses(adbPath);
-        }
-        else
-        {
-            UnixKillAdbProcesses(adbPath);
-        }
+        ProcessHelper.HardRestartAdb(Config.AdbDevice.AdbPath);
     }
-
-    [SupportedOSPlatform("windows")]
-    private void WindowsKillAdbProcesses(string adbPath)
-    {
-        const string WmiQueryString = "SELECT ProcessId, ExecutablePath, CommandLine FROM Win32_Process";
-        using var searcher = new ManagementObjectSearcher(WmiQueryString);
-        using var results = searcher.Get();
-
-        var query = from p in Process.GetProcesses()
-                    join mo in results.Cast<ManagementObject>()
-                        on p.Id equals (int)(uint)mo["ProcessId"]
-                    where ((string)mo["ExecutablePath"])?.Equals(adbPath, StringComparison.OrdinalIgnoreCase) == true
-                    select p;
-
-        KillProcesses(query);
-    }
-
-    private static void UnixKillAdbProcesses(string adbPath)
-    {
-        var processes = Process.GetProcessesByName("adb")
-            .Where(p =>
-            {
-                try
-                {
-                    return GetUnixProcessPath(p.Id)?.Equals(adbPath, StringComparison.Ordinal) == true;
-                }
-                catch
-                {
-                    return false;
-                }
-            });
-
-        KillProcesses(processes);
-    }
-
-    private static void KillProcesses(IEnumerable<Process> processes)
-    {
-        foreach (var process in processes)
-        {
-            try
-            {
-                process.Kill();
-                process.WaitForExit();
-            }
-            catch
-            {
-                // 记录日志或忽略异常
-            }
-        }
-    }
-
-    private static string GetUnixProcessPath(int pid)
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            var exePath = $"/proc/{pid}/exe";
-            return File.Exists(exePath) ? new FileInfo(exePath).LinkTarget : null;
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            var output = ExecuteShellCommand($"ps -p {pid} -o comm=");
-            return string.IsNullOrWhiteSpace(output) ? null : output.Trim();
-        }
-        return null;
-    }
-
-
-    /// <summary>
-    /// 跨平台终止指定进程
-    /// </summary>
-    /// <param name="processName">进程名称（不带后缀）</param>
-    /// <param name="commandLineKeyword">命令行关键词（可选）</param>
-    [SupportedOSPlatform("windows")]
-    [SupportedOSPlatform("linux")]
-    [SupportedOSPlatform("macos")]
-    public static void CloseProcessesByName(string processName, string? commandLineKeyword = null)
-    {
-        var processes = Process.GetProcesses()
-            .Where(p => IsTargetProcess(p, processName, commandLineKeyword))
-            .ToList();
-
-        foreach (var process in processes)
-        {
-            SafeTerminateProcess(process);
-        }
-    }
-
-    #region 跨平台核心逻辑
-
-    private static bool IsTargetProcess(Process process, string processName, string? keyword)
-    {
-        try
-        {
-            // 验证进程名称
-            if (!IsProcessNameMatch(process, processName))
-                return false;
-
-            // 验证命令行关键词
-            return string.IsNullOrWhiteSpace(keyword) || GetCommandLine(process).Contains(keyword, StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false; // 忽略无法访问的进程
-        }
-    }
-
-    private static bool IsProcessNameMatch(Process process, string targetName)
-    {
-        var actualName = Path.GetFileNameWithoutExtension(process.ProcessName);
-        return actualName.Equals(targetName, StringComparison.OrdinalIgnoreCase);
-    }
-
-    #endregion
 
     #region 命令行获取（平台相关）
 
@@ -2906,86 +1810,7 @@ public class MaaProcessor
 
     async private Task RunScript(string str = "Prescript")
     {
-        bool enable = str switch
-        {
-            "Prescript" => !string.IsNullOrWhiteSpace(ConfigurationManager.Current.GetValue(ConfigurationKeys.Prescript, string.Empty)),
-            "Post-script" => !string.IsNullOrWhiteSpace(ConfigurationManager.Current.GetValue(ConfigurationKeys.Postscript, string.Empty)),
-            _ => false,
-        };
-        if (!enable)
-        {
-            return;
-        }
-
-        Func<Task<bool>> func = str switch
-        {
-            "Prescript" => async () => await ExecuteScript(ConfigurationManager.Current.GetValue(ConfigurationKeys.Prescript, string.Empty)),
-            "Post-script" => async () => await ExecuteScript(ConfigurationManager.Current.GetValue(ConfigurationKeys.Postscript, string.Empty)),
-            _ => async () => false,
-        };
-
-        if (!await func())
-        {
-            LoggerHelper.Error($"Failed to execute the {str}.");
-        }
-    }
-
-    async private static Task<bool> ExecuteScript(string scriptPath)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(scriptPath))
-            {
-                return false;
-            }
-
-            string fileName;
-            string arguments;
-
-            if (scriptPath.StartsWith('\"'))
-            {
-                var parts = scriptPath.Split("\"", 3);
-                fileName = parts[1];
-                arguments = parts.Length > 2 ? parts[2] : string.Empty;
-            }
-            else
-            {
-                fileName = scriptPath;
-                arguments = string.Empty;
-            }
-
-            bool createNoWindow = arguments.Contains("-noWindow");
-            bool minimized = arguments.Contains("-minimized");
-
-            if (createNoWindow)
-            {
-                arguments = arguments.Replace("-noWindow", string.Empty).Trim();
-            }
-
-            if (minimized)
-            {
-                arguments = arguments.Replace("-minimized", string.Empty).Trim();
-            }
-
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = fileName,
-                    Arguments = arguments,
-                    WindowStyle = minimized ? ProcessWindowStyle.Minimized : ProcessWindowStyle.Normal,
-                    CreateNoWindow = createNoWindow,
-                    UseShellExecute = !createNoWindow,
-                },
-            };
-            process.Start();
-            await process.WaitForExitAsync();
-            return true;
-        }
-        catch (Exception)
-        {
-            return false;
-        }
+        await ScriptRunner.RunScriptAsync(str);
     }
 
     private void AddPostTasksAsync(bool onlyStart, bool checkUpdate, CancellationToken token)
@@ -3160,8 +1985,7 @@ public class MaaProcessor
                 // Windows: 使用 taskkill /F
                 ForceKillProcessWindows(processId, processName);
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
-                     RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 // Unix: 使用 kill -9
                 ForceKillProcessUnix(processId);
@@ -3405,7 +2229,7 @@ public class MaaProcessor
             }
             else
             {
-                CloseProcessesByName(Config.DesktopWindow.Name, ConfigurationManager.Current.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty));
+                ProcessHelper.CloseProcessesByName(Config.DesktopWindow.Name, ConfigurationManager.Current.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty));
                 _softwareProcess = null;
             }
 

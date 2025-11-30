@@ -53,7 +53,7 @@ public partial class AddTaskDialogViewModel : ViewModelBase
         {
             var output = Output.Clone();
             if (output.InterfaceItem.Option != null)
-                output.InterfaceItem.Option.ForEach(MaaProcessor.Instance.SetDefaultOptionValue);
+                output.InterfaceItem.Option.ForEach(option => TaskLoader.SetDefaultOptionValue(MaaProcessor.Interface, option));
 
             Instances.TaskQueueViewModel.TaskItemViewModels.Add(Output.Clone());
             ConfigurationManager.Current.SetValue(ConfigurationKeys.TaskItems, Instances.TaskQueueViewModel.TaskItemViewModels.ToList().Select(model => model.InterfaceItem));

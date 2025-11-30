@@ -53,7 +53,7 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
 
     private void UpdateCdkExpireDisplay()
     {
-        if (_cdkExpiredTime <= 0)
+        if (CdkExpiredTime <= 0)
         {
             CdkExpireText = string.Empty;
             CdkTextVisible = false;
@@ -61,7 +61,7 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
         }
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var remaining = _cdkExpiredTime - now;
+        var remaining = CdkExpiredTime - now;
 
         if (remaining <= 0)
         {
