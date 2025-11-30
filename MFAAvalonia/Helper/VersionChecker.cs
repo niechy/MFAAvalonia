@@ -211,7 +211,7 @@ public static class VersionChecker
             if (ex.Message.Contains("resource not found"))
                 ToastHelper.Error(LangKeys.CurrentResourcesNotSupportMirror.ToLocalization());
             else
-                ToastHelper.Error(LangKeys.ErrorWhenCheck.ToLocalizationFormatted(true, "Resource"), ex.Message);
+                ToastHelper.Error(LangKeys.ErrorWhenCheck.ToLocalizationFormatted(true, "Resource"), ex.Message, -1);
             LoggerHelper.Error(ex);
         }
     }
@@ -336,7 +336,7 @@ public static class VersionChecker
         catch (Exception ex)
         {
             Dismiss(sukiToast);
-            ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message);
+            ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message, -1);
             Instances.RootViewModel.SetUpdating(false);
             LoggerHelper.Error(ex);
             return;
@@ -1261,7 +1261,7 @@ public static class VersionChecker
         return string.Join(" ", args);
     }
 
-// 处理含空格的参数
+    // 处理含空格的参数
     private static string EscapeArgument(string arg) => $"\"{arg.Replace("\"", "\\\"")}\"";
 
     async private static Task ApplySecureUpdate(string source, string target, string oldName = "", string newName = "")
@@ -1451,7 +1451,7 @@ public static class VersionChecker
             catch (Exception ex)
             {
                 Dismiss(sukiToast);
-                ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message);
+                ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message, -1);
                 LoggerHelper.Error(ex);
                 Instances.RootViewModel.SetUpdating(false);
                 return;
@@ -2434,7 +2434,7 @@ public static class VersionChecker
                     return errors == SslPolicyErrors.None;
                 },
                 UseCookies = false,
-// 临时增加对低版本协议的支持（仅用于测试）
+                // 临时增加对低版本协议的支持（仅用于测试）
                 SslProtocols = SslProtocols.None
             };
 
