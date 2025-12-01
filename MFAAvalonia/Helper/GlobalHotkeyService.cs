@@ -6,7 +6,7 @@ using SharpHook.Data;
 using SharpHook.Native;
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
+using System.Threading;
 using System.Windows.Input;
 
 namespace MFAAvalonia.Helper;
@@ -16,7 +16,13 @@ public static class GlobalHotkeyService
     // 线程安全的热键存储（Key: 组合键标识，Value: 关联命令）
     private static readonly ConcurrentDictionary<(KeyCode, EventMask), ICommand> _commands = new();
     private static TaskPoolGlobalHook? _hook;
+    private static Mutex? _instanceMutex;
+    
+    // 使用固定的 GUID 作为互斥锁名称，确保即使程序被重命名也能正确检测多实例
+    private const string MutexName = "Global\\MFAAvalonia_SingleInstance_A7F3B2C1-9D4E-4F5A-8B6C-1E2D3F4A5B6C";
+    
     public static bool IsStopped = false;
+
     /// <summary>
     /// 初始化全局钩子服务
     /// </summary>
@@ -24,17 +30,30 @@ public static class GlobalHotkeyService
     {
         if (_hook != null) return;
 
-        // 检测是否有其他 MFAAvalonia 实例正在运行
-        var currentProcess = Process.GetCurrentProcess();
-        var instances = Process.GetProcessesByName(currentProcess.ProcessName);
+        // 使用命名互斥锁检测多实例，不受程序重命名影响
+        bool createdNew;
+        try
+        {
+            _instanceMutex = new Mutex(true, MutexName, out createdNew);
+        }
+        catch (Exception ex)
+        {
+            // 在某些情况下（如权限问题）可能无法创建互斥锁，记录日志并继续
+            LoggerHelper.Warning($"无法创建互斥锁: {ex.Message}，将尝试继续初始化热键服务");
+            createdNew = true; // 假设是第一个实例
+        }
 
-        if (instances.Length > 1)
+        if (!createdNew)
         {
             LoggerHelper.Warning("检测到多实例运行，已禁用全局热键以避免性能问题");
             ToastHelper.Warn(LangKeys.MultiInstanceModeGlobalHotkeyDisabled.ToLocalization());
             Instances.SettingsViewModel.EnableHotKey = false;
+            // 释放互斥锁引用，因为我们不是所有者
+            _instanceMutex?.Dispose();
+            _instanceMutex = null;
             return;
         }
+
         try
         {
             _hook = new TaskPoolGlobalHook();
@@ -47,7 +66,6 @@ public static class GlobalHotkeyService
             ToastHelper.Error(LangKeys.GlobalHotkeyServiceError.ToLocalization());
         }
     }
-
     /// <summary>
     /// 注册全局热键（跨平台）
     /// </summary>
@@ -86,14 +104,30 @@ public static class GlobalHotkeyService
             _hook = null;
         }
         _commands.Clear();
+        
+        // 释放互斥锁
+        if (_instanceMutex != null)
+        {
+            try
+            {
+                _instanceMutex.ReleaseMutex();
+            }
+            catch (ApplicationException)
+            {
+                // 如果当前线程不拥有互斥锁，忽略此异常
+            }
+            _instanceMutex.Dispose();
+            _instanceMutex = null;
+        }
+        
         IsStopped = true;
     }
+    
     private static KeyCode ErrorHandle(KeyGesture gesture)
     {
         if (Enum.TryParse(typeof(KeyCode), $"Vc{gesture.Key.ToString()}", out var key))
         {
-            return
-                (KeyCode)key;
+            return (KeyCode)key;
         }
 
         LoggerHelper.Warning($"热键映射失败：未找到 KeyCode.Vc{gesture.Key.ToString()}");
@@ -101,7 +135,6 @@ public static class GlobalHotkeyService
     }
 
     // 转换Avalonia手势到SharpHook标识
-// 替换 GlobalHotkeyService 中的 ConvertGesture 方法
     private static (KeyCode, EventMask) ConvertGesture(KeyGesture gesture)
     {
         // 1. 修复数字键、特殊字符键的 KeyCode 映射
@@ -131,6 +164,7 @@ public static class GlobalHotkeyService
             Key.OemCloseBrackets => KeyCode.VcCloseBracket, // 右括号（]）
             Key.OemPipe => KeyCode.VcBackslash, // 竖线（|）
             Key.OemTilde => KeyCode.VcBackQuote, // 波浪号（~）
+            
             // 小键盘数字键
             Key.NumPad0 => KeyCode.VcNumPad0,
             Key.NumPad1 => KeyCode.VcNumPad1,
@@ -221,7 +255,6 @@ public static class GlobalHotkeyService
     }
 
     // 处理全局按键事件
-    // 修改 HandleKeyEvent 方法
     private static void HandleKeyEvent(object? sender, KeyboardHookEventArgs e)
     {
         TaskManager.RunTask(async () =>
@@ -231,8 +264,8 @@ public static class GlobalHotkeyService
                 // 1. 定义：归一化后的修饰键掩码（合并左/右键）
                 const EventMask ControlMask = EventMask.LeftCtrl | EventMask.RightCtrl; // Ctrl 统一掩码
                 const EventMask ShiftMask = EventMask.LeftShift | EventMask.RightShift; // Shift 统一掩码
-                const EventMask AltMask = EventMask.LeftAlt | EventMask.RightAlt; // Alt 统一掩码（可选，保持完整）
-                const EventMask MetaMask = EventMask.LeftMeta | EventMask.RightMeta; // Win 键统一掩码（可选）
+                const EventMask AltMask = EventMask.LeftAlt | EventMask.RightAlt; // Alt 统一掩码
+                const EventMask MetaMask = EventMask.LeftMeta | EventMask.RightMeta; // Win 键统一掩码
 
                 // 2. 获取原始修饰键和键码
                 var rawModifiers = e.RawEvent.Mask;
@@ -249,7 +282,7 @@ public static class GlobalHotkeyService
                 if ((rawModifiers & MetaMask) != 0) // 包含左Win或右Win → 视为 Meta
                     normalizedModifiers |= MetaMask;
 
-                // 5. 用归一化后的修饰键匹配（注册时需用相同的统一掩码）
+                // 4. 用归一化后的修饰键匹配（注册时需用相同的统一掩码）
                 if (_commands.TryGetValue((keyCode, normalizedModifiers), out var command) && command.CanExecute(null))
                 {
                     await Dispatcher.UIThread.InvokeAsync(() => command.Execute(null), DispatcherPriority.Background);
@@ -260,6 +293,5 @@ public static class GlobalHotkeyService
                 LoggerHelper.Error($"热键执行失败: {ex.Message}");
             }
         }, noMessage: true);
-
     }
 }

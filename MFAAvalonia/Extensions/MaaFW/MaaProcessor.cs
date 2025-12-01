@@ -646,12 +646,6 @@ public class MaaProcessor
                         }
 
                     }
-                    // if (jObject["task_id"] != null)
-                    // {
-                    //     var taskId = Convert.ToInt64(jObject["task_id"]?.ToString() ?? string.Empty);
-                    //     Console.WriteLine(taskId);
-                    //     tasker.GetTaskDetail(taskId, out var nodeName, out var recognitionId, out var actionCompleted);
-                    // }
 
                 }
 
