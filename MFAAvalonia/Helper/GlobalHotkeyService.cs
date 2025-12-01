@@ -27,7 +27,7 @@ public static class GlobalHotkeyService
         // 检测是否有其他 MFAAvalonia 实例正在运行
         var currentProcess = Process.GetCurrentProcess();
         var instances = Process.GetProcessesByName(currentProcess.ProcessName);
-    
+
         if (instances.Length > 1)
         {
             LoggerHelper.Warning("检测到多实例运行，已禁用全局热键以避免性能问题");
@@ -144,10 +144,10 @@ public static class GlobalHotkeyService
             Key.NumPad9 => KeyCode.VcNumPad9,
 
             // 小键盘运算键
-            Key.Add => KeyCode.VcNumPadAdd,           // 小键盘加号
+            Key.Add => KeyCode.VcNumPadAdd, // 小键盘加号
             Key.Subtract => KeyCode.VcNumPadSubtract, // 小键盘减号
             Key.Multiply => KeyCode.VcNumPadMultiply, // 小键盘乘号
-            Key.Divide => KeyCode.VcNumPadDivide,     // 小键盘除号
+            Key.Divide => KeyCode.VcNumPadDivide, // 小键盘除号
             Key.Decimal => KeyCode.VcNumPadSeparator, // 小键盘小数点
 
             // F1-F12 功能键
@@ -221,7 +221,7 @@ public static class GlobalHotkeyService
     }
 
     // 处理全局按键事件
-// 修改 HandleKeyEvent 方法
+    // 修改 HandleKeyEvent 方法
     private static void HandleKeyEvent(object? sender, KeyboardHookEventArgs e)
     {
         TaskManager.RunTask(async () =>
@@ -259,7 +259,7 @@ public static class GlobalHotkeyService
             {
                 LoggerHelper.Error($"热键执行失败: {ex.Message}");
             }
-        });
-      
+        }, noMessage: true);
+
     }
 }
