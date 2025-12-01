@@ -11,6 +11,7 @@ using MFAAvalonia.ViewModels.Other;
 using MFAAvalonia.ViewModels.Windows;
 using System;
 using System.Collections.ObjectModel;
+using System.Threading;
 
 namespace MFAAvalonia.ViewModels.UsersControls.Settings;
 
@@ -33,7 +34,8 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
             MaaFwVersion = "v5.0.0";
             LoggerHelper.Error(e);
         }
-        LanguageHelper.LanguageChanged += (_, _) =>  UpdateCdkExpireDisplay();
+        LanguageHelper.LanguageChanged += (_, _) => UpdateCdkExpireDisplay();
+        StopCountdownTimer();
         base.Initialize();
     }
 
@@ -45,6 +47,7 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
     [ObservableProperty] private bool _cdkTextVisible = false;
     [ObservableProperty] private string _cdkExpireText = string.Empty;
     [ObservableProperty] private IBrush _cdkExpireColor = Brushes.MediumSeaGreen;
+    private Timer? _countdownTimer;
 
     partial void OnCdkExpiredTimeChanged(long value)
     {
@@ -57,6 +60,7 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
         {
             CdkExpireText = string.Empty;
             CdkTextVisible = false;
+            StopCountdownTimer();
             return;
         }
 
@@ -66,8 +70,9 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
         if (remaining <= 0)
         {
             CdkExpireText = LangKeys.MirrorCdkExpired.ToLocalization();
-            CdkExpireColor =  Brushes.Red;
+            CdkExpireColor = Brushes.Red;
             CdkTextVisible = true;
+            StopCountdownTimer();
             return;
         }
 
@@ -75,10 +80,11 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
         if (remaining < 86400)
         {
             CdkExpireColor = Brushes.Orange;
+            StartCountdownTimer();
         }
         else
         {
-            CdkExpireColor =  Brushes.MediumSeaGreen;
+            CdkExpireColor = Brushes.MediumSeaGreen;
         }
 
         // 根据时间长短显示不同单位
@@ -92,18 +98,64 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
             var hours = remaining / 3600;
             CdkExpireText = string.Format(LangKeys.CdkExpireInHours.ToLocalization(), hours);
         }
-        else if (remaining >= 60) // >= 1分钟
+        else if (remaining >= 120) // >= 2分钟
         {
             var minutes = remaining / 60;
             CdkExpireText = string.Format(LangKeys.CdkExpireInMinutes.ToLocalization(), minutes);
         }
-        else // 秒
+        else // < 2分钟
         {
             CdkExpireText = string.Format(LangKeys.CdkExpireInSeconds.ToLocalization(), remaining);
         }
         CdkTextVisible = true;
     }
     
+    private void StartCountdownTimer()
+    {
+        if (_countdownTimer != null)
+            return; // 定时器已经在运行
+
+        _countdownTimer = new Timer(_ =>
+        {
+            DispatcherHelper.RunOnMainThread(() =>
+            {
+                if (CdkExpiredTime <= 0)
+                {
+                    StopCountdownTimer();
+                    return;
+                }
+
+                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var remaining = CdkExpiredTime - now;
+
+                if (remaining <= 0)
+                {
+                    CdkExpireText = LangKeys.MirrorCdkExpired.ToLocalization();
+                    CdkExpireColor = Brushes.Red;
+                    CdkTextVisible = true;
+                    StopCountdownTimer();
+                }
+                else if (remaining < 86400) // 仍然小于2分钟，继续倒计时
+                {
+                    CdkExpireText = string.Format(LangKeys.CdkExpireInSeconds.ToLocalization(), remaining);
+                }
+                else // 超过2分钟了，停止倒计时并更新显示
+                {
+                    UpdateCdkExpireDisplay();
+                }
+            });
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private void StopCountdownTimer()
+    {
+        if (_countdownTimer != null)
+        {
+            _countdownTimer.Dispose();
+            _countdownTimer = null;
+        }
+    }
+
     partial void OnResourceVersionChanged(string value)
     {
         ShowResourceVersion = !string.IsNullOrWhiteSpace(value);
@@ -148,10 +200,7 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
 
     [ObservableProperty] private int _resourceUpdateChannelIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.ResourceUpdateChannelIndex, 2);
 
-    partial void OnResourceUpdateChannelIndexChanged(int value)
-    {
-        ConfigurationManager.Current.SetValue(ConfigurationKeys.ResourceUpdateChannelIndex, value);
-    }
+    partial void OnResourceUpdateChannelIndexChanged(int value) => HandlePropertyChanged(ConfigurationKeys.ResourceUpdateChannelIndex, value);
 
     [ObservableProperty] private string _gitHubToken = SimpleEncryptionHelper.Decrypt(ConfigurationManager.Current.GetValue(ConfigurationKeys.GitHubToken, string.Empty));
 
@@ -159,7 +208,11 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
 
     [ObservableProperty] private string _cdkPassword = SimpleEncryptionHelper.Decrypt(ConfigurationManager.Current.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
 
-    partial void OnCdkPasswordChanged(string value) => HandlePropertyChanged(ConfigurationKeys.DownloadCDK, SimpleEncryptionHelper.Encrypt(value));
+    partial void OnCdkPasswordChanged(string value) => HandlePropertyChanged(ConfigurationKeys.DownloadCDK, SimpleEncryptionHelper.Encrypt(value),(() =>
+    {
+        CdkExpiredTime = 0;
+        CdkTextVisible = false;
+    }));
 
     [ObservableProperty] private bool _enableCheckVersion = ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableCheckVersion, true);
 
@@ -231,5 +284,13 @@ public partial class VersionUpdateSettingsUserControlModel : ViewModelBase
     private void UpdateMaaFW()
     {
         VersionChecker.UpdateMaaFwAsync();
+    }
+    
+    [RelayCommand]
+    private void QueryCdkTime()
+    {
+        CdkExpiredTime = 0;
+        CdkTextVisible = false;
+        VersionChecker.CheckCDKAsync();
     }
 }

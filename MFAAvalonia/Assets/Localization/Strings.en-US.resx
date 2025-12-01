@@ -1277,4 +1277,7 @@
     <data name="CdkExpireInSeconds" xml:space="preserve">
         <value>CDK expires in {0} seconds</value>
     </data>
+    <data name="QueryCdkRemainingTime" xml:space="preserve">
+        <value>Query CDK Remaining Time</value>
+    </data>
 </root>

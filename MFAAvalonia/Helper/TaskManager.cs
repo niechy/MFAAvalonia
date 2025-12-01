@@ -1,5 +1,6 @@
 ﻿using MFAAvalonia.Helper;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,7 +24,7 @@ public static class TaskManager
     {
         if (!noMessage)
             LoggerHelper.Info($"{prompt}任务 {name} 开始.");
-
+        
         if (catchException)
         {
             try

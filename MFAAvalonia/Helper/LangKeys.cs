@@ -432,4 +432,5 @@ public static class LangKeys
 	public static readonly string CdkExpireInHours = "CdkExpireInHours";
 	public static readonly string CdkExpireInMinutes = "CdkExpireInMinutes";
 	public static readonly string CdkExpireInSeconds = "CdkExpireInSeconds";
+	public static readonly string QueryCdkRemainingTime = "QueryCdkRemainingTime";
 }

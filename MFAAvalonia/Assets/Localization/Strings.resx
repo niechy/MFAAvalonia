@@ -1283,6 +1283,9 @@
         <value>CDK 还有 {0} 分钟过期</value>
     </data>
     <data name="CdkExpireInSeconds" xml:space="preserve">
-        <value>CDK 还有 {0} 秒过期</value>
+        <value>CDK 还有 {0} 秒过期</value> 
+    </data>
+    <data name="QueryCdkRemainingTime" xml:space="preserve">
+        <value>查询CDK剩余时长</value>
     </data>
 </root>

@@ -169,6 +169,17 @@
                                Text="{Binding CdkExpireText}"
                                VerticalAlignment="Center"
                                Margin="0,0,4,0" />
+                    <Button DockPanel.Dock="Right"
+                            BorderBrush="Transparent"  IsVisible="{calcBinding:Binding '!CdkTextVisible'}"
+                            BorderThickness="0"
+                            Command="{Binding QueryCdkTimeCommand}"
+                            Height="40" Cursor="Hand"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,2,0">
+                        <TextBlock
+                            FontSize="14" Foreground="{DynamicResource SukiPrimaryColor}"
+                            Text="{markup:I18n {x:Static helper:LangKeys.QueryCdkRemainingTime}}" />
+                    </Button>
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
                         <TextBlock
                             FontSize="16"
