@@ -506,7 +506,11 @@ public class MaaProcessor
                     if (_agentClient.LinkStart(startInfo, token))
                     {
                         _agentProcess = _agentClient.AgentServerProcess;
-                        _agentProcess.Exited += (_, _) => { _agentProcess = null;};
+                        _agentProcess.Exited += (_, _) =>
+                        {
+                            LoggerHelper.Info("Agent process exited!");
+                            _agentProcess = null;
+                        };
                     }
                     else
                     {
