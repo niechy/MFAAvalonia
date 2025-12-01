@@ -10,7 +10,6 @@
         <LangVersion>14</LangVersion>
         <CETCompat>false</CETCompat>
         <TargetFramework>net10.0</TargetFramework>
-		<TargetFramework Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))">net10.0-windows</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -62,7 +61,6 @@
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
     </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.9" />
         <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.3.9" />
@@ -236,7 +234,7 @@
 <!--        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))"-->
 <!--              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_mac.sh'" />-->
 <!--    </Target>-->
-	<Target Name="CopyUpdaterAfterPublish" AfterTargets="Publish">
+	<Target Name="CopyUpdaterAfterPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
 	  <PropertyGroup>
 		<!-- 标准化路径分隔符 -->
 		<UpdaterOutputDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)\..\MFAUpdater\bin\$(Configuration)\net8.0\$(RuntimeIdentifier)'))</UpdaterOutputDir>
@@ -261,7 +259,7 @@
 	</Target>
 
 	<!-- 清理发布输出中不需要的文件 -->
-	<Target Name="RemoveUnwantedFiles" AfterTargets="CopyUpdaterAfterPublish">
+	<Target Name="RemoveUnwantedFiles" AfterTargets="CopyUpdaterAfterPublish" Condition="'$(PublishDir)' != ''">
 	  <PropertyGroup>
 		<MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
 	  </PropertyGroup>
@@ -277,7 +275,7 @@
 	</Target>
 
 	<!-- 将库文件（DLL/SO/DYLIB）移动到 libs 文件夹 -->
-	<Target Name="MoveLibrariesToLibs" AfterTargets="RemoveUnwantedFiles">
+	<Target Name="MoveLibrariesToLibs" AfterTargets="RemoveUnwantedFiles" Condition="'$(PublishDir)' != ''">
 	  <PropertyGroup>
 		<MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
 		<LibsDir>$([MSBuild]::NormalizeDirectory('$(MainPublishDir)libs'))</LibsDir>
@@ -307,12 +305,13 @@
 		<MacDylibFilesToMove Include="$(MainPublishDir)*.dylib"
 							 Condition="'$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'osx-arm64'" />
 	  </ItemGroup>
-
+        
 	  <!-- 移动库文件到 libs 文件夹 -->
 	  <Move SourceFiles="@(WinLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(WinLibFilesToMove)' != ''" />
 	  <Move SourceFiles="@(LinuxLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(LinuxLibFilesToMove)' != ''" />
 	  <Move SourceFiles="@(LinuxSoFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(LinuxSoFilesToMove)' != ''" />
 	  <Move SourceFiles="@(MacLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(MacLibFilesToMove)' != ''" />
 	  <Move SourceFiles="@(MacDylibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(MacDylibFilesToMove)' != ''" />
+
 	</Target>
 </Project>
