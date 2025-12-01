@@ -77,10 +77,52 @@ public partial class ErrorView : SukiWindow
             return;
         DispatcherHelper.RunOnMainThread(() =>
         {
-            var errorView = new ErrorView(e, shouldExit);
-            errorView.ShowDialog(Instances.RootView);
-            _existed = true;
+            try
+            {
+                var rootView = Instances.RootView;
+                // 检查 RootView 是否可用（未关闭且未正在关闭）
+                if (rootView == null || !rootView.IsVisible)
+                {
+                    // 窗口不可用，直接写入日志
+                    LogExceptionToFile(e, shouldExit);
+                    return;
+                }
+                
+                var errorView = new ErrorView(e, shouldExit);
+                errorView.ShowDialog(rootView);
+                _existed = true;
+            }
+            catch (InvalidOperationException)
+            {
+                // 捕获 "Cannot show a window with a closed owner" 异常
+                // 直接写入日志
+                LogExceptionToFile(e, shouldExit);
+            }
         });
+    }
+    
+    // 将异常写入日志文件
+    private static void LogExceptionToFile(Exception e, bool shouldExit)
+    {
+        var errorStr = new StringBuilder();
+        var exception = e;
+        while (exception != null)
+        {
+            errorStr.Append(exception.Message);
+            if (exception.InnerException != null)
+            {
+                errorStr.AppendLine();
+                exception = exception.InnerException;
+            }
+            else break;
+        }
+        
+        LoggerHelper.Error($"[ErrorView] 无法显示错误窗口，异常信息已写入日志:\n消息: {errorStr}\n详情: {e}");
+        
+        if (shouldExit)
+        {
+            Environment.Exit(1);
+        }
     }
     
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
