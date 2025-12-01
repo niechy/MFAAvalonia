@@ -87,6 +87,7 @@ public static class VersionChecker
             () => ToastNotification.Show("自动更新时发生错误！"), "启动检测");
     }
 
+    public static void CheckCDKAsync() => TaskManager.RunTaskAsync(() => CheckForCDK(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "查询CDK剩余时间");
     public static void CheckMFAVersionAsync() => TaskManager.RunTaskAsync(() => CheckForMFAUpdates(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "检测MFA版本");
     public static void CheckResourceVersionAsync() => TaskManager.RunTaskAsync(() => CheckForResourceUpdates(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "检测资源版本");
     public static void UpdateResourceAsync(string
@@ -472,14 +473,14 @@ public static class VersionChecker
             var jsonContent = await File.ReadAllTextAsync(interfacePath);
 
             var @interface = JObject.Parse(jsonContent);
-            if (@interface != null && @interface["interface_version"] != null && @interface["interface_version"].ToString().Trim().Equals("2"))
-            {
-                Dismiss(sukiToast);
-                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization());
-                RootView.AddLog(LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization(), Brushes.Orange, changeColor: false);
-                Instances.RootViewModel.SetUpdating(false);
-                return;
-            }
+            // if (@interface != null && @interface["interface_version"] != null && @interface["interface_version"].ToString().Trim().Equals("2"))
+            // {
+            //     Dismiss(sukiToast);
+            //     ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization());
+            //     RootView.AddLog(LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization(), Brushes.Orange, changeColor: false);
+            //     Instances.RootViewModel.SetUpdating(false);
+            //     return;
+            // }
 
             var targetPath = Path.Combine(wpfDir, "interface.json");
             file.CopyTo(targetPath, true);
