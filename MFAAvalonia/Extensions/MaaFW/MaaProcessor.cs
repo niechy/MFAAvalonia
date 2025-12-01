@@ -13,6 +13,8 @@ using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.ViewModels.Other;
+using MFAAvalonia.ViewModels.Pages;
+using MFAAvalonia.Views.Pages;
 using MFAAvalonia.Views.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -446,6 +448,7 @@ public class MaaProcessor
                 try
                 {
                     _agentClient = MaaAgentClient.Create(identifier, tasker);
+                    _agentClient.SetTimeout(TimeSpan.FromMinutes(20));
                     _agentClient.AttachDisposeToResource();
                     _agentClient.Releasing += (_, _) => LoggerHelper.Info("退出Agent进程");
 
@@ -481,7 +484,6 @@ public class MaaProcessor
                     if (!File.Exists(executablePath))
                     {
                         var errorMsg = LangKeys.AgentExecutableNotFound.ToLocalizationFormatted(false, executablePath);
-                        LoggerHelper.Error(errorMsg);
                         throw new FileNotFoundException(errorMsg, executablePath);
                     }
 
@@ -489,80 +491,86 @@ public class MaaProcessor
                     {
                         FileName = executablePath,
                         WorkingDirectory = AppContext.BaseDirectory,
-                        Arguments = $"{(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id}",
+                        Arguments = $"{(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Any(arg => arg.Contains("-u")) ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id}",
                         UseShellExecute = false,
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
                         WindowStyle = ProcessWindowStyle.Hidden,
                         CreateNoWindow = true
                     };
+
                     LoggerHelper.Info(
-                        $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
+                        $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Any(arg => arg.Contains("-u")) ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
-                    _agentProcess = new Process
-                    {
-                        StartInfo = startInfo
-                    };
-                    _agentProcess?.OutputDataReceived += (sender, args) =>
-                    {
 
-                        if (!string.IsNullOrEmpty(args.Data))
-                        {
-                            var outData = args.Data;
-                            try
-                            {
-                                outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
-                            }
-                            catch (Exception)
-                            {
-                            }
-
-                            DispatcherHelper.PostOnMainThread(() =>
-                            {
-                                RootView.AddLog(outData);
-                            });
-                        }
-                    };
-
-                    _agentProcess?.ErrorDataReceived += (sender, args) =>
+                    if (_agentClient.LinkStart(startInfo, token))
                     {
-                        if (!string.IsNullOrEmpty(args.Data))
-                        {
-                            var outData = args.Data;
-                            try
-                            {
-                                outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
-                            }
-                            catch (Exception)
-                            {
-                            }
-
-                            DispatcherHelper.PostOnMainThread(() =>
-                            {
-                                RootView.AddLog(outData);
-                            });
-                        }
-                    };
-                    
-                    _agentProcess?.Start();
-                    
-                    _agentProcess?.BeginOutputReadLine();
-                    _agentProcess?.BeginErrorReadLine();
-                    
-                    if (!await _agentClient.LinkStartUnlessProcessExit(_agentProcess, token))
+                        _agentProcess = _agentClient.AgentServerProcess;
+                    }
+                    else
                     {
-                        SafeKillAgentProcess();
-                        throw new Exception("ProcessStartInfo启动失败");
+                        throw new Exception("Failed to LinkStart agentClient!");
                     }
 
+                    _agentProcess.OutputDataReceived += (sender, args) =>
+                    {
+                        if (!string.IsNullOrEmpty(args.Data))
+                        {
+                            var outData = args.Data;
+                            try
+                            {
+                                outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
+                            }
+                            catch (Exception)
+                            {
+                            }
+
+                            DispatcherHelper.PostOnMainThread(() =>
+                            {
+                                if (TaskQueueViewModel.CheckShouldLog(outData))
+                                {
+                                    RootView.AddLog(outData);
+                                }
+                            });
+                        }
+                    };
+
+                    _agentProcess.ErrorDataReceived += (sender, args) =>
+                    {
+                        if (!string.IsNullOrEmpty(args.Data))
+                        {
+                            var outData = args.Data;
+                            try
+                            {
+                                outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
+                            }
+                            catch (Exception)
+                            {
+                            }
+
+                            DispatcherHelper.PostOnMainThread(() =>
+                            {
+                                if (TaskQueueViewModel.CheckShouldLog(outData))
+                                {
+                                    RootView.AddLog(outData);
+                                }
+                            });
+                        }
+                    };
+                    _agentProcess.BeginOutputReadLine();
+                    _agentProcess.BeginErrorReadLine();
+
                     TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token: token, name: "Agent程序启动");
+
                 }
                 catch (Exception ex)
                 {
+                    RootView.AddLogByKey(LangKeys.AgentStartFailed, Brushes.OrangeRed, changeColor: false);
                     LoggerHelper.Error($"{LangKeys.AgentStartFailed.ToLocalization()}: {ex}");
                     ToastHelper.Error(LangKeys.AgentStartFailed.ToLocalization(), ex.Message);
                     return (null, InvalidResource);
                 }
+
 
                 _agentStarted = true;
             }
@@ -1922,6 +1930,30 @@ public class MaaProcessor
         _emulatorCancellationTokenSource?.SafeCancel();
         CancellationTokenSource.SafeCancel();
     }
+    [SupportedOSPlatform("windows")]
+    private static void KillProcessTree(int parentPid)
+    {
+        using var searcher = new ManagementObjectSearcher(
+            $"SELECT ProcessId FROM Win32_Process WHERE ParentProcessId = {parentPid}");
+
+        foreach (var item in searcher.Get())
+        {
+            var childPid = Convert.ToInt32(item["ProcessId"]);
+            KillProcessTree(childPid); // 递归终止子进程的子进程
+
+            try
+            {
+                var childProcess = Process.GetProcessById(childPid);
+                if (!childProcess.HasExited)
+                {
+                    childProcess.Kill();
+                    childProcess.WaitForExit(3000);
+                }
+                childProcess.Dispose();
+            }
+            catch (ArgumentException) { } // 进程已退出
+        }
+    }
 
     /// <summary>
     /// 安全地终止 Agent 进程
@@ -1932,10 +1964,9 @@ public class MaaProcessor
     /// <param name="forceKill">是否使用强制终止模式</param>
     private void SafeKillAgentProcess()
     {
-      
         _agentClient?.LinkStop();
-        _agentClient?.DetachDisposeToResource();
         _agentClient?.Dispose();
+        _agentClient?.DetachDisposeToResource();
         _agentClient = null;
         try
         {

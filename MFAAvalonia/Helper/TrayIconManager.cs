@@ -114,7 +114,7 @@ public class TrayIconManager
             // 判断是否为双击（时间间隔小于 500 毫秒）
             if (clickInterval.TotalMilliseconds < 500)
             {
-                DispatcherHelper.RunOnMainThread(() =>
+                DispatcherHelper.PostOnMainThread(() =>
                 {
                     Instances.RootView.ShowWindow();
                 });

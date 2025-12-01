@@ -283,13 +283,55 @@ public partial class TaskQueueViewModel : ViewModelBase
     }
 
 
-    public readonly string INFO = "info:";
-    public readonly string[] ERROR = ["err:", "error:"];
-    public readonly string[] WARNING = ["warn:", "warning:"];
-    public readonly string TRACE = "trace:";
-    public readonly string DEBUG = "debug:";
-    public readonly string CRITICAL = "critical:";
+    public static readonly string INFO = "info:";
+    public static readonly string[] ERROR = ["err:", "error:"];
+    public static readonly string[] WARNING = ["warn:", "warning:"];
+    public static readonly string TRACE = "trace:";
+    public static readonly string DEBUG = "debug:";
+    public static readonly string CRITICAL = "critical:";
+    
+    public static bool CheckShouldLog(string content)
+    {
+        const StringComparison comparison = StringComparison.Ordinal; // 指定匹配规则（避免大小写问题，按需调整）
 
+        if (content.StartsWith(TRACE, comparison))
+        {
+            return true;
+        }
+
+        if (content.StartsWith(DEBUG, comparison))
+        {
+            return true;
+        }
+
+        if (content.StartsWith(INFO, comparison))
+        {
+            return true;
+        }
+
+        var warnPrefix = WARNING.FirstOrDefault(prefix =>
+            !string.IsNullOrEmpty(prefix) && content.StartsWith(prefix, comparison)
+        );
+        if (warnPrefix != null)
+        {
+            return true;
+        }
+
+        var errorPrefix = ERROR.FirstOrDefault(prefix =>
+            !string.IsNullOrEmpty(prefix) && content.StartsWith(prefix, comparison)
+        );
+
+        if (errorPrefix != null)
+        {
+            return true;
+        }
+
+        if (content.StartsWith(CRITICAL, comparison))
+        {
+            return true;
+        }
+        return false;
+    }
     public void AddLog(string content,
         IBrush? brush,
         string weight = "Regular",
@@ -304,20 +346,20 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (content.StartsWith(TRACE, comparison))
         {
             brush = Brushes.MediumAquamarine;
-            content = content.Substring(TRACE.Length);
+            content = content.Substring(TRACE.Length).TrimStart();
             changeColor = false;
         }
 
         if (content.StartsWith(DEBUG, comparison))
         {
             brush = Brushes.DeepSkyBlue;
-            content = content.Substring(DEBUG.Length);
+            content = content.Substring(DEBUG.Length).TrimStart();
             changeColor = false;
         }
 
         if (content.StartsWith(INFO, comparison))
         {
-            content = content.Substring(INFO.Length);
+            content = content.Substring(INFO.Length).TrimStart();
         }
 
         var warnPrefix = WARNING.FirstOrDefault(prefix =>
@@ -326,7 +368,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (warnPrefix != null)
         {
             brush = Brushes.Orange;
-            content = content.Substring(warnPrefix.Length);
+            content = content.Substring(warnPrefix.Length).TrimStart();
             changeColor = false;
         }
 
@@ -337,7 +379,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (errorPrefix != null)
         {
             brush = Brushes.OrangeRed;
-            content = content.Substring(errorPrefix.Length);
+            content = content.Substring(errorPrefix.Length).TrimStart();
             changeColor = false;
         }
 
@@ -351,10 +393,10 @@ public partial class TaskQueueViewModel : ViewModelBase
             else
                 brush = Brushes.White;
             backGroundBrush = Brushes.OrangeRed;
-            content = content.Substring(CRITICAL.Length);
+            content = content.Substring(CRITICAL.Length).TrimStart();
         }
 
-        DispatcherHelper.RunOnMainThread(() =>
+        DispatcherHelper.PostOnMainThread(() =>
         {
             LogItemViewModels.Add(new LogItemViewModel(content, brush, weight, "HH':'mm':'ss",
                 showTime: showTime, changeColor: changeColor)
@@ -380,7 +422,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         brush ??= Brushes.Black;
         Task.Run(() =>
         {
-            DispatcherHelper.RunOnMainThread(() =>
+            DispatcherHelper.PostOnMainThread(() =>
             {
                 var log = new LogItemViewModel(key, brush, "Regular", true, "HH':'mm':'ss", changeColor: changeColor, showTime: true, transformKey: transformKey, formatArgsKeys);
                 LogItemViewModels.Add(log);

@@ -64,7 +64,7 @@ public static class VersionChecker
         };
 
         AddCDKCheckTask();
-        
+
         if (config.AutoUpdateResource && !GetResourceVersion().Contains("debug", StringComparison.OrdinalIgnoreCase))
         {
             AddResourceUpdateTask(config.AutoUpdateMFA);
@@ -154,12 +154,13 @@ public static class VersionChecker
         if (isGithub) return;
         try
         {
-            GetDownloadUrlFromMirror("v0.0.0", "MFAAvalonia", CDK(), out _, out _, out _, out _, onlyCheck: false);
+            GetDownloadUrlFromMirror("v0.0.0", "MFAAvalonia", CDK(), out _, out _, out _, out _, onlyCheck: false, saveAnnouncement: false);
         }
         catch (Exception)
-        { }
+        {
+        }
     }
-    
+
     public static void CheckForResourceUpdates(bool isGithub = true)
     {
         Instances.RootViewModel.SetUpdating(true);
@@ -200,7 +201,7 @@ public static class VersionChecker
 
             if (IsNewVersionAvailable(latestVersion, resourceVersion))
             {
-                DispatcherHelper.RunOnMainThread(() =>
+                DispatcherHelper.PostOnMainThread(() =>
                 {
                     Instances.RootViewModel.WindowUpdateInfo = LangKeys.MirrorChyanResourceUpdateShortTip.ToLocalizationFormatted(false, latestVersion);
 
@@ -259,7 +260,7 @@ public static class VersionChecker
             }
             else if (IsNewVersionAvailable(latestVersion, localVersion))
             {
-                DispatcherHelper.RunOnMainThread(() =>
+                DispatcherHelper.PostOnMainThread(() =>
                 {
                     Instances.ToastManager.CreateToast().WithTitle(LangKeys.SoftwareUpdate.ToLocalization())
                         .WithContent("MFA" + LangKeys.NewVersionAvailableLatestVersion.ToLocalization() + latestVersion).Dismiss().After(TimeSpan.FromSeconds(6))
@@ -299,7 +300,7 @@ public static class VersionChecker
         ProgressBar? progress = null;
         TextBlock? textBlock = null;
         ISukiToast? sukiToast = null;
-        DispatcherHelper.RunOnMainThread(() =>
+        DispatcherHelper.PostOnMainThread(() =>
         {
             progress = new ProgressBar
             {
@@ -634,7 +635,7 @@ public static class VersionChecker
 
         Instances.RootViewModel.SetUpdating(false);
 
-        // DispatcherHelper.RunOnMainThread(() =>
+        // DispatcherHelper.PostOnMainThread(() =>
         // {
         //     if (!noDialog)
         //     {
@@ -783,7 +784,7 @@ public static class VersionChecker
         int totalFileCount = Directory.EnumerateFiles(newPath, "*", SearchOption.AllDirectories).Count();
 
         // 3. 初始化进度条（UI操作需通过 Invoke 确保线程安全）
-        DispatcherHelper.RunOnMainThread(() =>
+        DispatcherHelper.PostOnMainThread(() =>
         {
             progressBar?.Maximum = 100;
             progressBar?.Value = 0;
@@ -805,12 +806,12 @@ public static class VersionChecker
         catch (OperationCanceledException)
         {
             // 取消操作时可添加日志或后续处理
-            DispatcherHelper.RunOnMainThread(() => progressBar?.IsVisible = false);
+            DispatcherHelper.PostOnMainThread(() => progressBar?.IsVisible = false);
             throw; // 如需上层处理取消异常，可抛出；否则直接捕获忽略
         }
 
         // 6. 复制完成隐藏进度条
-        DispatcherHelper.RunOnMainThread(() => progressBar?.IsVisible = false);
+        DispatcherHelper.PostOnMainThread(() => progressBar?.IsVisible = false);
     }
 
     /// <summary>
@@ -867,7 +868,7 @@ public static class VersionChecker
 
             // 13. 更新进度条（线程安全）
             progressCounter.Current++;
-            DispatcherHelper.RunOnMainThread(() =>
+            DispatcherHelper.PostOnMainThread(() =>
             {
                 double percentage = Math.Round((progressCounter.Current * 100.0) / progressCounter.Total, 1);
                 // 确保百分比不超过100（防止极端情况下的计算误差）
@@ -963,7 +964,7 @@ public static class VersionChecker
         ISukiToast? sukiToast = null;
 
         // 初始化进度UI
-        DispatcherHelper.RunOnMainThread(() =>
+        DispatcherHelper.PostOnMainThread(() =>
         {
             progress = new ProgressBar
             {
@@ -1438,7 +1439,7 @@ public static class VersionChecker
         ISukiToast? sukiToast = null;
 
         // UI初始化（与原有逻辑保持一致）
-        DispatcherHelper.RunOnMainThread(() =>
+        DispatcherHelper.PostOnMainThread(() =>
         {
             progress = new ProgressBar
             {
@@ -1910,7 +1911,9 @@ public static class VersionChecker
         string userAgent = "MFA",
         bool isUI = false,
         bool onlyCheck = false,
-        string currentVersion = "v0.0.0",bool showResponse = false
+        string currentVersion = "v0.0.0",
+        bool showResponse = false,
+        bool saveAnnouncement = true
     )
     {
         var versionType = isUI ? Instances.VersionUpdateSettingsUserControlModel.UIUpdateChannelIndex.ToVersionType() : Instances.VersionUpdateSettingsUserControlModel.ResourceUpdateChannelIndex.ToVersionType();
@@ -1988,7 +1991,7 @@ public static class VersionChecker
                 LoggerHelper.Info($"更新类型: {updateType}, 是否全量更新: {isFull}");
             }
 
-            if (IsNewVersionAvailable(latestVersion, currentVersion))
+            if (IsNewVersionAvailable(latestVersion, currentVersion) && !saveAnnouncement)
             {
                 if (onlyCheck && !isUI && data != null)
                 {
@@ -2220,7 +2223,7 @@ public static class VersionChecker
                 SetProgress(progressBar, progressPercentage);
                 if (stopwatch.ElapsedMilliseconds >= 100)
                 {
-                    // DispatcherHelper.RunOnMainThread(() =>
+                    // DispatcherHelper.PostOnMainThread(() =>
                     //     Instances.TaskQueueViewModel.OutputDownloadProgress(
                     //         totalBytesRead,
                     //         totalBytes ?? 0,
@@ -2231,7 +2234,7 @@ public static class VersionChecker
             }
 
             SetProgress(progressBar, 100);
-            DispatcherHelper.RunOnMainThread(() =>
+            DispatcherHelper.PostOnMainThread(() =>
                 Instances.TaskQueueViewModel.OutputDownloadProgress(
                     totalBytesRead,
                     totalBytes ?? totalBytesRead,
@@ -2319,13 +2322,13 @@ public static class VersionChecker
     {
         if (block == null)
             return;
-        DispatcherHelper.RunOnMainThread(() => block.Text = text);
+        DispatcherHelper.PostOnMainThread(() => block.Text = text);
     }
     private static void SetProgress(ProgressBar? bar, double percentage)
     {
         if (bar == null)
             return;
-        DispatcherHelper.RunOnMainThread(() => bar.Value = percentage);
+        DispatcherHelper.PostOnMainThread(() => bar.Value = percentage);
     }
     private static void Dismiss(ISukiToast? toast)
     {
@@ -2333,7 +2336,7 @@ public static class VersionChecker
             return;
         try
         {
-            DispatcherHelper.RunOnMainThread(() => Instances.ToastManager.Dismiss(toast));
+            DispatcherHelper.PostOnMainThread(() => Instances.ToastManager.Dismiss(toast));
         }
         catch (Exception e)
         {
