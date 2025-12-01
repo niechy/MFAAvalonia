@@ -954,8 +954,20 @@ public class MaaProcessor
             {
                 foreach (var rp in resourcePs)
                 {
-                    if (!Directory.Exists(rp))
-                        Directory.CreateDirectory(rp);
+                    if (string.IsNullOrWhiteSpace(rp))
+                        continue;
+                    
+                    try
+                    {
+                        // 验证路径是否有效
+                        var fullPath = Path.GetFullPath(rp);
+                        if (!Directory.Exists(fullPath))
+                            Directory.CreateDirectory(fullPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Warning($"Failed to create resource directory '{rp}': {ex.Message}");
+                    }
                 }
             }
             if (fileCount == 0)
