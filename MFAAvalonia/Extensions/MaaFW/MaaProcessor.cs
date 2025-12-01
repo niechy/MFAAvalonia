@@ -499,11 +499,10 @@ public class MaaProcessor
                     LoggerHelper.Info(
                         $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
-                    if (_agentClient.LinkStart(startInfo, token))
-                        _agentProcess = _agentClient.AgentServerProcess;
-                    else
-                        throw new Exception("ProcessStartInfo启动失败");
-
+                    _agentProcess = new Process
+                    {
+                        StartInfo = startInfo
+                    };
                     _agentProcess?.OutputDataReceived += (sender, args) =>
                     {
 
@@ -544,13 +543,19 @@ public class MaaProcessor
                             });
                         }
                     };
-
-
-                    _agentProcess.BeginOutputReadLine();
-                    _agentProcess.BeginErrorReadLine();
+                    
+                    _agentProcess?.Start();
+                    
+                    _agentProcess?.BeginOutputReadLine();
+                    _agentProcess?.BeginErrorReadLine();
+                    
+                    if (!await _agentClient.LinkStartUnlessProcessExit(_agentProcess, token))
+                    {
+                        SafeKillAgentProcess();
+                        throw new Exception("ProcessStartInfo启动失败");
+                    }
 
                     TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token: token, name: "Agent程序启动");
-
                 }
                 catch (Exception ex)
                 {
@@ -1927,18 +1932,18 @@ public class MaaProcessor
     /// <param name="forceKill">是否使用强制终止模式</param>
     private void SafeKillAgentProcess()
     {
-        LoggerHelper.Info($"Kill AgentProcess: {_agentProcess?.ProcessName}");
+      
         _agentClient?.LinkStop();
         _agentClient?.DetachDisposeToResource();
         _agentClient?.Dispose();
         _agentClient = null;
         try
         {
+            LoggerHelper.Info(_agentProcess?.HasExited == false ? $"Kill AgentProcess: {_agentProcess?.ProcessName}" : "AgentProcess has exited");
             if (_agentProcess?.HasExited == false)
-            {
                 _agentProcess?.Kill(true);
+            if (_agentProcess?.HasExited == false)
                 _agentProcess?.WaitForExit();
-            }
             if (_agentProcess?.HasExited == false)
                 _agentProcess?.Dispose();
         }
