@@ -1,31 +1,20 @@
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls; 
 using Avalonia.Controls.Notifications;
-using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.ViewModels.Windows;
-using MFAAvalonia.Views.UserControls;
-using Newtonsoft.Json;
 using SukiUI.Controls;
 using SukiUI.Dialogs;
 using SukiUI.MessageBox;
-using SukiUI.Toasts;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace MFAAvalonia.Views.Windows;
 
@@ -147,7 +136,6 @@ public partial class RootView : SukiWindow
             LoggerHelper.Info("MFA Closed!");
 
             MaaProcessor.Instance.SetTasker();
-            MaaProcessor.Instance.ForceKillAgentProcess();
             LoggerHelper.DisposeLogger();
             GlobalHotkeyService.Shutdown();
             Program.ReleaseMutex();

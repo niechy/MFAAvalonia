@@ -222,10 +222,9 @@ public class MaaProcessor
         if (maaTasker == null)
         {
             MaaTasker?.Stop().Wait();
-            MaaTasker?.Dispose();
-            _agentClient = null;
             _agentStarted = false;
             SafeKillAgentProcess();
+            MaaTasker?.Dispose();
             Instances.TaskQueueViewModel.SetConnected(false);
         }
         MaaTasker = maaTasker;
@@ -249,6 +248,7 @@ public class MaaProcessor
         MaaTasker ??= MaaTaskerTuple.Item1;
         return (MaaTasker, MaaTaskerTuple.Item2);
     }
+
     public ObservableCollection<DragItemViewModel> TasksSource { get; private set; } =
         [];
     public AutoInitDictionary AutoInitDictionary { get; } = new();
@@ -437,10 +437,6 @@ public class MaaProcessor
                 RootView.AddLogByKey(LangKeys.StartingAgent);
                 if (_agentClient != null)
                 {
-                    _agentClient.LinkStop();
-                    _agentClient.Dispose();
-                    _agentClient.DetachDisposeToResource();
-                    _agentClient = null;
                     SafeKillAgentProcess();
                 }
 
@@ -500,8 +496,13 @@ public class MaaProcessor
                         WindowStyle = ProcessWindowStyle.Hidden,
                         CreateNoWindow = true
                     };
-                    _agentClient?.LinkStart(startInfo, token);
-                    _agentProcess = _agentClient.AgentServerProcess;
+                    LoggerHelper.Info(
+                        $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
+                        + $"socket_id: {_agentClient.Id}");
+                    if (_agentClient.LinkStart(startInfo, token))
+                        _agentProcess = _agentClient.AgentServerProcess;
+                    else
+                        throw new Exception("ProcessStartInfo启动失败");
 
                     _agentProcess?.OutputDataReceived += (sender, args) =>
                     {
@@ -544,9 +545,7 @@ public class MaaProcessor
                         }
                     };
 
-                    LoggerHelper.Info(
-                        $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Contains("-u ") && !replacedArgs.Contains("-u") ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
-                        + $"socket_id: {_agentClient.Id}");
+
                     _agentProcess.BeginOutputReadLine();
                     _agentProcess.BeginErrorReadLine();
 
@@ -1876,12 +1875,29 @@ public class MaaProcessor
 
             Instances.RootViewModel.IsRunning = false;
 
-            ExecuteStopCore(finished, () =>
+            ExecuteStopCore(finished, async () =>
             {
                 var stopResult = MaaJobStatus.Succeeded;
 
-                if (status != MFATask.MFATaskStatus.FAILED)
-                    stopResult = AbortCurrentTasker();
+                if (status != MFATask.MFATaskStatus.FAILED && status != MFATask.MFATaskStatus.SUCCEEDED)
+                {
+
+                    // 持续尝试停止直到返回 Succeeded
+                    const int maxRetries = 10;
+                    const int retryDelayMs = 500;
+
+                    for (int i = 0; i < maxRetries; i++)
+                    {
+
+                        stopResult = AbortCurrentTasker();
+                        LoggerHelper.Info($"Stopping tasker attempt {i + 1} returned {stopResult}, retrying...");
+                        if (stopResult == MaaJobStatus.Succeeded)
+                            break;
+
+                        await Task.Delay(retryDelayMs);
+                    }
+
+                }
 
                 HandleStopResult(status, stopResult, onlyStart, action, isUpdateRelated);
             });
@@ -1909,168 +1925,28 @@ public class MaaProcessor
     /// 强制终止 Agent 进程（用于窗口关闭等紧急情况）
     /// </summary>
     /// <param name="forceKill">是否使用强制终止模式</param>
-    private void SafeKillAgentProcess(bool forceKill = false)
+    private void SafeKillAgentProcess()
     {
-        if (_agentProcess == null)
-            return;
-
+        LoggerHelper.Info($"Kill AgentProcess: {_agentProcess?.ProcessName}");
+        _agentClient?.LinkStop();
+        _agentClient?.DetachDisposeToResource();
+        _agentClient?.Dispose();
+        _agentClient = null;
         try
         {
-            // 如果进程已退出，直接清理
-            if (_agentProcess.HasExited)
+            if (_agentProcess?.HasExited == false)
             {
-                _agentProcess.Dispose();
-                _agentProcess = null;
-                return;
+                _agentProcess?.Kill(true);
+                _agentProcess?.WaitForExit();
             }
-
-            // 尝试正常终止
-            try
-            {
-                _agentProcess.Kill();
-
-                // 等待进程退出（最多等待 2 秒）
-                if (!_agentProcess.WaitForExit(2000))
-                {
-                    LoggerHelper.Warning("Agent 进程未在 2 秒内退出，尝试强制终止");
-                    forceKill = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggerHelper.Warning($"正常终止 Agent 进程失败: {ex.Message}，尝试强制终止");
-                forceKill = true;
-            }
-
-            // 如果需要强制终止
-            if (forceKill && !_agentProcess.HasExited)
-            {
-                ForceKillAgentProcess();
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"终止 Agent 进程时发生错误: {ex.Message}", ex);
-        }
-        finally
-        {
-            try
-            {
+            if (_agentProcess?.HasExited == false)
                 _agentProcess?.Dispose();
-            }
-            catch { }
-            _agentProcess = null;
         }
-    }
-
-    /// <summary>
-    /// 强制终止 Agent 进程（使用平台特定的方法）
-    /// </summary>
-    public void ForceKillAgentProcess()
-    {
-        if (_agentProcess == null || _agentProcess.HasExited)
-            return;
-
-        try
+        catch (Exception e)
         {
-            var processId = _agentProcess.Id;
-            var processName = _agentProcess.ProcessName;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // Windows: 使用 taskkill /F
-                ForceKillProcessWindows(processId, processName);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                // Unix: 使用 kill -9
-                ForceKillProcessUnix(processId);
-            }
-
-            // 再次等待进程退出
-            _agentProcess.WaitForExit(1000);
+            LoggerHelper.Error(e);
         }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"强制终止 Agent 进程失败: {ex.Message}", ex);
-        }
-    }
-
-    /// <summary>
-    /// Windows 平台强制终止进程
-    /// </summary>
-    [SupportedOSPlatform("windows")]
-    private void ForceKillProcessWindows(int processId, string processName)
-    {
-        try
-        {
-            // 方法 1: 使用 taskkill /F
-            var psi = new ProcessStartInfo
-            {
-                FileName = "taskkill",
-                Arguments = $"/F /PID {processId}",
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-
-            using var process = Process.Start(psi);
-            process?.WaitForExit(2000);
-
-            LoggerHelper.Info($"已使用 taskkill 强制终止 Agent 进程 (PID: {processId})");
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Warning($"taskkill 失败，尝试备用方法: {ex.Message}");
-
-            // 方法 2: 使用 WMI 终止进程
-            try
-            {
-                using var searcher = new ManagementObjectSearcher(
-                    $"SELECT * FROM Win32_Process WHERE ProcessId = {processId}");
-
-                foreach (ManagementObject obj in searcher.Get())
-                {
-                    obj.InvokeMethod("Terminate", null);
-                    LoggerHelper.Info($"已使用 WMI 强制终止 Agent 进程 (PID: {processId})");
-                }
-            }
-            catch (Exception wmiEx)
-            {
-                LoggerHelper.Error($"WMI 终止进程失败: {wmiEx.Message}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Unix 平台强制终止进程
-    /// </summary>
-    [SupportedOSPlatform("linux")]
-    [SupportedOSPlatform("macos")]
-    private void ForceKillProcessUnix(int processId)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"-c \"kill -9 {processId}\"",
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-
-            using var process = Process.Start(psi);
-            process?.WaitForExit(2000);
-
-            LoggerHelper.Info($"已使用 kill -9 强制终止 Agent 进程 (PID: {processId})");
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"kill -9 失败: {ex.Message}");
-        }
+        _agentProcess = null;
     }
 
     private bool ShouldProcessStop(bool finished)
@@ -2098,7 +1974,6 @@ public class MaaProcessor
             return MaaJobStatus.Succeeded;
         var status = MaaTasker.Stop().Wait();
 
-        LoggerHelper.Info("Stopping tasker, status: " + status);
         return status;
     }
 
@@ -2136,7 +2011,13 @@ public class MaaProcessor
         else if (status == MFATask.MFATaskStatus.STOPPED)
         {
             ToastHelper.Info(LangKeys.TaskStopped.ToLocalization());
-            RootView.AddLogByKey(LangKeys.TaskAbandoned);
+            TaskManager.RunTask(() =>
+            {
+                Task.Delay(400).ContinueWith(_ =>
+                {
+                    RootView.AddLogByKey(LangKeys.TaskAbandoned);
+                });
+            });
         }
         else
         {
