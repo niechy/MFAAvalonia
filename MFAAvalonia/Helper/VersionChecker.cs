@@ -1992,7 +1992,7 @@ public static class VersionChecker
                 LoggerHelper.Info($"更新类型: {updateType}, 是否全量更新: {isFull}");
             }
 
-            if (IsNewVersionAvailable(latestVersion, currentVersion) && !saveAnnouncement)
+            if (IsNewVersionAvailable(latestVersion, currentVersion) && saveAnnouncement)
             {
                 if (onlyCheck && !isUI && data != null)
                 {
@@ -2389,6 +2389,7 @@ public static class VersionChecker
 
     private static void SaveChangelog(JToken? releaseData, string from)
     {
+        Console.WriteLine(new StackTrace(true));
         try
         {
             var bodyContent = releaseData?[from]?.ToString();
