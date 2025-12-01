@@ -244,11 +244,11 @@ public class MaaProcessor
         MaaTasker ??= (await InitializeMaaTasker(token)).Item1;
         return MaaTasker;
     }
-    public async Task<(MaaTasker?, bool)> GetTaskerAndBoolAsync(CancellationToken token = default)
+    public async Task<(MaaTasker?, bool, bool)> GetTaskerAndBoolAsync(CancellationToken token = default)
     {
         var MaaTaskerTuple = await InitializeMaaTasker(token);
         MaaTasker ??= MaaTaskerTuple.Item1;
-        return (MaaTasker, MaaTaskerTuple.Item2);
+        return (MaaTasker, MaaTaskerTuple.Item2, MaaTaskerTuple.Item3);
     }
 
     public ObservableCollection<DragItemViewModel> TasksSource { get; private set; } =
@@ -307,10 +307,10 @@ public class MaaProcessor
         return hasPathSeparator || isAbsolutePath || isRelativePath || hasFileExtension;
     }
 
-    async private Task<(MaaTasker?, bool)> InitializeMaaTasker(CancellationToken token) // 添加 async 和 token
+    async private Task<(MaaTasker?, bool, bool)> InitializeMaaTasker(CancellationToken token) // 添加 async 和 token
     {
         var InvalidResource = false;
-
+        var ShouldRetry = true;
         AutoInitDictionary.Clear();
         LoggerHelper.Info(LangKeys.LoadingResources.ToLocalization());
 
@@ -344,18 +344,19 @@ public class MaaProcessor
         }
         catch (OperationCanceledException)
         {
+            ShouldRetry = false;
             LoggerHelper.Warning("Resource loading was canceled");
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry);
         }
         catch (MaaException)
         {
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry);
         }
         catch (Exception e)
         {
-
+            ShouldRetry = false;
             LoggerHelper.Error("Initialization resource error", e);
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry);
         }
 
         // 初始化控制器部分同理
@@ -387,16 +388,16 @@ public class MaaProcessor
         catch (OperationCanceledException)
         {
             LoggerHelper.Warning("Controller initialization was canceled");
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry);
         }
         catch (MaaException)
         {
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry); // 控制器异常可以重试
         }
         catch (Exception e)
         {
             LoggerHelper.Error("Initialization controller error", e);
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry); // 控制器错误可以重试
         }
 
         try
@@ -565,11 +566,12 @@ public class MaaProcessor
                 }
                 catch (Exception ex)
                 {
-                    SafeKillAgentProcess();
                     RootView.AddLogByKey(LangKeys.AgentStartFailed, Brushes.OrangeRed, changeColor: false);
-                    LoggerHelper.Error($"{LangKeys.AgentStartFailed.ToLocalization()}: {ex}");
+                    LoggerHelper.Error(ex);
                     ToastHelper.Error(LangKeys.AgentStartFailed.ToLocalization(), ex.Message);
-                    return (null, InvalidResource);
+                    SafeKillAgentProcess();
+                    ShouldRetry = false; // Agent 启动失败不应该重连
+                    return (null, InvalidResource, ShouldRetry);
                 }
 
 
@@ -657,21 +659,21 @@ public class MaaProcessor
                 }
             };
 
-            return (tasker, InvalidResource);
+            return (tasker, InvalidResource, ShouldRetry);
         }
         catch (OperationCanceledException)
         {
             LoggerHelper.Warning("Tasker initialization was canceled");
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry);
         }
         catch (MaaException)
         {
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry);
         }
         catch (Exception e)
         {
             LoggerHelper.Error("Initialization tasker error", e);
-            return (null, InvalidResource);
+            return (null, InvalidResource, ShouldRetry);
         }
     }
 
@@ -1714,7 +1716,10 @@ public class MaaProcessor
             Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false, true);
         var tuple = await TryConnectAsync(token);
         var connected = tuple.Item1;
-        if (!connected && isAdb && !tuple.Item2)
+        var shouldRetry = tuple.Item3; // 获取是否应该重试的标志
+
+        // 只有在应该重试的情况下才进行重连
+        if (!connected && isAdb && !tuple.Item2 && shouldRetry)
         {
             connected = await HandleAdbConnectionAsync(token, showMessage);
         }
@@ -1766,14 +1771,19 @@ public class MaaProcessor
         }
         other?.Invoke();
         var tuple = await TryConnectAsync(token);
+        // 如果不应该重试（Agent启动失败或资源加载失败），直接返回 false
+        if (!tuple.Item3)
+        {
+            return false;
+        }
         return tuple.Item1;
     }
 
-    async private Task<(bool, bool)> TryConnectAsync(CancellationToken token)
+    async private Task<(bool, bool, bool)> TryConnectAsync(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         var tuple = await GetTaskerAndBoolAsync(token);
-        return (tuple.Item1 is { IsInitialized: true }, tuple.Item2);
+        return (tuple.Item1 is { IsInitialized: true }, tuple.Item2, tuple.Item3);
     }
 
     private void HandleConnectionFailureAsync(bool isAdb, CancellationToken token)
