@@ -157,7 +157,7 @@ public static class LanguageHelper
                 LoggerHelper.Error($"加载语言文件失败 [{langCode}]: {ex.Message}");
             }
         }
-        Instances.TaskQueueViewModel.InitializeControllerName();
+        
     }
 
     /// <summary>

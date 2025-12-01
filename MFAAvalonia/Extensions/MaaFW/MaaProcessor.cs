@@ -161,7 +161,7 @@ public class MaaProcessor
                 {
                     LanguageHelper.LoadLanguagesFromInterface(value.Languages, AppContext.BaseDirectory);
                 }
-
+                Instances.TaskQueueViewModel.InitializeControllerName();
                 // 异步加载 Contact 和 Description 内容
                 _ = LoadContactAndDescriptionAsync(value);
             }
