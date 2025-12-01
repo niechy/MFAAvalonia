@@ -71,7 +71,7 @@ public partial class RootView : SukiWindow
             LoggerHelper.Info("UI initialization started");
 
             // 确保在UI线程上执行
-            Dispatcher.UIThread.Post(() =>
+            DispatcherHelper.PostOnMainThread(() =>
             {
                 // 初始化完成
                 _isInitializing = false;

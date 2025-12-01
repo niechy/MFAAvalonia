@@ -28,7 +28,7 @@ public static class JsonHelper
         catch (Exception ex) when (IsThreadAccessException(ex))
         {
             // 线程错误：切换到UI线程重试
-            return Dispatcher.UIThread.Invoke(() => LoadJson(filePath, defaultValue, errorHandle, converters));
+            return DispatcherHelper.RunOnMainThread(() => LoadJson(filePath, defaultValue, errorHandle, converters));
         }
         catch (Exception ex)
         {
@@ -51,7 +51,7 @@ public static class JsonHelper
         catch (Exception ex) when (IsThreadAccessException(ex))
         {
             // 线程错误：切换到UI线程重试
-            Dispatcher.UIThread.Invoke(() => SaveJson(filePath, config, converters));
+            DispatcherHelper.PostOnMainThread(() => SaveJson(filePath, config, converters));
         }
         catch (Exception ex)
         {

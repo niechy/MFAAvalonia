@@ -6,6 +6,7 @@ using SharpHook.Data;
 using SharpHook.Native;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Windows.Input;
 
 namespace MFAAvalonia.Helper;
@@ -23,6 +24,17 @@ public static class GlobalHotkeyService
     {
         if (_hook != null) return;
 
+        // 检测是否有其他 MFAAvalonia 实例正在运行
+        var currentProcess = Process.GetCurrentProcess();
+        var instances = Process.GetProcessesByName(currentProcess.ProcessName);
+    
+        if (instances.Length > 1)
+        {
+            LoggerHelper.Warning("检测到多实例运行，已禁用全局热键以避免性能问题");
+            ToastHelper.Warn(LangKeys.MultiInstanceModeGlobalHotkeyDisabled.ToLocalization());
+            Instances.SettingsViewModel.EnableHotKey = false;
+            return;
+        }
         try
         {
             _hook = new TaskPoolGlobalHook();
@@ -212,31 +224,42 @@ public static class GlobalHotkeyService
 // 修改 HandleKeyEvent 方法
     private static void HandleKeyEvent(object? sender, KeyboardHookEventArgs e)
     {
-        // 1. 定义：归一化后的修饰键掩码（合并左/右键）
-        const EventMask ControlMask = EventMask.LeftCtrl | EventMask.RightCtrl; // Ctrl 统一掩码
-        const EventMask ShiftMask = EventMask.LeftShift | EventMask.RightShift; // Shift 统一掩码
-        const EventMask AltMask = EventMask.LeftAlt | EventMask.RightAlt; // Alt 统一掩码（可选，保持完整）
-        const EventMask MetaMask = EventMask.LeftMeta | EventMask.RightMeta; // Win 键统一掩码（可选）
-
-        // 2. 获取原始修饰键和键码
-        var rawModifiers = e.RawEvent.Mask;
-        var keyCode = e.Data.KeyCode;
-
-        // 3. 修饰键归一化：左/右键 → 统一修饰键
-        var normalizedModifiers = EventMask.None;
-        if ((rawModifiers & ControlMask) != 0) // 包含左Ctrl或右Ctrl → 视为 Control
-            normalizedModifiers |= ControlMask;
-        if ((rawModifiers & ShiftMask) != 0) // 包含左Shift或右Shift → 视为 Shift
-            normalizedModifiers |= ShiftMask;
-        if ((rawModifiers & AltMask) != 0) // 包含左Alt或右Alt → 视为 Alt
-            normalizedModifiers |= AltMask;
-        if ((rawModifiers & MetaMask) != 0) // 包含左Win或右Win → 视为 Meta
-            normalizedModifiers |= MetaMask;
-
-        // 5. 用归一化后的修饰键匹配（注册时需用相同的统一掩码）
-        if (_commands.TryGetValue((keyCode, normalizedModifiers), out var command) && command.CanExecute(null))
+        TaskManager.RunTask(async () =>
         {
-            Dispatcher.UIThread.Post(() => command.Execute(null));
-        }
+            try
+            {
+                // 1. 定义：归一化后的修饰键掩码（合并左/右键）
+                const EventMask ControlMask = EventMask.LeftCtrl | EventMask.RightCtrl; // Ctrl 统一掩码
+                const EventMask ShiftMask = EventMask.LeftShift | EventMask.RightShift; // Shift 统一掩码
+                const EventMask AltMask = EventMask.LeftAlt | EventMask.RightAlt; // Alt 统一掩码（可选，保持完整）
+                const EventMask MetaMask = EventMask.LeftMeta | EventMask.RightMeta; // Win 键统一掩码（可选）
+
+                // 2. 获取原始修饰键和键码
+                var rawModifiers = e.RawEvent.Mask;
+                var keyCode = e.Data.KeyCode;
+
+                // 3. 修饰键归一化：左/右键 → 统一修饰键
+                var normalizedModifiers = EventMask.None;
+                if ((rawModifiers & ControlMask) != 0) // 包含左Ctrl或右Ctrl → 视为 Control
+                    normalizedModifiers |= ControlMask;
+                if ((rawModifiers & ShiftMask) != 0) // 包含左Shift或右Shift → 视为 Shift
+                    normalizedModifiers |= ShiftMask;
+                if ((rawModifiers & AltMask) != 0) // 包含左Alt或右Alt → 视为 Alt
+                    normalizedModifiers |= AltMask;
+                if ((rawModifiers & MetaMask) != 0) // 包含左Win或右Win → 视为 Meta
+                    normalizedModifiers |= MetaMask;
+
+                // 5. 用归一化后的修饰键匹配（注册时需用相同的统一掩码）
+                if (_commands.TryGetValue((keyCode, normalizedModifiers), out var command) && command.CanExecute(null))
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => command.Execute(null), DispatcherPriority.Background);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Error($"热键执行失败: {ex.Message}");
+            }
+        });
+      
     }
 }

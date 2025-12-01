@@ -72,7 +72,7 @@ public partial class SettingsViewModel : ViewModelBase
     #endregion 配置
 
     #region HotKey
-
+    [ObservableProperty] private bool _enableHotKey = true;
     private MFAHotKey _hotKeyShowGui = MFAHotKey.NOTSET;
 
     public MFAHotKey HotKeyShowGui

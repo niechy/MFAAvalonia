@@ -1095,6 +1095,9 @@
     <data name="GlobalHotkeyServiceError" xml:space="preserve">
         <value>全局热键服务加载失败</value>
     </data>
+    <data name="MultiInstanceModeGlobalHotkeyDisabled" xml:space="preserve">
+        <value>多实例模式：全局热键已禁用</value>
+    </data>
     <data name="UpcomingChanges" xml:space="preserve">
         <value>即将更新</value>
     </data>

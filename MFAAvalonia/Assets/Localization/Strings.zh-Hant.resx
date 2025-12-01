@@ -1084,6 +1084,9 @@
     </data>
     <data name="GlobalHotkeyServiceError" xml:space="preserve">
         <value>全域快速鍵服務載入失敗</value>
+    <data name="MultiInstanceModeGlobalHotkeyDisabled" xml:space="preserve">
+        <value>多實例模式：全域快速鍵已停用</value>
+    </data>
     </data>
     <data name="UpcomingChanges" xml:space="preserve">
         <value>即將發生的變更</value>
