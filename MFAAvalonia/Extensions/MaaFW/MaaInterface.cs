@@ -520,6 +520,9 @@ public partial class MaaInterface
         [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
         [JsonProperty("path")]
         public List<string>? Path { get; set; }
+        
+        [JsonIgnore]
+        public List<string>? ResolvedPath { get; set; }
 
         [ObservableProperty][JsonIgnore] private string _displayName = string.Empty;
 

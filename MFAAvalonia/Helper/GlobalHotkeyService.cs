@@ -1,64 +1,58 @@
-﻿using Avalonia.Input;
+using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 using MFAAvalonia.Extensions;
+using MFAAvalonia.Helper.HotkeyIpc;
 using SharpHook;
 using SharpHook.Data;
 using SharpHook.Native;
 using System;
 using System.Collections.Concurrent;
-using System.Threading;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace MFAAvalonia.Helper;
 
 public static class GlobalHotkeyService
 {
-    // 线程安全的热键存储（Key: 组合键标识，Value: 关联命令）
-    private static readonly ConcurrentDictionary<(KeyCode, EventMask), ICommand> _commands = new();
-    private static TaskPoolGlobalHook? _hook;
-    private static Mutex? _instanceMutex;
-    
-    // 使用固定的 GUID 作为互斥锁名称，确保即使程序被重命名也能正确检测多实例
-    private const string MutexName = "Global\\MFAAvalonia_SingleInstance_A7F3B2C1-9D4E-4F5A-8B6C-1E2D3F4A5B6C";
-    
-    public static bool IsStopped = false;
+    private static readonly ConcurrentDictionary<HotkeyIdentifier, ICommand> _commands = new();
+    private static IGlobalHook? _hook;
+    private static HotkeyPrimaryElection? _election;
+    private static HotkeyIpcServer? _server;
+    private static HotkeyIpcClient? _client;
 
-    /// <summary>
-    /// 初始化全局钩子服务
-    /// </summary>
+    public static bool IsStopped { get; private set; }
+    public static bool IsPrimary => _election?.IsPrimary == true;
+    public static bool IsEnabled { get; private set; }
+
     public static void Initialize()
     {
-        if (_hook != null) return;
-
-        // 使用命名互斥锁检测多实例，不受程序重命名影响
-        bool createdNew;
-        try
-        {
-            _instanceMutex = new Mutex(true, MutexName, out createdNew);
-        }
-        catch (Exception ex)
-        {
-            // 在某些情况下（如权限问题）可能无法创建互斥锁，记录日志并继续
-            LoggerHelper.Warning($"无法创建互斥锁: {ex.Message}，将尝试继续初始化热键服务");
-            createdNew = true; // 假设是第一个实例
-        }
-
-        if (!createdNew)
-        {
-            LoggerHelper.Warning("检测到多实例运行，已禁用全局热键以避免性能问题");
-            ToastHelper.Warn(LangKeys.MultiInstanceModeGlobalHotkeyDisabled.ToLocalization());
-            Instances.SettingsViewModel.EnableHotKey = false;
-            // 释放互斥锁引用，因为我们不是所有者
-            _instanceMutex?.Dispose();
-            _instanceMutex = null;
+        if (_election != null) return;
+        if (Design.IsDesignMode)
             return;
-        }
+        // 使用全局互斥锁选举主进程
+        // 与 Program.IsNewInstance 不同，这里对所有 MFAAvalonia 实例生效（不区分目录）
+        _election = new HotkeyPrimaryElection();
+        if (_election.TryBecomePrimary())
+            InitializeAsPrimary();
+        else
+            InitializeAsSecondary();
+    }
 
+    private static void InitializeAsPrimary()
+    {
+        LoggerHelper.Info("GlobalHotkeyService: 作为主进程初始化");
         try
         {
-            _hook = new TaskPoolGlobalHook();
+            _server = new HotkeyIpcServer();
+            _ = _server.StartAsync();
+            _hook = new SimpleGlobalHook();
             _hook.KeyPressed += HandleKeyEvent;
-            _hook.RunAsync(); // 启动后台监听线程
+            _hook.RunAsync();
+            var saved = HotkeyPrimaryElection.LoadState();
+            if (saved != null) LoggerHelper.Info($"GlobalHotkeyService: 恢复 {saved.Length} 个热键");
+            IsEnabled = true;
         }
         catch (Exception e)
         {
@@ -66,232 +60,210 @@ public static class GlobalHotkeyService
             ToastHelper.Error(LangKeys.GlobalHotkeyServiceError.ToLocalization());
         }
     }
-    /// <summary>
-    /// 注册全局热键（跨平台）
-    /// </summary>
-    /// <param name="gesture">热键手势（需转换为SharpHook的按键标识）</param>
-    /// <param name="command">关联命令</param>
-    public static bool Register(KeyGesture? gesture, ICommand command)
+
+    private static void InitializeAsSecondary()
     {
-        if (gesture == null || command == null)
+        LoggerHelper.Info("GlobalHotkeyService: 作为子进程初始化");
+        _client = new HotkeyIpcClient();
+        _client.HotkeyTriggered += h => ExecuteHotkey(h);
+        _client.Disconnected += OnPrimaryDisconnected;
+        // 在后台线程运行连接，避免阻塞 UI 线程
+        _ = Task.Run(ConnectToPrimaryAsync);
+    }
+
+    private static async Task ConnectToPrimaryAsync()
+    {
+        LoggerHelper.Info("GlobalHotkeyService: 开始连接主进程...");
+        for (int i = 0; i < 10 && _client != null; i++)
+        {
+            try
+            {
+                LoggerHelper.Info($"GlobalHotkeyService: 连接尝试 {i + 1}/10...");
+                if (await _client.ConnectAsync())
+                {
+                    LoggerHelper.Info($"GlobalHotkeyService: 成功连接到主进程，注册 {_commands.Count} 个热键");
+                    IsEnabled = true;
+                    foreach (var h in _commands.Keys){
+                        LoggerHelper.Info($"GlobalHotkeyService: 向主进程注册热键 {h}");
+                        await _client.RegisterHotkeyAsync(h);
+                    }
+                    return;
+                }else
+                {
+                    LoggerHelper.Warning($"GlobalHotkeyService: 连接尝试 {i + 1} 返回 false");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Warning($"GlobalHotkeyService: 连接尝试 {i + 1} 异常 - {ex.Message}");
+            }
+            await Task.Delay(500);
+        }
+        LoggerHelper.Warning("GlobalHotkeyService: 无法连接主进程，尝试成为主进程");
+        await TryBecomePrimaryAsync();
+    }
+
+    private static async Task TryBecomePrimaryAsync()
+    {
+        _client?.Dispose();
+        _client = null;
+        
+        // 在后台线程尝试成为主进程
+        bool becamePrimary = await Task.Run(() => _election?.TryBecomePrimary() == true);
+        
+        if (becamePrimary)
+        {
+            InitializeAsPrimary();
+        }
+        else
+        {
+            _client = new HotkeyIpcClient();
+            _client.HotkeyTriggered += h => ExecuteHotkey(h);
+            _client.Disconnected += OnPrimaryDisconnected;
+            await ConnectToPrimaryAsync();
+        }
+    }
+
+    private static void OnPrimaryDisconnected()
+    {
+        IsEnabled = false;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1000);
+            bool primaryAlive = await Task.Run(() => HotkeyPrimaryElection.IsPrimaryAlive());
+            if (!primaryAlive)
+                await TryBecomePrimaryAsync();
+            else
+                await ConnectToPrimaryAsync();
+        });
+    }
+
+    private static void ExecuteHotkey(HotkeyIdentifier h)
+    {
+        if (_commands.TryGetValue(h, out var cmd))
+            TaskManager.RunTask(async () =>
+            {
+                try
+                {
+                    if (cmd.CanExecute(null)) await Dispatcher.UIThread.InvokeAsync(() => cmd.Execute(null), DispatcherPriority.Background);
+                }
+                catch (Exception ex) { LoggerHelper.Error($"热键执行失败: {ex.Message}"); }
+            }, noMessage: true);
+    }
+
+    private static void HandleKeyEvent(object? sender, KeyboardHookEventArgs e)
+    {
+        var h = Normalize(e.Data.KeyCode, e.RawEvent.Mask);
+        bool localRegistered = _commands.ContainsKey(h);
+        bool remoteRegistered = _server?.HasSubscription(h) == true;
+        
+        LoggerHelper.Debug($"GlobalHotkeyService: 检测到按键 {h}, 本地注册={localRegistered}, 远程订阅={remoteRegistered}");
+        
+        if (localRegistered || remoteRegistered)
+        {
+            LoggerHelper.Info($"GlobalHotkeyService: 触发热键 {h}");
+            // 如果本地注册了，执行本地命令
+            if (localRegistered)
+                ExecuteHotkey(h);
+            // 广播给所有订阅了该热键的客户端
+            if (remoteRegistered)
+                _ = _server?.BroadcastHotkeyTriggeredAsync(h);
+        }
+    }
+
+    private static HotkeyIdentifier Normalize(KeyCode k, EventMask m)
+    {
+        const EventMask C = EventMask.LeftCtrl | EventMask.RightCtrl;
+        const EventMask S = EventMask.LeftShift | EventMask.RightShift;
+        const EventMask A = EventMask.LeftAlt | EventMask.RightAlt;
+        const EventMask M = EventMask.LeftMeta | EventMask.RightMeta;
+        var n = EventMask.None;
+        if ((m & C) != 0) n |= C;
+        if ((m & S) != 0) n |= S;
+        if ((m & A) != 0) n |= A;
+        if ((m & M) != 0) n |= M;
+        return new HotkeyIdentifier(k, n);
+    }
+
+    public static bool Register(KeyGesture? g, ICommand c)
+    {
+        if (g == null || c == null) return true;
+        var (k, m) = Convert(g);
+        var h = new HotkeyIdentifier(k, m);
+        LoggerHelper.Info($"Register Hotkey[{h}]");
+        if (_commands.TryAdd(h, c))
+        {
+            if (_client?.IsConnected == true) _ = _client.RegisterHotkeyAsync(h);
+            SaveState();
             return true;
-        var (keyCode, modifiers) = ConvertGesture(gesture);
-        LoggerHelper.Info($"Register Hotkey[{modifiers}+{keyCode}]");
-        return _commands.TryAdd((keyCode, modifiers), command);
+        }
+        return false;
     }
 
-    /// <summary>
-    /// 注销全局热键
-    /// </summary>
-    public static void Unregister(KeyGesture? gesture)
+    public static void Unregister(KeyGesture? g)
     {
-        if (gesture == null) return;
-
-        var (keyCode, modifiers) = ConvertGesture(gesture);
-        _commands.TryRemove((keyCode, modifiers), out _);
+        if (g == null) return;
+        var (k, m) = Convert(g);
+        var h = new HotkeyIdentifier(k, m);
+        if (_commands.TryRemove(h, out _))
+        {
+            if (_client?.IsConnected == true) _ = _client.UnregisterHotkeyAsync(h);
+            SaveState();
+        }
     }
 
-    /// <summary>
-    /// 释放资源
-    /// </summary>
+    private static void SaveState()
+    {
+        if (IsPrimary) HotkeyPrimaryElection.SaveState(_server?.GetAllRegisteredHotkeys().ToArray() ?? _commands.Keys.ToArray());
+    }
+
     public static void Shutdown()
     {
-        // 先取消事件订阅，避免内存泄漏
         if (_hook != null)
         {
             _hook.KeyPressed -= HandleKeyEvent;
             _hook.Dispose();
             _hook = null;
         }
+        _client?.Dispose();
+        _client = null;
+        _server?.Dispose();
+        _server = null;
+        _election?.Dispose();
+        _election = null;
         _commands.Clear();
-        
-        // 释放互斥锁
-        if (_instanceMutex != null)
-        {
-            try
-            {
-                _instanceMutex.ReleaseMutex();
-            }
-            catch (ApplicationException)
-            {
-                // 如果当前线程不拥有互斥锁，忽略此异常
-            }
-            _instanceMutex.Dispose();
-            _instanceMutex = null;
-        }
-        
         IsStopped = true;
-    }
-    
-    private static KeyCode ErrorHandle(KeyGesture gesture)
-    {
-        if (Enum.TryParse(typeof(KeyCode), $"Vc{gesture.Key.ToString()}", out var key))
-        {
-            return (KeyCode)key;
-        }
-
-        LoggerHelper.Warning($"热键映射失败：未找到 KeyCode.Vc{gesture.Key.ToString()}");
-        return KeyCode.VcEscape;
+        IsEnabled = false;
+        HotkeyPrimaryElection.ClearState();
     }
 
-    // 转换Avalonia手势到SharpHook标识
-    private static (KeyCode, EventMask) ConvertGesture(KeyGesture gesture)
+    private static (KeyCode, EventMask) Convert(KeyGesture g)
     {
-        // 1. 修复数字键、特殊字符键的 KeyCode 映射
-        var keyCode = gesture.Key switch
+        var k = g.Key switch
         {
-            // 数字键映射（Avalonia Key.D0-D9 → SharpHook Vc0-Vc9）
-            Key.D0 => KeyCode.Vc0,
-            Key.D1 => KeyCode.Vc1,
-            Key.D2 => KeyCode.Vc2,
-            Key.D3 => KeyCode.Vc3,
-            Key.D4 => KeyCode.Vc4,
-            Key.D5 => KeyCode.Vc5,
-            Key.D6 => KeyCode.Vc6,
-            Key.D7 => KeyCode.Vc7,
-            Key.D8 => KeyCode.Vc8,
-            Key.D9 => KeyCode.Vc9,
-
-            // 特殊字符键映射（Avalonia OemXXX → SharpHook 对应键）
-            Key.OemPlus => KeyCode.VcEquals, // 加号（+）
-            Key.OemMinus => KeyCode.VcMinus, // 减号（-）
-            Key.OemComma => KeyCode.VcComma, // 逗号（,）
-            Key.OemPeriod => KeyCode.VcPeriod, // 句号（.）
-            Key.OemQuestion => KeyCode.VcSlash, // 问号（?）
-            Key.OemSemicolon => KeyCode.VcSemicolon, // 分号（;）
-            Key.OemQuotes => KeyCode.VcQuote, // 单引号（'）
-            Key.OemOpenBrackets => KeyCode.VcOpenBracket, // 左括号（[）
-            Key.OemCloseBrackets => KeyCode.VcCloseBracket, // 右括号（]）
-            Key.OemPipe => KeyCode.VcBackslash, // 竖线（|）
-            Key.OemTilde => KeyCode.VcBackQuote, // 波浪号（~）
-            
-            // 小键盘数字键
-            Key.NumPad0 => KeyCode.VcNumPad0,
-            Key.NumPad1 => KeyCode.VcNumPad1,
-            Key.NumPad2 => KeyCode.VcNumPad2,
-            Key.NumPad3 => KeyCode.VcNumPad3,
-            Key.NumPad4 => KeyCode.VcNumPad4,
-            Key.NumPad5 => KeyCode.VcNumPad5,
-            Key.NumPad6 => KeyCode.VcNumPad6,
-            Key.NumPad7 => KeyCode.VcNumPad7,
-            Key.NumPad8 => KeyCode.VcNumPad8,
-            Key.NumPad9 => KeyCode.VcNumPad9,
-
-            // 小键盘运算键
-            Key.Add => KeyCode.VcNumPadAdd, // 小键盘加号
-            Key.Subtract => KeyCode.VcNumPadSubtract, // 小键盘减号
-            Key.Multiply => KeyCode.VcNumPadMultiply, // 小键盘乘号
-            Key.Divide => KeyCode.VcNumPadDivide, // 小键盘除号
-            Key.Decimal => KeyCode.VcNumPadSeparator, // 小键盘小数点
-
-            // F1-F12 功能键
-            Key.F1 => KeyCode.VcF1,
-            Key.F2 => KeyCode.VcF2,
-            Key.F3 => KeyCode.VcF3,
-            Key.F4 => KeyCode.VcF4,
-            Key.F5 => KeyCode.VcF5,
-            Key.F6 => KeyCode.VcF6,
-            Key.F7 => KeyCode.VcF7,
-            Key.F8 => KeyCode.VcF8,
-            Key.F9 => KeyCode.VcF9,
-            Key.F10 => KeyCode.VcF10,
-            Key.F11 => KeyCode.VcF11,
-            Key.F12 => KeyCode.VcF12,
-            Key.F13 => KeyCode.VcF13,
-            Key.F14 => KeyCode.VcF14,
-            Key.F15 => KeyCode.VcF15,
-            Key.F16 => KeyCode.VcF16,
-            Key.F17 => KeyCode.VcF17,
-            Key.F18 => KeyCode.VcF18,
-            Key.F19 => KeyCode.VcF19,
-            Key.F20 => KeyCode.VcF20,
-            Key.F21 => KeyCode.VcF21,
-            Key.F22 => KeyCode.VcF22,
-            Key.F23 => KeyCode.VcF23,
-            Key.F24 => KeyCode.VcF24,
-
-            // 方向键
-            Key.Up => KeyCode.VcUp,
-            Key.Down => KeyCode.VcDown,
-            Key.Left => KeyCode.VcLeft,
-            Key.Right => KeyCode.VcRight,
-
-            // 导航键
-            Key.Home => KeyCode.VcHome,
-            Key.End => KeyCode.VcEnd,
-            Key.PageUp => KeyCode.VcPageUp,
-            Key.PageDown => KeyCode.VcPageDown,
-            Key.Insert => KeyCode.VcInsert,
-            Key.Delete => KeyCode.VcDelete,
-
-            // 常用控制键
-            Key.Enter => KeyCode.VcEnter,
-            Key.Space => KeyCode.VcSpace,
-            Key.Tab => KeyCode.VcTab,
-            Key.Back => KeyCode.VcBackspace,
-            Key.Escape => KeyCode.VcEscape,
-            Key.CapsLock => KeyCode.VcCapsLock,
-            Key.NumLock => KeyCode.VcNumLock,
-            Key.Scroll => KeyCode.VcScrollLock,
-            Key.Pause => KeyCode.VcPause,
-            Key.PrintScreen => KeyCode.VcPrintScreen,
-
-            // 其他键（字母等）保持原有逻辑
-            _ => ErrorHandle(gesture)
+            Key.D0 => KeyCode.Vc0, Key.D1 => KeyCode.Vc1, Key.D2 => KeyCode.Vc2, Key.D3 => KeyCode.Vc3, Key.D4 => KeyCode.Vc4,
+            Key.D5 => KeyCode.Vc5, Key.D6 => KeyCode.Vc6, Key.D7 => KeyCode.Vc7, Key.D8 => KeyCode.Vc8, Key.D9 => KeyCode.Vc9,
+            Key.OemPlus => KeyCode.VcEquals, Key.OemMinus => KeyCode.VcMinus, Key.OemComma => KeyCode.VcComma, Key.OemPeriod => KeyCode.VcPeriod,
+            Key.OemQuestion => KeyCode.VcSlash, Key.OemSemicolon => KeyCode.VcSemicolon, Key.OemQuotes => KeyCode.VcQuote,
+            Key.OemOpenBrackets => KeyCode.VcOpenBracket, Key.OemCloseBrackets => KeyCode.VcCloseBracket, Key.OemPipe => KeyCode.VcBackslash, Key.OemTilde => KeyCode.VcBackQuote,
+            Key.NumPad0 => KeyCode.VcNumPad0, Key.NumPad1 => KeyCode.VcNumPad1, Key.NumPad2 => KeyCode.VcNumPad2, Key.NumPad3 => KeyCode.VcNumPad3, Key.NumPad4 => KeyCode.VcNumPad4,
+            Key.NumPad5 => KeyCode.VcNumPad5, Key.NumPad6 => KeyCode.VcNumPad6, Key.NumPad7 => KeyCode.VcNumPad7, Key.NumPad8 => KeyCode.VcNumPad8, Key.NumPad9 => KeyCode.VcNumPad9,
+            Key.Add => KeyCode.VcNumPadAdd, Key.Subtract => KeyCode.VcNumPadSubtract, Key.Multiply => KeyCode.VcNumPadMultiply, Key.Divide => KeyCode.VcNumPadDivide, Key.Decimal => KeyCode.VcNumPadSeparator,
+            Key.F1 => KeyCode.VcF1, Key.F2 => KeyCode.VcF2, Key.F3 => KeyCode.VcF3, Key.F4 => KeyCode.VcF4, Key.F5 => KeyCode.VcF5, Key.F6 => KeyCode.VcF6,
+            Key.F7 => KeyCode.VcF7, Key.F8 => KeyCode.VcF8, Key.F9 => KeyCode.VcF9, Key.F10 => KeyCode.VcF10, Key.F11 => KeyCode.VcF11, Key.F12 => KeyCode.VcF12,
+            Key.F13 => KeyCode.VcF13, Key.F14 => KeyCode.VcF14, Key.F15 => KeyCode.VcF15, Key.F16 => KeyCode.VcF16, Key.F17 => KeyCode.VcF17, Key.F18 => KeyCode.VcF18,
+            Key.F19 => KeyCode.VcF19, Key.F20 => KeyCode.VcF20, Key.F21 => KeyCode.VcF21, Key.F22 => KeyCode.VcF22, Key.F23 => KeyCode.VcF23, Key.F24 => KeyCode.VcF24,
+            Key.Up => KeyCode.VcUp, Key.Down => KeyCode.VcDown, Key.Left => KeyCode.VcLeft, Key.Right => KeyCode.VcRight,
+            Key.Home => KeyCode.VcHome, Key.End => KeyCode.VcEnd, Key.PageUp => KeyCode.VcPageUp, Key.PageDown => KeyCode.VcPageDown, Key.Insert => KeyCode.VcInsert, Key.Delete => KeyCode.VcDelete,
+            Key.Enter => KeyCode.VcEnter, Key.Space => KeyCode.VcSpace, Key.Tab => KeyCode.VcTab, Key.Back => KeyCode.VcBackspace, Key.Escape => KeyCode.VcEscape,
+            Key.CapsLock => KeyCode.VcCapsLock, Key.NumLock => KeyCode.VcNumLock, Key.Scroll => KeyCode.VcScrollLock, Key.Pause => KeyCode.VcPause, Key.PrintScreen => KeyCode.VcPrintScreen,
+            _ => Enum.TryParse<KeyCode>($"Vc{g.Key}", out var x) ? x : KeyCode.VcEscape
         };
-
-        // 2. 修复组合修饰键（支持 Ctrl+Shift、Alt+Ctrl 等）
-        var modifiers = EventMask.None;
-        if (gesture.KeyModifiers.HasFlag(KeyModifiers.Control))
-            modifiers |= EventMask.LeftCtrl | EventMask.RightCtrl; // 同时支持左右Ctrl
-        if (gesture.KeyModifiers.HasFlag(KeyModifiers.Alt))
-            modifiers |= EventMask.LeftAlt | EventMask.RightAlt; // 同时支持左右Alt
-        if (gesture.KeyModifiers.HasFlag(KeyModifiers.Shift))
-            modifiers |= EventMask.LeftShift | EventMask.RightShift; // 同时支持左右Shift
-        if (gesture.KeyModifiers.HasFlag(KeyModifiers.Meta))
-            modifiers |= EventMask.LeftMeta | EventMask.RightMeta; // 同时支持左右Win键
-
-        return (keyCode, modifiers);
-    }
-
-    // 处理全局按键事件
-    private static void HandleKeyEvent(object? sender, KeyboardHookEventArgs e)
-    {
-        TaskManager.RunTask(async () =>
-        {
-            try
-            {
-                // 1. 定义：归一化后的修饰键掩码（合并左/右键）
-                const EventMask ControlMask = EventMask.LeftCtrl | EventMask.RightCtrl; // Ctrl 统一掩码
-                const EventMask ShiftMask = EventMask.LeftShift | EventMask.RightShift; // Shift 统一掩码
-                const EventMask AltMask = EventMask.LeftAlt | EventMask.RightAlt; // Alt 统一掩码
-                const EventMask MetaMask = EventMask.LeftMeta | EventMask.RightMeta; // Win 键统一掩码
-
-                // 2. 获取原始修饰键和键码
-                var rawModifiers = e.RawEvent.Mask;
-                var keyCode = e.Data.KeyCode;
-
-                // 3. 修饰键归一化：左/右键 → 统一修饰键
-                var normalizedModifiers = EventMask.None;
-                if ((rawModifiers & ControlMask) != 0) // 包含左Ctrl或右Ctrl → 视为 Control
-                    normalizedModifiers |= ControlMask;
-                if ((rawModifiers & ShiftMask) != 0) // 包含左Shift或右Shift → 视为 Shift
-                    normalizedModifiers |= ShiftMask;
-                if ((rawModifiers & AltMask) != 0) // 包含左Alt或右Alt → 视为 Alt
-                    normalizedModifiers |= AltMask;
-                if ((rawModifiers & MetaMask) != 0) // 包含左Win或右Win → 视为 Meta
-                    normalizedModifiers |= MetaMask;
-
-                // 4. 用归一化后的修饰键匹配（注册时需用相同的统一掩码）
-                if (_commands.TryGetValue((keyCode, normalizedModifiers), out var command) && command.CanExecute(null))
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() => command.Execute(null), DispatcherPriority.Background);
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggerHelper.Error($"热键执行失败: {ex.Message}");
-            }
-        }, noMessage: true);
+        var m = EventMask.None;
+        if (g.KeyModifiers.HasFlag(KeyModifiers.Control)) m |= EventMask.LeftCtrl | EventMask.RightCtrl;
+        if (g.KeyModifiers.HasFlag(KeyModifiers.Alt)) m |= EventMask.LeftAlt | EventMask.RightAlt;
+        if (g.KeyModifiers.HasFlag(KeyModifiers.Shift)) m |= EventMask.LeftShift | EventMask.RightShift;
+        if (g.KeyModifiers.HasFlag(KeyModifiers.Meta)) m |= EventMask.LeftMeta | EventMask.RightMeta;
+        return (k, m);
     }
 }

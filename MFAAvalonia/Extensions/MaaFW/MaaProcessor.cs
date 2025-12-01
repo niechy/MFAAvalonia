@@ -128,7 +128,7 @@ public class MaaProcessor
             {
                 var nameKey = customResource.Name?.Trim() ?? string.Empty;
                 var paths = MaaInterface.ReplacePlaceholder(customResource.Path ?? new(), AppContext.BaseDirectory);
-                customResource.Path = paths;
+                customResource.ResolvedPath = paths;
                 value!.Resources[nameKey] = customResource;
             }
 
@@ -153,7 +153,7 @@ public class MaaProcessor
             if (value != null)
             {
                 Instances.SettingsViewModel.ShowResourceIssues = !string.IsNullOrWhiteSpace(value.Url) || !string.IsNullOrWhiteSpace(value.Github);
-                Instances.SettingsViewModel.ResourceGithub = !string.IsNullOrWhiteSpace(value.Github) ? value.Github : value.Url;
+                Instances.SettingsViewModel.ResourceGithub = (!string.IsNullOrWhiteSpace(value.Github) ? value.Github : value.Url) ?? "";
                 Instances.SettingsViewModel.ResourceIssues = $"{(!string.IsNullOrWhiteSpace(value.Github) ? value.Github : value.Url)}/issues";
 
                 // 加载多语言配置
@@ -317,9 +317,10 @@ public class MaaProcessor
         MaaResource maaResource = null;
         try
         {
-            var resources = Instances.TaskQueueViewModel.CurrentResources
-                    .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource)?.Path
-                ?? [];
+            var currentResource = Instances.TaskQueueViewModel.CurrentResources
+                    .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
+            // 优先使用 ResolvedPath（运行时路径），如果没有则使用 Path
+            var resources = currentResource?.ResolvedPath ?? currentResource?.Path ?? [];
             resources = resources.Select(Path.GetFullPath).ToList();
 
             LoggerHelper.Info($"Resource: {string.Join(",", resources)}");
@@ -902,9 +903,11 @@ public class MaaProcessor
             if (Instances.TaskQueueViewModel.CurrentResources.Any(r => r.Name == Instances.TaskQueueViewModel.CurrentResource))
             {
                 var resources = Instances.TaskQueueViewModel.CurrentResources.FirstOrDefault(r => r.Name == Instances.TaskQueueViewModel.CurrentResource);
-                if (resources?.Path != null)
+                // 优先使用 ResolvedPath（运行时路径），如果没有则使用 Path
+                var resourcePaths = resources?.ResolvedPath ?? resources?.Path;
+                if (resourcePaths != null)
                 {
-                    foreach (var resourcePath in resources.Path)
+                    foreach (var resourcePath in resourcePaths)
                     {
                         var pipeline = Path.Combine(resourcePath, "pipeline");
                         if (!Path.Exists(pipeline))
@@ -944,19 +947,22 @@ public class MaaProcessor
                     }
                 }
             }
+            // 优先使用 ResolvedPath（运行时路径），如果没有则使用 Path
+            var currentRes = Instances.TaskQueueViewModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
             var resourceP = string.IsNullOrWhiteSpace(Instances.TaskQueueViewModel.CurrentResource)
                 ? ResourceBase
-                : (Instances.TaskQueueViewModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource)?.Path?[0]) ?? ResourceBase;
+                : (currentRes?.ResolvedPath?[0] ?? currentRes?.Path?[0]) ?? ResourceBase;
             var resourcePs = string.IsNullOrWhiteSpace(Instances.TaskQueueViewModel.CurrentResource)
                 ? [ResourceBase]
-                : (Instances.TaskQueueViewModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource)?.Path);
+                : (currentRes?.ResolvedPath ?? currentRes?.Path);
+
             if (resourcePs is { Count: > 0 })
             {
                 foreach (var rp in resourcePs)
                 {
                     if (string.IsNullOrWhiteSpace(rp))
                         continue;
-                    
+
                     try
                     {
                         // 验证路径是否有效

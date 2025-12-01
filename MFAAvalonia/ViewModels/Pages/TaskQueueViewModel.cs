@@ -883,17 +883,16 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     [ObservableProperty] private ObservableCollection<MaaInterface.MaaInterfaceResource> _currentResources = [];
 
-    private string _currentResource;
 
     public string CurrentResource
     {
-        get => _currentResource;
+        get => field;
         set
         {
             if (!string.IsNullOrWhiteSpace(value))
             {
                 MaaProcessor.Instance.SetTasker();
-                SetNewProperty(ref _currentResource, value);
+                SetNewProperty(ref field, value);
                 HandlePropertyChanged(ConfigurationKeys.Resource, value);
             }
         }
