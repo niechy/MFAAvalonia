@@ -565,6 +565,7 @@ public class MaaProcessor
                 }
                 catch (Exception ex)
                 {
+                    SafeKillAgentProcess();
                     RootView.AddLogByKey(LangKeys.AgentStartFailed, Brushes.OrangeRed, changeColor: false);
                     LoggerHelper.Error($"{LangKeys.AgentStartFailed.ToLocalization()}: {ex}");
                     ToastHelper.Error(LangKeys.AgentStartFailed.ToLocalization(), ex.Message);
