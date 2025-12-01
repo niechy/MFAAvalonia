@@ -503,10 +503,10 @@ public class MaaProcessor
                     LoggerHelper.Info(
                         $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Any(arg => arg.Contains("-u")) ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
-
                     if (_agentClient.LinkStart(startInfo, token))
                     {
                         _agentProcess = _agentClient.AgentServerProcess;
+                        _agentProcess.Exited += (_, _) => { _agentProcess = null;};
                     }
                     else
                     {
