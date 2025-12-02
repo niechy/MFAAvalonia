@@ -140,14 +140,17 @@ public static class ConfigurationKeys
     
     #endregion
 
-    #region UI设置
-    
-    public const string TaskQueueColumn1Width = "UI.TaskQueue.Column1Width";
-    public const string TaskQueueColumn2Width = "UI.TaskQueue.Column2Width";
-    public const string TaskQueueColumn3Width = "UI.TaskQueue.Column3Width";
-    public const string MainWindowWidth = "UI.MainWindow.Width";
-    public const string MainWindowHeight = "UI.MainWindow.Height";
-    
-    #endregion
+        #region UI设置
+        
+        public const string TaskQueueColumn1Width = "UI.TaskQueue.Column1Width";
+        public const string TaskQueueColumn2Width = "UI.TaskQueue.Column2Width";
+        public const string TaskQueueColumn3Width = "UI.TaskQueue.Column3Width";
+        public const string MainWindowWidth = "UI.MainWindow.Width";
+        public const string MainWindowHeight = "UI.MainWindow.Height";
+        public const string MainWindowPositionX = "UI.MainWindow.PositionX";
+        public const string MainWindowPositionY = "UI.MainWindow.PositionY";
+        public const string MainWindowMaximized = "UI.MainWindow.Maximized";
+        
+        #endregion
     
 }
