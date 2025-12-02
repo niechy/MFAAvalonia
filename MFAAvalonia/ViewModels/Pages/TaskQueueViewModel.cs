@@ -32,7 +32,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     private string win32Key = LangKeys.TabWin32;
     private string adbFallback = "";
     private string win32Fallback = "";
-    
+
     private void UpdateControllerName()
     {
         Adb = adbKey == LangKeys.TabADB ? adbKey.ToLocalization() : LanguageHelper.GetLocalizedDisplayName(adbKey, adbFallback);
@@ -45,7 +45,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         {
             var adb = MaaProcessor.Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(MaaControllerTypes.Adb.ToJsonKey(), StringComparison.OrdinalIgnoreCase));
             var win32 = MaaProcessor.Interface?.Controller?.Find(c => c.Type != null && c.Type.Equals(MaaControllerTypes.Win32.ToJsonKey(), StringComparison.OrdinalIgnoreCase));
-           
+
             if (adb is { Label: not null } or { Name: not null })
             {
                 adbKey = adb.Label ?? string.Empty;
@@ -290,7 +290,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     public static readonly string TRACE = "trace:";
     public static readonly string DEBUG = "debug:";
     public static readonly string CRITICAL = "critical:";
-    
+
     public static bool CheckShouldLog(string content)
     {
         const StringComparison comparison = StringComparison.Ordinal; // 指定匹配规则（避免大小写问题，按需调整）
@@ -452,9 +452,13 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     partial void OnShouldShowChanged(int _)
     {
-        Instances.TaskQueueView.UpdateConnectionLayout();
+        Task.Run(async () =>
+        {
+            await Task.Delay(1000);
+            DispatcherHelper.PostOnMainThread(Instances.TaskQueueView.UpdateConnectionLayout);
+        });
     }
-    
+
     partial void OnCurrentDeviceChanged(object? value)
     {
         ChangedDevice(value);
@@ -498,8 +502,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
     }
 
-    [ObservableProperty]
-    private MaaControllerTypes _currentController =
+    [ObservableProperty] private MaaControllerTypes _currentController =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.CurrentController, MaaControllerTypes.Adb, MaaControllerTypes.None, new UniversalEnumConverter<MaaControllerTypes>());
 
     partial void OnCurrentControllerChanged(MaaControllerTypes value)
