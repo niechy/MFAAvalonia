@@ -775,6 +775,8 @@ public partial class TaskQueueViewModel : ViewModelBase
             4 => Win32InputMethod.PostMessage,
             8 => Win32InputMethod.LegacyEvent,
             16 => Win32InputMethod.PostThreadMessage,
+            32 => Win32InputMethod.SendMessageWithCursorPos,
+            64 => Win32InputMethod.PostMessageWithCursorPos,
             _ => null
         };
     }

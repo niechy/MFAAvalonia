@@ -80,7 +80,11 @@ public partial class ConnectSettingsUserControlModel : ViewModelBase
     [
         Win32ScreencapMethod.FramePool, Win32ScreencapMethod.DXGI_DesktopDup, Win32ScreencapMethod.DXGI_DesktopDup_Window, Win32ScreencapMethod.PrintWindow, Win32ScreencapMethod.ScreenDC, Win32ScreencapMethod.GDI
     ];
-    public static ObservableCollection<Win32InputMethod> Win32ControlInputTypes => [Win32InputMethod.SendMessage, Win32InputMethod.Seize, Win32InputMethod.PostMessage, Win32InputMethod.LegacyEvent, Win32InputMethod.PostThreadMessage];
+    public static ObservableCollection<Win32InputMethod> Win32ControlInputTypes =>
+    [
+        Win32InputMethod.SendMessage, Win32InputMethod.Seize, Win32InputMethod.PostMessage, Win32InputMethod.LegacyEvent, Win32InputMethod.PostThreadMessage, Win32InputMethod.SendMessageWithCursorPos,
+        Win32InputMethod.PostMessageWithCursorPos
+    ];
 
     [ObservableProperty] private AdbScreencapMethods _adbControlScreenCapType =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.AdbControlScreenCapType, AdbScreencapMethods.None, [AdbScreencapMethods.All, AdbScreencapMethods.Default], new UniversalEnumConverter<AdbScreencapMethods>());
