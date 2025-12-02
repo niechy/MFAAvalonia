@@ -450,13 +450,9 @@ public partial class TaskQueueViewModel : ViewModelBase
     [ObservableProperty] private object? _currentDevice;
     private DateTime? _lastExecutionTime;
 
-    partial void OnShouldShowChanged(int _)
+    partial void OnShouldShowChanged(int value)
     {
-        Task.Run(async () =>
-        {
-            await Task.Delay(1000);
-            DispatcherHelper.PostOnMainThread(Instances.TaskQueueView.UpdateConnectionLayout);
-        });
+        DispatcherHelper.PostOnMainThread(() => Instances.TaskQueueView.UpdateConnectionLayout(true));
     }
 
     partial void OnCurrentDeviceChanged(object? value)
@@ -519,7 +515,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void CustomAdb()
+    private void CustomAdb()
     {
         var deviceInfo = CurrentDevice as AdbDeviceInfo;
 

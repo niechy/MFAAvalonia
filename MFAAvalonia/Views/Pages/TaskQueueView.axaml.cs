@@ -82,7 +82,7 @@ public partial class TaskQueueView : UserControl
         UpdateConnectionLayout();
     }
 
-    public void UpdateConnectionLayout()
+    public void UpdateConnectionLayout(bool forceUpdate = false)
     {
         var totalWidth = ConnectionGrid.Bounds.Width;
         if (totalWidth <= 0) return;
@@ -104,8 +104,7 @@ public partial class TaskQueueView : UserControl
             newMode = 1; // 两行布局，DeviceSelector水平
         else
             newMode = 2; // 三行布局，DeviceSelector垂直
-
-        if (newMode == _currentLayoutMode) return;
+        if (newMode == _currentLayoutMode && !forceUpdate) return;
         _currentLayoutMode = newMode;
 
         ConnectionGrid.ColumnDefinitions.Clear();
