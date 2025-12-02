@@ -604,6 +604,9 @@ public partial class MaaInterface
         public List<string>? ChildArgs { get; set; }
         [JsonProperty("identifier")]
         public string? Identifier { get; set; }
+        
+        [JsonProperty("timeout")]
+        public long? Timeout { get; set; }
     }
 
     public class MaaResourceController

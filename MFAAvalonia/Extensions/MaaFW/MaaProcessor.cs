@@ -318,7 +318,7 @@ public class MaaProcessor
         try
         {
             var currentResource = Instances.TaskQueueViewModel.CurrentResources
-                    .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
+                .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
             // 优先使用 ResolvedPath（运行时路径），如果没有则使用 Path
             var resources = currentResource?.ResolvedPath ?? currentResource?.Path ?? [];
             resources = resources.Select(Path.GetFullPath).ToList();
@@ -450,7 +450,7 @@ public class MaaProcessor
                 try
                 {
                     _agentClient = MaaAgentClient.Create(identifier, tasker);
-                    _agentClient.SetTimeout(TimeSpan.FromMinutes(20));
+                    _agentClient.SetTimeout(TimeSpan.FromSeconds(Interface?.Agent?.Timeout ?? 20));
                     _agentClient.AttachDisposeToResource();
                     _agentClient.Releasing += (_, _) => LoggerHelper.Info("退出Agent进程");
 
@@ -515,7 +515,72 @@ public class MaaProcessor
                     }
                     else
                     {
-                        throw new Exception("Failed to LinkStart agentClient!");
+                        // 尝试获取进程的错误输出
+                        var errorMessage = "Failed to LinkStart agentClient!";
+                        var agentProcess = _agentClient.AgentServerProcess;
+                        if (agentProcess != null)
+                        {
+                            try
+                            {
+                                var errorDetails = new StringBuilder();
+
+                                // 如果进程已经退出，尝试读取错误输出
+                                if (agentProcess.HasExited)
+                                {
+                                    var exitCode = agentProcess.ExitCode;
+                                    var stderr = agentProcess.StandardError.ReadToEnd();
+                                    var stdout = agentProcess.StandardOutput.ReadToEnd();
+
+                                    errorDetails.AppendLine($"Agent process exited with code: {exitCode}");
+
+                                    if (!string.IsNullOrWhiteSpace(stderr))
+                                    {
+                                        errorDetails.AppendLine($"StandardError: {stderr}");
+                                        LoggerHelper.Error($"Agent StandardError: {stderr}");
+                                        RootView.AddLog($"Agent Error: {stderr}", Brushes.OrangeRed, changeColor: false);
+                                    }
+                                   
+                                    if (!string.IsNullOrWhiteSpace(stdout))
+                                    {
+                                        errorDetails.AppendLine($"StandardOutput: {stdout}");
+                                        LoggerHelper.Info($"Agent StandardOutput: {stdout}");
+                                    }
+                                    errorMessage = errorDetails.ToString();
+                                }
+                                else
+                                {
+                                    // 进程还在运行但 LinkStart 失败，等待一小段时间让进程退出
+                                    if (agentProcess.WaitForExit(3000))
+                                    {
+                                        var exitCode = agentProcess.ExitCode;
+                                        var stderr = agentProcess.StandardError.ReadToEnd();
+                                        var stdout = agentProcess.StandardOutput.ReadToEnd();
+
+                                        errorDetails.AppendLine($"Agent process exited with code: {exitCode}");
+
+                                        if (!string.IsNullOrWhiteSpace(stderr))
+                                        {
+                                            errorDetails.AppendLine($"StandardError: {stderr}");
+                                            LoggerHelper.Error($"Agent StandardError: {stderr}");
+                                            RootView.AddLog($"Agent Error: {stderr}", Brushes.OrangeRed, changeColor: false);
+
+                                            if (!string.IsNullOrWhiteSpace(stdout))
+                                            {
+                                                errorDetails.AppendLine($"StandardOutput: {stdout}");
+                                                LoggerHelper.Info($"Agent StandardOutput: {stdout}");
+
+                                                errorMessage = errorDetails.ToString();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception readEx)
+                            {
+                                LoggerHelper.Warning($"Failed to read agent process output: {readEx.Message}");
+                            }
+                        }
+                        throw new Exception(errorMessage);
                     }
 
                     _agentProcess.OutputDataReceived += (sender, args) =>
@@ -536,6 +601,10 @@ public class MaaProcessor
                                 if (TaskQueueViewModel.CheckShouldLog(outData))
                                 {
                                     RootView.AddLog(outData);
+                                }
+                                else
+                                {
+                                    LoggerHelper.Info("agent:" + outData);
                                 }
                             });
                         }
@@ -559,6 +628,10 @@ public class MaaProcessor
                                 if (TaskQueueViewModel.CheckShouldLog(outData))
                                 {
                                     RootView.AddLog(outData);
+                                }
+                                else
+                                {
+                                    LoggerHelper.Info("agent:" + outData);
                                 }
                             });
                         }
