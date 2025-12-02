@@ -504,20 +504,84 @@ public class MaaProcessor
                     LoggerHelper.Info(
                         $"Agent Command: {program} {(program!.Contains("python") && replacedArgs.Contains(".py") && !replacedArgs.Any(arg => arg.Contains("-u")) ? "-u " : "")}{string.Join(" ", replacedArgs)} {_agentClient.Id} "
                         + $"socket_id: {_agentClient.Id}");
-                    if (_agentClient.LinkStart(startInfo, token))
+                    IMaaAgentClient.AgentServerStartupMethod method = (s, directory) =>
                     {
-                        _agentProcess = _agentClient.AgentServerProcess;
-                        _agentProcess.Exited += (_, _) =>
+                        _agentProcess = Process.Start(startInfo);
+                        if (_agentProcess == null)
+                            LoggerHelper.Error("Agent start failed!");
+                        else
                         {
-                            LoggerHelper.Info("Agent process exited!");
-                            _agentProcess = null;
-                        };
-                    }
-                    else
+                            _agentProcess.Exited += (_, _) =>
+                            {
+                                LoggerHelper.Info("Agent process exited!");
+                                _agentProcess = null;
+                            };
+                            _agentProcess.OutputDataReceived += (sender, args) =>
+                            {
+                                if (!string.IsNullOrEmpty(args.Data))
+                                {
+                                    var outData = args.Data;
+                                    try
+                                    {
+                                        outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
+                                    }
+                                    catch (Exception)
+                                    {
+                                    }
+
+                                    DispatcherHelper.PostOnMainThread(() =>
+                                    {
+                                        if (TaskQueueViewModel.CheckShouldLog(outData))
+                                        {
+                                            RootView.AddLog(outData);
+                                        }
+                                        else
+                                        {
+                                            LoggerHelper.Info("agent:" + outData);
+                                        }
+                                    });
+                                }
+                            };
+
+                            _agentProcess.ErrorDataReceived += (sender, args) =>
+                            {
+                                if (!string.IsNullOrEmpty(args.Data))
+                                {
+                                    var outData = args.Data;
+                                    try
+                                    {
+                                        outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
+                                    }
+                                    catch (Exception)
+                                    {
+                                    }
+
+                                    DispatcherHelper.PostOnMainThread(() =>
+                                    {
+                                        if (TaskQueueViewModel.CheckShouldLog(outData))
+                                        {
+                                            RootView.AddLog(outData);
+                                        }
+                                        else
+                                        {
+                                            LoggerHelper.Info("agent:" + outData);
+                                        }
+                                    });
+                                }
+                            };
+                            _agentProcess.BeginOutputReadLine();
+                            _agentProcess.BeginErrorReadLine();
+
+                            TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token: token, name: "Agent程序启动");
+
+                        }
+                        return _agentProcess;
+                    };
+                    if (!_agentClient.LinkStart(method, token))
                     {
                         // 尝试获取进程的错误输出
                         var errorMessage = "Failed to LinkStart agentClient!";
-                        var agentProcess = _agentClient.AgentServerProcess;
+                        var agentProcess = _agentProcess;
                         if (agentProcess != null)
                         {
                             try
@@ -582,65 +646,6 @@ public class MaaProcessor
                         }
                         throw new Exception(errorMessage);
                     }
-
-                    _agentProcess.OutputDataReceived += (sender, args) =>
-                    {
-                        if (!string.IsNullOrEmpty(args.Data))
-                        {
-                            var outData = args.Data;
-                            try
-                            {
-                                outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
-                            }
-                            catch (Exception)
-                            {
-                            }
-
-                            DispatcherHelper.PostOnMainThread(() =>
-                            {
-                                if (TaskQueueViewModel.CheckShouldLog(outData))
-                                {
-                                    RootView.AddLog(outData);
-                                }
-                                else
-                                {
-                                    LoggerHelper.Info("agent:" + outData);
-                                }
-                            });
-                        }
-                    };
-
-                    _agentProcess.ErrorDataReceived += (sender, args) =>
-                    {
-                        if (!string.IsNullOrEmpty(args.Data))
-                        {
-                            var outData = args.Data;
-                            try
-                            {
-                                outData = Regex.Replace(outData, @"\x1B\[[0-9;]*[a-zA-Z]", "");
-                            }
-                            catch (Exception)
-                            {
-                            }
-
-                            DispatcherHelper.PostOnMainThread(() =>
-                            {
-                                if (TaskQueueViewModel.CheckShouldLog(outData))
-                                {
-                                    RootView.AddLog(outData);
-                                }
-                                else
-                                {
-                                    LoggerHelper.Info("agent:" + outData);
-                                }
-                            });
-                        }
-                    };
-                    _agentProcess.BeginOutputReadLine();
-                    _agentProcess.BeginErrorReadLine();
-
-                    TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token: token, name: "Agent程序启动");
-
                 }
                 catch (Exception ex)
                 {
