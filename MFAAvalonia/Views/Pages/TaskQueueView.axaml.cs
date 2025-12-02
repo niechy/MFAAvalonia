@@ -82,7 +82,7 @@ public partial class TaskQueueView : UserControl
         UpdateConnectionLayout();
     }
 
-    private void UpdateConnectionLayout()
+    public void UpdateConnectionLayout()
     {
         var totalWidth = ConnectionGrid.Bounds.Width;
         if (totalWidth <= 0) return;

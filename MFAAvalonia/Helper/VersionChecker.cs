@@ -2389,7 +2389,6 @@ public static class VersionChecker
 
     private static void SaveChangelog(JToken? releaseData, string from)
     {
-        Console.WriteLine(new StackTrace(true));
         try
         {
             var bodyContent = releaseData?[from]?.ToString();

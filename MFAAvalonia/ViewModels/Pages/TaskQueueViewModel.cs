@@ -445,10 +445,16 @@ public partial class TaskQueueViewModel : ViewModelBase
     [ObservableProperty] private string _adb = string.Empty;
     [ObservableProperty] private string _win32 = string.Empty;
 
-    [ObservableProperty] private int shouldShow = 0;
+    [ObservableProperty] private int _shouldShow = 0;
     [ObservableProperty] private ObservableCollection<object> _devices = [];
     [ObservableProperty] private object? _currentDevice;
     private DateTime? _lastExecutionTime;
+
+    partial void OnShouldShowChanged(int _)
+    {
+        Instances.TaskQueueView.UpdateConnectionLayout();
+    }
+    
     partial void OnCurrentDeviceChanged(object? value)
     {
         ChangedDevice(value);
