@@ -3,16 +3,15 @@ using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.Styling;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace SukiUI.Controls;
@@ -47,6 +46,7 @@ public class SukiImageViewer : TemplatedControl
         get => GetValue(SourceProperty);
         set => SetValue(SourceProperty, value);
     }
+
     public static readonly DirectProperty<SukiImageViewer, double> ScaleProperty = AvaloniaProperty.RegisterDirect<SukiImageViewer, double>(
         nameof(Scale), o => o.Scale, (o, v) => o.Scale = v, unsetValue: 1);
 
@@ -275,6 +275,7 @@ public class SukiImageViewer : TemplatedControl
         TranslateX = clampedX;
         TranslateY = clampedY;
     }
+
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
         base.OnApplyTemplate(e);
@@ -290,6 +291,7 @@ public class SukiImageViewer : TemplatedControl
 
         // 设置右键菜单
         SetupContextMenu();
+        CleanupOnStartup();
     }
 
     private void SetupContextMenu()
@@ -309,6 +311,33 @@ public class SukiImageViewer : TemplatedControl
         _ = CopyImageToClipboardAsync();
     }
 
+
+    private static readonly string TempDir = Path.Combine(Path.GetTempPath(), "MFAAvalonia_Clipboard");
+
+    
+    // 应用启动时调用，清理旧的临时文件
+    public static void CleanupOnStartup()
+    {
+        try
+        {
+            if (Directory.Exists(TempDir))
+            {
+                Directory.Delete(TempDir, true);
+            }
+        }
+        catch
+        {
+            /* 忽略清理失败 */
+        }
+    }
+
+    public static string GetTempFilePath(string extension = ".png")
+    {
+        if (!Directory.Exists(TempDir))
+            Directory.CreateDirectory(TempDir);
+        return Path.Combine(TempDir, $"clipboard_{Guid.NewGuid()}{extension}");
+    }
+
     public async Task CopyImageToClipboardAsync()
     {
         if (Source is not Bitmap bitmap) return;
@@ -319,20 +348,22 @@ public class SukiImageViewer : TemplatedControl
 
         try
         {
-            using var memoryStream = new MemoryStream();
-            bitmap.Save(memoryStream);
-            memoryStream.Position = 0;
-            var dataTransferItem = new DataTransferItem();
+            var tempPath = GetTempFilePath();
+            bitmap.Save(tempPath);
             var dataTransfer = new DataTransfer();
-            dataTransferItem.SetBitmap(bitmap);
-            dataTransfer.Add(dataTransferItem);
+            dataTransfer.Add(DataTransferItem.Create(DataFormat.Bitmap, bitmap));
+            var storageFile = await TopLevel.GetTopLevel(this)?.StorageProvider.TryGetFileFromPathAsync(tempPath);
+            if (storageFile != null)
+                dataTransfer.Add(DataTransferItem.CreateFile(storageFile));
             await clipboard.SetDataAsync(dataTransfer);
+
         }
         catch
         {
             // 忽略复制失败的情况
         }
     }
+
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
