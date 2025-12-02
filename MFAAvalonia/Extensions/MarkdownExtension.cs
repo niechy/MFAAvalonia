@@ -19,9 +19,15 @@ public class MarkdownExtension : MarkupExtension
             ? resourcePath
             : Path.GetFullPath(Directory, AppContext.BaseDirectory);
 
+        // 创建 MFALinkCommand 并同步设置 CurrentDocumentPath
+        var linkCommand = new MFALinkCommand
+        {
+            CurrentDocumentPath = targetDir
+        };
+
         return new Markdown.Avalonia.Markdown
         {
-            HyperlinkCommand = new MFALinkCommand(),
+            HyperlinkCommand = linkCommand,
             AssetPathRoot = targetDir,
             StrictBoldItalic = false,
         };

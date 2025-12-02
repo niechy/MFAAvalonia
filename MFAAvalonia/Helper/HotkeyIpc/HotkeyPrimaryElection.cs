@@ -214,7 +214,7 @@ public class HotkeyPrimaryElection : IDisposable
         var appData = Path.Combine(AppContext.BaseDirectory, "config");
         Directory.CreateDirectory(appData);
         return Path.Combine(appData, StateFileName);
-    }
+    }  
 
     public void Dispose()
     {

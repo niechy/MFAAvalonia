@@ -54,8 +54,7 @@ public static class MFAExtensions
             var content = transform ? LanguageHelper.GetLocalizedString(input) : input;
 
             // 2. 判断是否为 URL
-            if (Uri.TryCreate(content, UriKind.Absolute, out var uri) &&
-                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            if (Uri.TryCreate(content, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
                 // 如果是文本文件 URL，获取内容；否则返回超链接格式
                 var path = uri.AbsolutePath;
@@ -83,47 +82,6 @@ public static class MFAExtensions
         }
     }
 
-    /// <summary>
-    /// 从 URL 获取文本内容
-    /// </summary>
-    async private static Task<string> FetchUrlContentAsync(this string url)
-    {
-        try
-        {
-            using var httpClient = VersionChecker.CreateHttpClientWithProxy();
-            httpClient.Timeout = TimeSpan.FromSeconds(10);
-            return await httpClient.GetStringAsync(url);
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Warning($"获取 URL 内容失败: {url}, 错误: {ex.Message}");
-            return string.Empty;
-        }
-    }
-    // public static Dictionary<TKey, MaaNode> MergeMaaNodes<TKey>(
-    //     this IEnumerable<KeyValuePair<TKey, MaaNode>>? taskModels,
-    //     IEnumerable<KeyValuePair<TKey, MaaNode>>? additionalModels) where TKey : notnull
-    // {
-    //
-    //     if (additionalModels == null)
-    //         return taskModels?.ToDictionary() ?? new Dictionary<TKey, MaaNode>();
-    //     return taskModels?
-    //             .Concat(additionalModels)
-    //             .GroupBy(pair => pair.Key)
-    //             .ToDictionary(
-    //                 group => group.Key,
-    //                 group =>
-    //                 {
-    //                     var mergedModel = group.First().Value;
-    //                     foreach (var taskModel in group.Skip(1))
-    //                     {
-    //                         mergedModel.Merge(taskModel.Value);
-    //                     }
-    //                     return mergedModel;
-    //                 }
-    //             )
-    //         ?? new Dictionary<TKey, MaaNode>();
-    // }
 
     public static MaaToken ToMaaToken(
         this Dictionary<string, JToken>? taskModels)
@@ -591,5 +549,226 @@ public static class MFAExtensions
         var sukiResources = sukiTheme.Resources; // SukiTheme 自身的资源字典（包含 ThemeDictionaries）
 
         return sukiResources.TryGetResource(resourceKey, currentThemeVariant, out var value) && value is T t ? t : null;
+    }
+
+    extension(string url)
+    {
+        /// <summary>
+        /// 判断是否为本地绝对路径
+        /// </summary>
+        public bool IsAbsolutePath() => Path.IsPathRooted(url);
+
+        /// <summary>
+        /// 判断是否为网络URL（http/https）
+        /// </summary>
+        public bool IsUrl()
+        {
+            // 网络链接（http/https/ftp等）
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeFtp))
+                return true;
+            return false;
+        }
+
+        /// <summary>
+        /// 从 URL 获取文本内容
+        /// </summary>
+        public async Task<string> FetchUrlContentAsync()
+        {
+            try
+            {
+                using var httpClient = VersionChecker.CreateHttpClientWithProxy();
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
+                return await httpClient.GetStringAsync(url);
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Warning($"获取 URL 内容失败: {url}, 错误: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        public string ResolveUrl(string basePath)
+        {
+            // 1. 处理http链接
+            if (url.IsUrl())
+            {
+                return url;
+            }
+
+            // 获取基准目录（basePath 可能是文件路径或目录路径）
+            string? baseDir = null;
+            if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                // 如果 basePath 是文件路径，获取其目录；如果是目录路径，直接使用
+                if (File.Exists(basePath))
+                    baseDir = Path.GetDirectoryName(basePath);
+                else if (Directory.Exists(basePath))
+                    baseDir = basePath;
+                else
+                    baseDir = Path.GetDirectoryName(basePath);
+            }
+
+            // 判断是否为 Windows 平台
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+            // 2. 处理以 / 或 \ 开头的路径
+            if (url.StartsWith("/") || url.StartsWith("\\"))
+            {
+                // 在 Linux/macOS 上，/ 开头是真正的绝对路径
+                if (!isWindows && url.StartsWith("/"))
+                {
+                    // 先检查文件是否存在
+                    if (File.Exists(url))
+                        return url;
+
+                    // 如果不存在，尝试在基准目录中查找
+                    string fileName = Path.GetFileName(url);
+                    if (!string.IsNullOrEmpty(fileName) && !string.IsNullOrEmpty(baseDir) && Directory.Exists(baseDir))
+                    {
+                        string foundPath = baseDir.FindFileInDirectoryAndSubfolders(fileName);
+                        if (!string.IsNullOrEmpty(foundPath))
+                            return foundPath;
+                    }
+                    // 找不到则返回原始路径
+                    return url;
+                }
+
+                // 在 Windows 上，/ 开头不是真正的绝对路径，作为相对路径处理
+                // 去掉开头的 / 或 \，作为相对路径处理
+                string relativePath = url.TrimStart('/', '\\');
+
+                if (!string.IsNullOrEmpty(baseDir) && Directory.Exists(baseDir))
+                {
+                    // 先尝试直接组合路径
+                    string combinedPath = Path.Combine(baseDir, relativePath);
+                    if (File.Exists(combinedPath))
+                        return combinedPath;
+
+                    // 尝试在基准目录及子目录中查找文件
+                    string fileName = Path.GetFileName(relativePath);
+                    if (!string.IsNullOrEmpty(fileName))
+                    {
+                        string foundPath = baseDir.FindFileInDirectoryAndSubfolders(fileName);
+                        if (!string.IsNullOrEmpty(foundPath))
+                            return foundPath;
+                    }
+                }
+
+                // 找不到则返回组合后的路径
+                return !string.IsNullOrEmpty(baseDir)
+                    ? Path.Combine(baseDir, relativePath)
+                    : relativePath;
+            }
+
+            // 3. 检查真正的绝对路径
+            // Windows: 带盘符的路径（如 C:\xxx 或 D:\xxx）
+            // Linux/macOS: 以 / 开头的路径（已在上面处理）
+            bool isRealAbsolutePath = isWindows
+                ? (url.Length > 1 && url[1] == ':') // Windows: C:\xxx
+                : url.StartsWith("/"); // Linux/macOS: /xxx
+
+            if (isRealAbsolutePath)
+            {
+                if (File.Exists(url))
+                    return url;
+
+                // 提取文件名尝试在基准目录查找
+                string fileName = Path.GetFileName(url);
+                if (!string.IsNullOrEmpty(fileName) && !string.IsNullOrEmpty(baseDir) && Directory.Exists(baseDir))
+                {
+                    string foundPath = baseDir.FindFileInDirectoryAndSubfolders(fileName);
+                    if (!string.IsNullOrEmpty(foundPath))
+                        return foundPath;
+                }
+                // 找不到则返回原始绝对路径
+                return url;
+            }
+
+            // 4. 处理相对路径
+            // 若没有有效基准目录，直接返回
+            if (string.IsNullOrEmpty(baseDir) || !Directory.Exists(baseDir))
+                return url;
+
+            // 解析相对路径为绝对路径
+            string absolutePath = Path.Combine(baseDir, url);
+            string normalizedPath = Path.GetFullPath(absolutePath);
+
+            // 检查解析后的路径是否存在
+            if (File.Exists(normalizedPath))
+                return normalizedPath;
+
+            // 提取文件名尝试在基准目录查找
+            string targetFileName = Path.GetFileName(normalizedPath);
+            if (!string.IsNullOrEmpty(targetFileName) && Directory.Exists(baseDir))
+            {
+                string foundPath = baseDir.FindFileInDirectoryAndSubfolders(targetFileName, true);
+                if (!string.IsNullOrEmpty(foundPath))
+                    return foundPath;
+            }
+            // 所有尝试失败，返回规范化后的路径
+            return normalizedPath;
+        }
+    }
+
+    /// <summary>
+    /// 常见图片扩展名（用于智能匹配）
+    /// </summary>
+    private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico"];
+
+    public static string FindFileInDirectoryAndSubfolders(this string rootDir, string fileName, bool tryAlternativeExtensions = false)
+    {
+        try
+        {
+            // 检查当前目录是否包含目标文件
+            string currentDirFile = Path.Combine(rootDir, fileName);
+            if (File.Exists(currentDirFile))
+                return currentDirFile;
+
+            // 如果启用了扩展名智能匹配，尝试查找同名但不同扩展名的文件
+            if (tryAlternativeExtensions)
+            {
+                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                string currentExt = Path.GetExtension(fileName).ToLowerInvariant();
+
+                // 只对图片文件进行扩展名智能匹配
+                if (ImageExtensions.Contains(currentExt))
+                {
+                    foreach (var ext in ImageExtensions)
+                    {
+                        if (ext == currentExt) continue; // 跳过当前扩展名
+
+                        string alternativeFile = Path.Combine(rootDir, fileNameWithoutExt + ext);
+                        if (File.Exists(alternativeFile))
+                            return alternativeFile;
+                    }
+                }
+            }
+
+            // 递归查找所有子目录
+            foreach (string subDir in Directory.EnumerateDirectories(rootDir))
+            {
+                string foundFile = FindFileInDirectoryAndSubfolders(subDir, fileName, tryAlternativeExtensions);
+                if (!string.IsNullOrEmpty(foundFile))
+                    return foundFile;
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // 忽略无权限目录
+            LoggerHelper.Info($"无权限访问目录：{rootDir}");
+        }
+        catch (PathTooLongException)
+        {
+            // 忽略路径过长
+            LoggerHelper.Info($"路径过长：{rootDir}");
+        }
+        catch (IOException)
+        {
+            // 忽略I/O错误
+            LoggerHelper.Info($"I/O错误：{rootDir}");
+        }
+
+        // 未找到文件
+        return string.Empty;
     }
 }
