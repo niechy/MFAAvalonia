@@ -332,7 +332,7 @@ public class MaaProcessor
                 return new MaaResource(resources);
             }, token: token, name: "资源检测", catchException: true, shouldLog: false, handleError: exception =>
             {
-                HandleInitializationError(exception, LangKeys.LoadResourcesFailed.ToLocalization());
+                HandleInitializationError(exception, LangKeys.LoadResourcesFailed.ToLocalization(), LangKeys.LoadResourcesFailedDetail.ToLocalization());
                 RootView.AddLog(LangKeys.LoadResourcesFailed.ToLocalization(), Brushes.OrangeRed, changeColor: false);
                 InvalidResource = true;
             });
@@ -539,7 +539,7 @@ public class MaaProcessor
                                         LoggerHelper.Error($"Agent StandardError: {stderr}");
                                         RootView.AddLog($"Agent Error: {stderr}", Brushes.OrangeRed, changeColor: false);
                                     }
-                                   
+
                                     if (!string.IsNullOrWhiteSpace(stdout))
                                     {
                                         errorDetails.AppendLine($"StandardOutput: {stdout}");
@@ -759,7 +759,17 @@ public class MaaProcessor
             LoggerHelper.Warning(waringMessage);
         LoggerHelper.Error(e.ToString());
     }
-
+    private void HandleInitializationError(Exception e,
+        string title,
+        string message,
+        bool hasWarning = false,
+        string waringMessage = "")
+    {
+        ToastHelper.Error(title, message);
+        if (hasWarning)
+            LoggerHelper.Warning(waringMessage);
+        LoggerHelper.Error(e.ToString());
+    }
     private MaaController InitializeController(bool isAdb)
     {
         ConnectToMAA();

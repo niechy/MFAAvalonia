@@ -615,7 +615,7 @@
         <value>選擇 Pipeline 檔案</value>
     </data>
     <data name="LoadResourcesFailed" xml:space="preserve">
-        <value>資源載入失敗！請刪除整個資料夾重新下載，或聯絡專案維護者。</value>
+        <value>資源載入失敗！</value>
     </data>
     <data name="LogRecord" xml:space="preserve">
         <value>記錄</value>
@@ -1279,5 +1279,8 @@
     </data>
     <data name="QueryCdkRemainingTime" xml:space="preserve">
         <value>查詢CDK剩餘時長</value>
+    </data>
+    <data name="LoadResourcesFailedDetail" xml:space="preserve">
+        <value>請刪除整個資料夾重新下載，或聯絡專案維護者。</value>
     </data>
 </root>

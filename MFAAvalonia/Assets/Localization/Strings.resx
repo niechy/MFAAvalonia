@@ -622,7 +622,7 @@
         <value>选择 Pipeline 文件</value>
     </data>
     <data name="LoadResourcesFailed" xml:space="preserve">
-        <value>资源加载失败！请删除整个文件夹重新下载，或联系项目维护者。</value>
+        <value>资源加载失败！</value>
     </data>
     <data name="LogRecord" xml:space="preserve">
         <value>日志</value>
@@ -1287,5 +1287,8 @@
     </data>
     <data name="QueryCdkRemainingTime" xml:space="preserve">
         <value>查询CDK剩余时长</value>
+    </data>
+    <data name="LoadResourcesFailedDetail" xml:space="preserve">
+        <value>请删除整个文件夹重新下载，或联系项目维护者。</value>
     </data>
 </root>
