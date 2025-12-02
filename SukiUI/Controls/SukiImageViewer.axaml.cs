@@ -25,7 +25,7 @@ public class SukiImageViewer : TemplatedControl
     public const string PART_Image = "PART_Image";
     public const string PART_Layer = "PART_Layer";
     public const string PC_Moving = ":moving";
-    
+
     private Image? _image;
     private Point? _lastClickPoint;
     private Point? _lastLocation;
@@ -47,16 +47,13 @@ public class SukiImageViewer : TemplatedControl
         get => GetValue(SourceProperty);
         set => SetValue(SourceProperty, value);
     }
-
-    private double _scale = 1;
-
     public static readonly DirectProperty<SukiImageViewer, double> ScaleProperty = AvaloniaProperty.RegisterDirect<SukiImageViewer, double>(
         nameof(Scale), o => o.Scale, (o, v) => o.Scale = v, unsetValue: 1);
 
     public double Scale
     {
-        get => _scale;
-        set => SetAndRaise(ScaleProperty, ref _scale, value);
+        get;
+        set => SetAndRaise(ScaleProperty, ref field, value);
     }
 
     public static readonly DirectProperty<SukiImageViewer, double> MinScaleProperty = AvaloniaProperty.RegisterDirect<SukiImageViewer, double>(
@@ -67,7 +64,7 @@ public class SukiImageViewer : TemplatedControl
         get;
         set => SetAndRaise(MinScaleProperty, ref field, value);
     }
-    
+
     public static readonly DirectProperty<SukiImageViewer, double> TranslateXProperty = AvaloniaProperty.RegisterDirect<SukiImageViewer, double>(
         nameof(TranslateX), o => o.TranslateX, (o, v) => o.TranslateX = v, unsetValue: 0);
 
@@ -117,7 +114,7 @@ public class SukiImageViewer : TemplatedControl
     public static readonly StyledProperty<BitmapInterpolationMode> BitmapInterpolationModeProperty =
         AvaloniaProperty.Register<SukiImageViewer, BitmapInterpolationMode>(
             nameof(BitmapInterpolationMode),
-            defaultValue: BitmapInterpolationMode.HighQuality);
+            defaultValue: BitmapInterpolationMode.None);
 
     public BitmapInterpolationMode BitmapInterpolationMode
     {
@@ -304,12 +301,12 @@ public class SukiImageViewer : TemplatedControl
         copyMenuItem.Bind(HeaderedSelectingItemsControl.HeaderProperty, new DynamicResourceExtension("STRING_MENU_COPY"));
         copyMenuItem.Click += OnCopyImageClick;
         contextMenu.Items.Add(copyMenuItem);
-        _image.ContextMenu = contextMenu;
+        this.ContextMenu = contextMenu;
     }
 
-    private async void OnCopyImageClick(object? sender, RoutedEventArgs e)
+    private void OnCopyImageClick(object? sender, RoutedEventArgs e)
     {
-        await CopyImageToClipboardAsync();
+        _ = CopyImageToClipboardAsync();
     }
 
     public async Task CopyImageToClipboardAsync()

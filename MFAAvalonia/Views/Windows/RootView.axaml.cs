@@ -66,9 +66,14 @@ public partial class RootView : SukiWindow
             MaaProcessor.Instance.InitializeData();
         }
     }
-    
+
 
     private bool _isInitializing = true;
+    private bool _hasValidPosition = false;
+    // 缓存最后一个有效的窗口位置和大小
+    private PixelPoint _lastValidPosition;
+    private double _lastValidWidth;
+    private double _lastValidHeight;
 
     private void HandleWindowStateChange()
     {
@@ -233,12 +238,16 @@ public partial class RootView : SukiWindow
                         GlobalConfiguration.SetValue(ConfigurationKeys.NoAutoStart, bool.FalseString);
 
                         Instances.RootViewModel.LockController = (MaaProcessor.Interface?.Controller?.Count ?? 0) == 1;
-                        
+
                         ConfigurationManager.Current.SetValue(ConfigurationKeys.EnableEdit, ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableEdit, false));
                         DragItemViewModel tempTask = null;
                         foreach (var task in Instances.TaskQueueViewModel.TaskItemViewModels)
                         {
-                            if (task.InterfaceItem?.Advanced is { Count: > 0 } || task.InterfaceItem?.Option is { Count: > 0 } || !string.IsNullOrWhiteSpace(task.InterfaceItem?.Description) || task.InterfaceItem?.Document != null || task.InterfaceItem?.Repeatable == true)
+                            if (task.InterfaceItem?.Advanced is { Count: > 0 }
+                                || task.InterfaceItem?.Option is { Count: > 0 }
+                                || !string.IsNullOrWhiteSpace(task.InterfaceItem?.Description)
+                                || task.InterfaceItem?.Document != null
+                                || task.InterfaceItem?.Repeatable == true)
                             {
                                 tempTask ??= task;
                             }
@@ -328,10 +337,13 @@ public partial class RootView : SukiWindow
                     {
                         Width = width;
                         Height = height;
+                        _lastValidWidth = width;
+                        _lastValidHeight = height;
                         LoggerHelper.Info($"窗口大小已加载: width={width}, height={height}");
                     }
                 }
             }
+
 
             // 加载窗口位置
             var posXStr = ConfigurationManager.Current.GetValue(ConfigurationKeys.MainWindowPositionX, "");
@@ -346,6 +358,8 @@ public partial class RootView : SukiWindow
                     {
                         Position = new PixelPoint(posX, posY);
                         WindowStartupLocation = WindowStartupLocation.Manual;
+                        _hasValidPosition = true; // 标记已有有效位置
+                        _lastValidPosition = new PixelPoint(posX, posY); // 缓存位置
                         LoggerHelper.Info($"窗口位置已加载: X={posX}, Y={posY}");
                     }
                     else
@@ -385,10 +399,7 @@ public partial class RootView : SukiWindow
             foreach (var screen in screens.All)
             {
                 var bounds = screen.Bounds;
-                if (x >= bounds.X - (Width - margin) &&
-                    x <= bounds.X + bounds.Width - margin &&
-                    y >= bounds.Y - (Height - margin) &&
-                    y <= bounds.Y + bounds.Height - margin)
+                if (x >= bounds.X - (Width - margin) && x <= bounds.X + bounds.Width - margin && y >= bounds.Y - (Height - margin) && y <= bounds.Y + bounds.Height - margin)
                 {
                     return true;
                 }
@@ -415,6 +426,21 @@ public partial class RootView : SukiWindow
         // 初始化过程中不保存窗口位置
         if (!_isInitializing && WindowState == WindowState.Normal)
         {
+            // 检查位置是否有效（不是 0,0 或者已经确认有效）
+            var position = e.Point;
+            if (position.X == 0 && position.Y == 0 && !_hasValidPosition)
+            {
+                // 忽略初始的 (0, 0) 位置
+                return;
+            }
+
+            // 一旦位置不是 (0, 0)，标记为有效并缓存位置
+            if (position.X != 0 || position.Y != 0)
+            {
+                _hasValidPosition = true;
+                _lastValidPosition = position;
+            }
+
             SaveWindowSizeAndPosition();
         }
     }
@@ -444,14 +470,38 @@ public partial class RootView : SukiWindow
                 double height = Height;
                 if (width > 100 && height > 100) // 确保有效的窗口大小
                 {
+                    _lastValidWidth = width;
+                    _lastValidHeight = height;
                     ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowWidth, width.ToString());
                     ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowHeight, height.ToString());
                 }
 
-                // 保存窗口位置
+                // 保存窗口位置 - 只有在位置有效时才保存
                 var position = Position;
-                ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionX, position.X.ToString());
-                ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionY, position.Y.ToString());
+                if (position.X != 0 || position.Y != 0)
+                {
+                    _hasValidPosition = true;
+                    _lastValidPosition = position;
+                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionX, position.X.ToString());
+                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionY, position.Y.ToString());
+                }
+                else if (_hasValidPosition)
+                {
+                    // 如果当前位置是 (0, 0) 但之前有有效位置，使用缓存的位置
+                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionX, _lastValidPosition.X.ToString());
+                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionY, _lastValidPosition.Y.ToString());
+                }
+            }
+            else if (_hasValidPosition)
+            {
+                // 如果窗口不是正常状态（如最大化或最小化），使用缓存的大小和位置
+                if (_lastValidWidth > 100 && _lastValidHeight > 100)
+                {
+                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowWidth, _lastValidWidth.ToString());
+                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowHeight, _lastValidHeight.ToString());
+                }
+                ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionX, _lastValidPosition.X.ToString());
+                ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionY, _lastValidPosition.Y.ToString());
             }
         }
         catch (Exception ex)
