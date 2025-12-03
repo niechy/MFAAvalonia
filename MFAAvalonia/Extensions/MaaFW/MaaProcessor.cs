@@ -246,11 +246,12 @@ public class MaaProcessor
         MaaTasker ??= (await InitializeMaaTasker(token)).Item1;
         return MaaTasker;
     }
+    
     public async Task<(MaaTasker?, bool, bool)> GetTaskerAndBoolAsync(CancellationToken token = default)
     {
-        var MaaTaskerTuple = await InitializeMaaTasker(token);
-        MaaTasker ??= MaaTaskerTuple.Item1;
-        return (MaaTasker, MaaTaskerTuple.Item2, MaaTaskerTuple.Item3);
+        var tuple = MaaTasker != null ? (MaaTasker, false, false) : await InitializeMaaTasker(token);
+        MaaTasker ??= tuple.Item1;
+        return (MaaTasker, tuple.Item2, tuple.Item3);
     }
 
     public ObservableCollection<DragItemViewModel> TasksSource { get; private set; } =
