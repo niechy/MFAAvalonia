@@ -23,12 +23,20 @@ public class AvaloniaMemoryCracker : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
     private Task? _monitorTask;
+    // 缓存当前进程句柄，避免重复创建 Process 对象导致句柄泄漏
+    private readonly IntPtr _currentProcessHandle;
 
     // 内存历史记录（用于诊断泄漏趋势）
     private readonly Queue<(DateTime Time, long Memory)> _memoryHistory = new();
     private const int MaxHistoryCount = 10;
 
     #endregion
+    public AvaloniaMemoryCracker()
+    {
+        // 在构造函数中获取并缓存进程句柄
+        // 注意：这里使用 GetCurrentProcess() 返回的是伪句柄，不需要关闭
+        _currentProcessHandle = Process.GetCurrentProcess().Handle;
+    }
 
     #region 核心逻辑
 
@@ -149,7 +157,16 @@ public class AvaloniaMemoryCracker : IDisposable
     /// <summary>Windows平台优化（工作集调整）</summary>
     private void WindowsMemoryOptimization()
     {
-        SetProcessWorkingSetSize(Process.GetCurrentProcess().Handle, -1, -1);
+        // 使用缓存的进程句柄，避免每次调用都创建新的 Process 对象
+        // 这可以防止句柄泄漏，避免长时间运行后可能导致的堆损坏
+        try
+        {
+            SetProcessWorkingSetSize(_currentProcessHandle, -1, -1);
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Debug($"Windows内存优化失败: {ex.Message}");
+        }
     }
 
     /// <summary>Linux平台优化（释放不常用内存页）</summary>
@@ -213,7 +230,16 @@ public class AvaloniaMemoryCracker : IDisposable
     /// <summary>获取当前进程内存占用（字节）</summary>
     private long GetCurrentMemoryUsage()
     {
-        return Process.GetCurrentProcess().WorkingSet64;
+        // 使用 GC 获取托管内存，避免频繁创建 Process 对象
+        // 这比 Process.GetCurrentProcess().WorkingSet64 更安全，不会导致句柄泄漏
+        try
+        {
+            return GC.GetTotalMemory(false);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     #region 资源释放
