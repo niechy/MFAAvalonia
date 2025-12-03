@@ -246,7 +246,7 @@ public class MaaProcessor
         MaaTasker ??= (await InitializeMaaTasker(token)).Item1;
         return MaaTasker;
     }
-    
+
     public async Task<(MaaTasker?, bool, bool)> GetTaskerAndBoolAsync(CancellationToken token = default)
     {
         var tuple = MaaTasker != null ? (MaaTasker, false, false) : await InitializeMaaTasker(token);
@@ -2044,13 +2044,15 @@ public class MaaProcessor
 
     private void CancelOperations()
     {
-        if (!_agentStarted)
+        // 只有当 Agent 启动失败（不是从未启动）且有进程或客户端需要清理时才调用
+        if (!_agentStarted && (_agentProcess != null || _agentClient != null))
         {
             SafeKillAgentProcess();
         }
         _emulatorCancellationTokenSource?.SafeCancel();
         CancellationTokenSource.SafeCancel();
     }
+
     [SupportedOSPlatform("windows")]
     private static void KillProcessTree(int parentPid)
     {
