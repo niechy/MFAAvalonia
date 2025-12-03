@@ -262,7 +262,7 @@
                             </markup:IfConditionConverter.False>
                         </markup:IfConditionConverter>
                     </StackPanel.Resources>
-                    <Button Classes="Flat Rounded"
+                    <Button Classes="Flat Rounded" IsEnabled="{Binding ToggleEnable}"
                             Command="{Binding ToggleCommand}"
                             Content="{Binding IsRunning, Source={x:Static helper:Instances.RootViewModel}, Converter={StaticResource StatusConditionConverter}}"
                             FontWeight="DemiBold"

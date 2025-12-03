@@ -1986,66 +1986,72 @@ public class MaaProcessor
 
     #region 停止任务
 
+    private Lock stop = new Lock();
     public void Stop(MFATask.MFATaskStatus status, bool finished = false, bool onlyStart = false, Action? action = null)
     {
-        LoggerHelper.Info("Stop Status: " + Status);
-        if (Status == MFATask.MFATaskStatus.STOPPING)
-            return;
-        Status = MFATask.MFATaskStatus.STOPPING;
-        try
+        lock (stop)
         {
-            var isUpdateRelated = TaskQueue.Any(task => task.IsUpdateRelated);
-            if (!ShouldProcessStop(finished))
-            {
-                ToastHelper.Warn(LangKeys.NoTaskToStop.ToLocalization());
-
-                TaskQueue.Clear();
+            LoggerHelper.Info("Stop Status: " + Status);
+            if (Status == MFATask.MFATaskStatus.STOPPING)
                 return;
-            }
-
-            CancelOperations();
-
-            TaskQueue.Clear();
-
-            Instances.RootViewModel.IsRunning = false;
-
-            ExecuteStopCore(finished, async () =>
+            Status = MFATask.MFATaskStatus.STOPPING;
+            Instances.TaskQueueViewModel.ToggleEnable = false;
+            try
             {
-                var stopResult = MaaJobStatus.Succeeded;
-
-                if (status != MFATask.MFATaskStatus.FAILED && status != MFATask.MFATaskStatus.SUCCEEDED)
+                var isUpdateRelated = TaskQueue.Any(task => task.IsUpdateRelated);
+                if (!ShouldProcessStop(finished))
                 {
+                    ToastHelper.Warn(LangKeys.NoTaskToStop.ToLocalization());
 
-                    // 持续尝试停止直到返回 Succeeded
-                    const int maxRetries = 10;
-                    const int retryDelayMs = 500;
-
-                    for (int i = 0; i < maxRetries; i++)
-                    {
-
-                        stopResult = AbortCurrentTasker();
-                        LoggerHelper.Info($"Stopping tasker attempt {i + 1} returned {stopResult}, retrying...");
-                        if (stopResult == MaaJobStatus.Succeeded)
-                            break;
-
-                        await Task.Delay(retryDelayMs);
-                    }
-
+                    TaskQueue.Clear();
+                    return;
                 }
 
-                HandleStopResult(status, stopResult, onlyStart, action, isUpdateRelated);
-            });
-        }
-        catch (Exception ex)
-        {
-            HandleStopException(ex);
+                CancelOperations((status == MFATask.MFATaskStatus.STOPPED && _agentStarted == false));
+
+                TaskQueue.Clear();
+
+                Instances.RootViewModel.IsRunning = false;
+
+                ExecuteStopCore(finished, async () =>
+                {
+                    var stopResult = MaaJobStatus.Succeeded;
+
+                    if (status != MFATask.MFATaskStatus.FAILED && status != MFATask.MFATaskStatus.SUCCEEDED)
+                    {
+
+                        // 持续尝试停止直到返回 Succeeded
+                        const int maxRetries = 10;
+                        const int retryDelayMs = 500;
+
+                        for (int i = 0; i < maxRetries; i++)
+                        {
+
+                            stopResult = AbortCurrentTasker();
+                            LoggerHelper.Info($"Stopping tasker attempt {i + 1} returned {stopResult}, retrying...");
+                            if (stopResult == MaaJobStatus.Succeeded)
+                                break;
+
+                            await Task.Delay(retryDelayMs);
+                        }
+
+                    }
+
+                    HandleStopResult(status, stopResult, onlyStart, action, isUpdateRelated);
+                    Instances.TaskQueueViewModel.ToggleEnable = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                Instances.TaskQueueViewModel.ToggleEnable = true;
+                HandleStopException(ex);
+            }
         }
     }
 
-    private void CancelOperations()
+    private void CancelOperations(bool killAgent = false)
     {
-        // 只有当 Agent 启动失败（不是从未启动）且有进程或客户端需要清理时才调用
-        if (!_agentStarted && (_agentProcess != null || _agentClient != null))
+        if (killAgent)
         {
             SafeKillAgentProcess();
         }

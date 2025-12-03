@@ -111,7 +111,7 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isCommon = true;
     [ObservableProperty] private bool _showSettings;
-
+    [ObservableProperty] private bool _toggleEnable = true;
 
     [ObservableProperty] private ObservableCollection<DragItemViewModel> _taskItemViewModels = [];
 

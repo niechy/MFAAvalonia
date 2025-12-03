@@ -596,6 +596,7 @@ public partial class TaskQueueView : UserControl
 
         return true;
     }
+    
     private string FilterToInteger(string text)
     {
         // 1. 去除所有非数字和非负号字符
