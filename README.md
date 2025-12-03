@@ -103,7 +103,7 @@ _✨ 基于 **[Avalonia](https://github.com/AvaloniaUI/Avalonia)** 的 **[MAAFra
     {
       "name": "任务",
       "entry": "任务接口",
-      "check": true,  //默认为false，任务默认是否被选中
+      "default_check": true,  //默认为false，任务默认是否被选中
       "doc": "文档介绍",  //默认为null，显示在任务设置选项底下，可支持富文本，格式在下方
       "repeatable": true,  //默认为false，任务可不可以重复运行
       "repeat_count": 1,  //任务默认重复运行次数，需要repeatable为true
