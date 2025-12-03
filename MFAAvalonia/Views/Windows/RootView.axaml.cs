@@ -121,8 +121,9 @@ public partial class RootView : SukiWindow
             SaveWindowSizeAndPosition();
 
             LoggerHelper.Info("MFA Closed!");
-
+            
             MaaProcessor.Instance.SetTasker();
+            CustomClassLoader.Dispose();
             LoggerHelper.DisposeLogger();
             GlobalHotkeyService.Shutdown();
             Program.ReleaseMutex();

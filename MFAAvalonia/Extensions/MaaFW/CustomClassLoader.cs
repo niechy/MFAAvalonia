@@ -83,7 +83,7 @@ public class CustomClassLoader
     private static IEnumerable<CustomValue<object>> LoadAndInstantiateCustomClasses(string directory, string[] interfacesToImplement)
     {
         var customClasses = new List<CustomValue<object>>();
-        
+
         if (!Directory.Exists(directory))
         {
             LoggerHelper.Info($"Custom directory does not exist: {directory}");
@@ -127,9 +127,12 @@ public class CustomClassLoader
             {
                 var name = Path.GetFileNameWithoutExtension(filePath);
                 LoggerHelper.Info($"Trying to parse custom class: {name}");
-                
+
                 var code = File.ReadAllText(filePath);
-                var codeLines = code.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                var codeLines = code.Split(new[]
+                {
+                    '\n'
+                }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
                 var syntaxTree = CSharpSyntaxTree.ParseText(code);
                 var compilation = CSharpCompilation.Create($"DynamicAssembly_{name}_{Guid.NewGuid():N}")
@@ -148,8 +151,8 @@ public class CustomClassLoader
                     {
                         var lineInfo = diagnostic.Location.GetLineSpan().StartLinePosition;
                         var lineNumber = lineInfo.Line + 1;
-                        var errorLine = lineNumber <= codeLines.Count 
-                            ? codeLines[lineNumber - 1].Trim() 
+                        var errorLine = lineNumber <= codeLines.Count
+                            ? codeLines[lineNumber - 1].Trim()
                             : "无法获取对应代码行（行号超出范围）";
                         LoggerHelper.Error($"{diagnostic.Id}: {diagnostic.GetMessage()}  [错误行号: {lineNumber}]  [错误代码行: {errorLine}]");
                     }
@@ -202,7 +205,8 @@ public class CustomClassLoader
     private static void OnFileChanged(object sender, FileSystemEventArgs e)
     {
         LoggerHelper.Info($"Custom class file changed: {e.FullPath} ({e.ChangeType})");
-        _shouldLoadCustomClasses = true;_customClasses = null;
+        _shouldLoadCustomClasses = true;
+        _customClasses = null;
     }
 
     /// <summary>
@@ -233,7 +237,8 @@ public class CustomClassLoader
     public static void ForceReload()
     {
         _shouldLoadCustomClasses = true;
-        _customClasses = null;LoggerHelper.Info("Custom classes will be reloaded on next access");
+        _customClasses = null;
+        LoggerHelper.Info("Custom classes will be reloaded on next access");
     }
 
     /// <summary>
@@ -252,6 +257,7 @@ public class CustomClassLoader
             _watcher = null;
             LoggerHelper.Info("File watcher disposed");
         }
-        _customClasses = null;_metadataReferences = null;
+        _customClasses = null;
+        _metadataReferences = null;
     }
 }
