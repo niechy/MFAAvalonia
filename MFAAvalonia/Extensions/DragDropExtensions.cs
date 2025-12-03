@@ -54,13 +54,13 @@ public class DragDropExtensions
         {
             if (args.NewValue.Value)
             {
-                DragDrop.SetAllowDrop(textBox,true);
+                DragDrop.SetAllowDrop(textBox, true);
                 textBox.AddHandler(DragDrop.DragOverEvent, File_DragOver);
                 textBox.AddHandler(DragDrop.DropEvent, File_Drop);
             }
             else
             {
-                DragDrop.SetAllowDrop(textBox,false);
+                DragDrop.SetAllowDrop(textBox, false);
                 textBox.RemoveHandler(DragDrop.DragOverEvent, File_DragOver);
                 textBox.RemoveHandler(DragDrop.DropEvent, File_Drop);
             }
@@ -358,7 +358,7 @@ public class DragDropExtensions
 
     private static void OnDrop(object? sender, DragEventArgs e)
     {
-        if (sender is not ListBox listBox || listBox.ItemsSource is not IList items || !e.DataTransfer.TryGetText(out string sourceIndexStr) ||  !int.TryParse(sourceIndexStr, out int sourceIndex))
+        if (sender is not ListBox listBox || listBox.ItemsSource is not IList items || !e.DataTransfer.TryGetText(out string sourceIndexStr) || !int.TryParse(sourceIndexStr, out int sourceIndex))
             return;
         var position = e.GetPosition(listBox);
         var targetIndex = GetTargetIndex(listBox, position);
@@ -453,11 +453,22 @@ public class DragDropExtensions
         if (sourceIndex < targetIndex)
             targetIndex--;
 
-        affectedItems.Add(new ListBoxItemAndIndex(listBox.ContainerFromIndex(sourceIndex) as ListBoxItem, sourceIndex, targetIndex));
+        var sourceContainer = listBox.ContainerFromIndex(sourceIndex) as ListBoxItem;
+        if (sourceContainer?.IsVisible == true)
+        {
+            affectedItems.Add(new ListBoxItemAndIndex(sourceContainer, sourceIndex, targetIndex));
+        }
         foreach (var i in Enumerable.Range(start, end - start))
         {
             if (i != sourceIndex)
-                affectedItems.Add(new ListBoxItemAndIndex(listBox.ContainerFromIndex(i) as ListBoxItem, i, i + increment));
+            {
+                var container = listBox.ContainerFromIndex(i) as ListBoxItem;
+                // 只添加可见的项目到动画列表
+                if (container?.IsVisible == true)
+                {
+                    affectedItems.Add(new ListBoxItemAndIndex(container, i, i + increment));
+                }
+            }
         }
         return affectedItems;
     }
@@ -466,17 +477,83 @@ public class DragDropExtensions
         IEnumerable<ListBoxItemAndIndex> items,
         Action action)
     {
-        var animations = items.Select(item =>
+        // 构建可见项的数据索引列表（按顺序）
+        var visibleIndices = new List<int>();
+        for (int i = 0; i < listBox.ItemCount; i++)
         {
-            var startY = listBox.ContainerFromIndex(item.SourceIndex).Bounds.Y;
-            var endY = listBox.ContainerFromIndex(item.TargetIndex).Bounds.Y;
+            var container = listBox.ContainerFromIndex(i) as ListBoxItem;
+            if (container?.IsVisible == true)
+            {
+                visibleIndices.Add(i);
+            }
+        }
 
-            return AnimateItemMovement(item.ListBoxItem, 0, endY - startY, GetAnimationDuration(listBox));
+        var itemsList = items.ToList();
+        // 找出被拖动的源项（它的 SourceIndex 和 TargetIndex 差距最大的那个）
+        var draggedItem = itemsList.OrderByDescending(i => Math.Abs(i.TargetIndex - i.SourceIndex)).FirstOrDefault();
+        if (draggedItem == null)
+        {
+            action();
+            return;
+        }
+
+        var animations = itemsList.Select(item =>
+        {
+            // 跳过不可见的项
+            if (item.ListBoxItem == null || !item.ListBoxItem.IsVisible)
+            {
+                return Task.CompletedTask;
+            }
+
+            // 获取当前项在可见项列表中的视觉位置索引
+            var sourceVisualIndex = visibleIndices.IndexOf(item.SourceIndex);
+            if (sourceVisualIndex < 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            int targetVisualIndex;
+
+            // 判断这个项是被拖动的源项还是其他受影响的项
+            bool isDraggedItem = item.SourceIndex == draggedItem.SourceIndex;
+
+            if (isDraggedItem)
+            {
+                // 被拖动的项：计算它在可见项中的目标视觉位置
+                // 目标视觉位置 = 有多少可见项的数据索引小于目标数据索引
+                targetVisualIndex = visibleIndices.Count(vi => vi < item.TargetIndex);
+                // 如果目标索引大于所有可见项，则放到最后
+                if (item.TargetIndex > visibleIndices.Max())
+                {
+                    targetVisualIndex = visibleIndices.Count - 1;
+                }
+            }
+            else
+            {
+                // 其他受影响的项：它们需要移动一个位置来为被拖动的项腾出空间
+                // 如果源项向下移动（sourceIndex < targetIndex），其他项向上移动（-1）
+                // 如果源项向上移动（sourceIndex > targetIndex），其他项向下移动（+1）
+                int direction = draggedItem.SourceIndex < draggedItem.TargetIndex ? -1 : +1;
+                targetVisualIndex = sourceVisualIndex + direction;
+
+                // 确保目标视觉索引在有效范围内
+                targetVisualIndex = Math.Clamp(targetVisualIndex, 0, visibleIndices.Count - 1);
+            }
+
+            // 计算视觉位置的变化量
+            var visualPositionDiff = targetVisualIndex - sourceVisualIndex;
+
+            // 使用项目高度计算实际的Y偏移
+            var itemHeight = item.ListBoxItem.Bounds.Height;
+            var offsetY = visualPositionDiff * itemHeight;
+
+            return AnimateItemMovement(item.ListBoxItem, 0, offsetY, GetAnimationDuration(listBox));
         }).ToList();
         var delayTask = Task.Delay((int)GetAnimationDuration(listBox) - 2).ContinueWith(_ => action());
         animations.Add(delayTask);
         await Task.WhenAll(animations);
     }
+
 
     private static void OnDragLeave(object? sender, DragEventArgs e)
     {
@@ -488,9 +565,10 @@ public class DragDropExtensions
 
     private static int GetSourceIndex(ListBox listBox, Point position, int defaultValue)
     {
-        // 获取滚动视图和相关项
+        // 获取滚动视图和相关项，只获取可见的项
         var items = listBox.GetVisualDescendants()
             .OfType<ListBoxItem>()
+            .Where(item => item.IsVisible)
             .ToList();
 
         if (items.Count == 0) return defaultValue;
@@ -505,7 +583,8 @@ public class DragDropExtensions
             .OfType<ListBoxItem>()
             .FirstOrDefault();
 
-        if (hitItem != null)
+        // 确保命中的项是可见的
+        if (hitItem != null && hitItem.IsVisible)
         {
             // 返回命中项的索引
             return listBox.IndexFromContainer(hitItem);
@@ -522,6 +601,7 @@ public class DragDropExtensions
             .FirstOrDefault();
         var items = listBox.GetVisualDescendants()
             .OfType<ListBoxItem>()
+            .Where(item => item.IsVisible)
             .ToList();
 
         if (items.Count == 0) return -1;
@@ -544,11 +624,11 @@ public class DragDropExtensions
             return -1;
         }
 
-        // 查找命中的ListBoxItem
+        // 查找命中的ListBoxItem，确保是可见的
         var hitItem = hitControl?
             .GetVisualAncestors()
             .OfType<ListBoxItem>()
-            .FirstOrDefault();
+            .FirstOrDefault(item => item.IsVisible);
 
         if (hitItem != null)
         {
@@ -569,7 +649,7 @@ public class DragDropExtensions
     }
 
 
-    // 修改装饰器更新逻辑
+// 修改装饰器更新逻辑
     private static void UpdateAdorner(ListBox listBox, int index, int count)
     {
         var adornerLayer = AdornerLayer.GetAdornerLayer(listBox);
@@ -624,7 +704,7 @@ public class DragDropExtensions
         adorner.UpdatePosition(absolutePos.Y, index == 0, end);
     }
 
-    // 获取ListBox的实际可见宽度
+// 获取ListBox的实际可见宽度
     private static double GetListBoxEffectiveWidth(ListBox listBox)
     {
         // 尝试获取滚动视图
