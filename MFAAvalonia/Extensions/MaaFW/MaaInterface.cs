@@ -45,11 +45,11 @@ public partial class MaaInterface
         [JsonProperty("pipeline_override")]
         public Dictionary<string, JToken>? PipelineOverride { get; set; }
 
-        [ObservableProperty][JsonIgnore] private string _displayName = string.Empty;
+        [ObservableProperty] [JsonIgnore] private string _displayName = string.Empty;
 
-        [ObservableProperty][JsonIgnore] private bool _hasDescription;
+        [ObservableProperty] [JsonIgnore] private bool _hasDescription;
 
-        [ObservableProperty][JsonIgnore] private string _displayDescription = string.Empty;
+        [ObservableProperty] [JsonIgnore] private string _displayDescription = string.Empty;
 
         /// <summary>
         /// 初始化显示名称并注册语言变化监听
@@ -465,8 +465,7 @@ public partial class MaaInterface
         [JsonProperty("description")] public string? Description;
 
         /// <summary>文档说明（旧版兼容）</summary>
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
-        [JsonProperty("doc")]
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("doc")]
         public List<string>? Document;
 
         [JsonProperty("default_check",
@@ -520,15 +519,24 @@ public partial class MaaInterface
         [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
         [JsonProperty("path")]
         public List<string>? Path { get; set; }
-        
+
+        /// <summary>
+        /// 可选。指定该资源包支持的控制器类型列表。
+        /// 数组元素应与 controller 配置中的 name 字段对应。
+        /// 若不指定，则表示支持所有控制器类型。
+        /// </summary>
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        [JsonProperty("controller")]
+        public List<string>? Controller { get; set; }
+
         [JsonIgnore]
         public List<string>? ResolvedPath { get; set; }
 
-        [ObservableProperty][JsonIgnore] private string _displayName = string.Empty;
+        [ObservableProperty] [JsonIgnore] private string _displayName = string.Empty;
 
-        [ObservableProperty][JsonIgnore] private bool _hasDescription = false;
+        [ObservableProperty] [JsonIgnore] private bool _hasDescription = false;
 
-        [ObservableProperty][JsonIgnore] private string _displayDescription = string.Empty;
+        [ObservableProperty] [JsonIgnore] private string _displayDescription = string.Empty;
 
         /// <summary>
         /// 初始化显示名称并注册语言变化监听
@@ -604,7 +612,7 @@ public partial class MaaInterface
         public List<string>? ChildArgs { get; set; }
         [JsonProperty("identifier")]
         public string? Identifier { get; set; }
-        
+
         [JsonProperty("timeout")]
         public long? Timeout { get; set; }
     }
@@ -669,7 +677,7 @@ public partial class MaaInterface
 
     [JsonProperty("welcome")]
     public string? Welcome { get; set; }
-    
+
     [JsonProperty("message")]
     public string? Message { get; set; }
 

@@ -55,7 +55,7 @@ public class TaskLoader(MaaInterface? maaInterface)
 
     private void InitializeResources()
     {
-        var resources = maaInterface?.Resources.Values.Count > 0
+        var allResources = maaInterface?.Resources.Values.Count > 0
             ? maaInterface.Resources.Values.ToList()
             :
             [
@@ -66,14 +66,59 @@ public class TaskLoader(MaaInterface? maaInterface)
                 }
             ];
 
-        foreach (var resource in resources)
+        // 获取当前控制器的名称
+        var currentControllerName = GetCurrentControllerName();
+        
+        // 根据控制器过滤资源
+        var filteredResources = FilterResourcesByController(allResources, currentControllerName);
+
+        foreach (var resource in filteredResources)
         {
             resource.InitializeDisplayName();
         }
-        Instances.TaskQueueViewModel.CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(resources);
-        Instances.TaskQueueViewModel.CurrentResource = ConfigurationManager.Current.GetValue(ConfigurationKeys.Resource, string.Empty);
+        Instances.TaskQueueViewModel.CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(filteredResources);Instances.TaskQueueViewModel.CurrentResource = ConfigurationManager.Current.GetValue(ConfigurationKeys.Resource, string.Empty);
         if (Instances.TaskQueueViewModel.CurrentResources.Count > 0 && Instances.TaskQueueViewModel.CurrentResources.All(r => r.Name != Instances.TaskQueueViewModel.CurrentResource))
             Instances.TaskQueueViewModel.CurrentResource = Instances.TaskQueueViewModel.CurrentResources[0].Name ?? "Default";
+    }
+
+    /// <summary>
+    /// 获取当前控制器的名称
+    /// </summary>
+    private string? GetCurrentControllerName()
+    {
+        var currentControllerType = Instances.TaskQueueViewModel.CurrentController;
+        var controllerTypeKey = currentControllerType.ToJsonKey();
+        
+        // 从 interface 的 controller 配置中查找匹配的控制器
+        var controller = maaInterface?.Controller?.Find(c => 
+            c.Type != null && c.Type.Equals(controllerTypeKey, StringComparison.OrdinalIgnoreCase));
+        
+        return controller?.Name;
+    }
+
+    /// <summary>
+    /// 根据控制器过滤资源
+    /// </summary>
+    /// <param name="resources">所有资源列表</param>
+    /// <param name="controllerName">当前控制器名称</param>
+    /// <returns>过滤后的资源列表</returns>
+    public static List<MaaInterface.MaaInterfaceResource> FilterResourcesByController(
+        List<MaaInterface.MaaInterfaceResource> resources, 
+        string? controllerName)
+    {
+        return resources.Where(r =>{
+            // 如果资源没有指定 controller，则支持所有控制器
+            if (r.Controller == null || r.Controller.Count == 0)
+                return true;
+            
+            // 如果当前控制器名称为空，则显示所有资源
+            if (string.IsNullOrWhiteSpace(controllerName))
+                return true;
+            
+            // 检查资源是否支持当前控制器
+            return r.Controller.Any(c => 
+                c.Equals(controllerName, StringComparison.OrdinalIgnoreCase));
+        }).ToList();
     }
 
     private (List<DragItemViewModel> updateList, List<DragItemViewModel> removeList) SynchronizeTaskItems(
@@ -201,16 +246,14 @@ public class TaskLoader(MaaInterface? maaInterface)
             foreach (var input in io.Inputs)
                 if (!string.IsNullOrEmpty(input.Name) && !option.Data.ContainsKey(input.Name))
                     option.Data[input.Name] = input.Default ?? string.Empty;
-        }
-    }
+        }}
 
     private void UpdateViewModels(IList<DragItemViewModel> drags, List<MaaInterface.MaaInterfaceTask> tasks, ObservableCollection<DragItemViewModel> tasksSource)
     {
         var newItems = tasks.Select(t => new DragItemViewModel(t)).ToList();
         foreach (var item in newItems)
         {
-            if (item.InterfaceItem?.Option != null && !drags.Any())
-                item.InterfaceItem.Option.ForEach(option => SetDefaultOptionValue(maaInterface, option));
+            if (item.InterfaceItem?.Option != null && !drags.Any())item.InterfaceItem.Option.ForEach(option => SetDefaultOptionValue(maaInterface, option));
         }
 
         tasksSource.Clear();
