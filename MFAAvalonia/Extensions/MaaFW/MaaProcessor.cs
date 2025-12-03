@@ -450,7 +450,7 @@ public class MaaProcessor
                 try
                 {
                     _agentClient = MaaAgentClient.Create(identifier, tasker);
-                    _agentClient.SetTimeout(TimeSpan.FromSeconds(Interface?.Agent?.Timeout ?? 20));
+                    _agentClient.SetTimeout(TimeSpan.FromSeconds(Interface?.Agent?.Timeout ?? 120));
                     _agentClient.AttachDisposeToResource();
                     _agentClient.Releasing += (_, _) => LoggerHelper.Info("退出Agent进程");
 
