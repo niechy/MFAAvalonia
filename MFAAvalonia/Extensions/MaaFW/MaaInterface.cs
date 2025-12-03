@@ -279,52 +279,70 @@ public partial class MaaInterface
             };
         }
 
-        private JToken ProcessStringToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
-        {
-            var strVal = token.Value<string>();
-            if (string.IsNullOrEmpty(strVal)) return token;
-
-            string? currentPlaceholder = null;
-            var defaults = GetDefaultValues();
-
-            var newVal = regex.Replace(strVal, match =>
-            {
-                currentPlaceholder = match.Groups[1].Value;
-
-                // 首先尝试从输入值获取
-                if (inputValues.TryGetValue(currentPlaceholder, out var inputStr))
+                /// <summary>
+                /// 特殊标记，表示用户显式输入的 null 值
+                /// </summary>
+                public const string ExplicitNullMarker = "\0null";
+        
+                private JToken? ProcessStringToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
                 {
-                    return inputStr;
-                }
-
-                // 尝试从默认值获取
-                if (defaults.TryGetValue(currentPlaceholder, out var defaultStr))
-                {
-                    return defaultStr;
-                }
-
-                // 保持占位符
-                return match.Value;
-            });
-
-            if (newVal != strVal && currentPlaceholder != null && typeMap.TryGetValue(currentPlaceholder, out var targetType))
-            {
-                try
-                {
-                    if (targetType != typeof(string))
+                    var strVal = token.Value<string>();
+                    if (string.IsNullOrEmpty(strVal)) return token;
+        
+                    string? currentPlaceholder = null;
+                    var defaults = GetDefaultValues();
+                    bool isExplicitNull = false;
+        
+                    var newVal = regex.Replace(strVal, match =>
                     {
-                        var convertedValue = Convert.ChangeType(newVal, targetType);
-                        return JToken.FromObject(convertedValue);
+                        currentPlaceholder = match.Groups[1].Value;
+        
+                        // 首先尝试从输入值获取
+                        if (inputValues.TryGetValue(currentPlaceholder, out var inputStr))
+                        {
+                            // 检查是否是显式 null 标记
+                            if (inputStr == ExplicitNullMarker)
+                            {
+                                isExplicitNull = true;
+                                return string.Empty; // 临时返回空字符串，后面会处理
+                            }
+                            return inputStr;
+                        }
+        
+                        // 尝试从默认值获取
+                        if (defaults.TryGetValue(currentPlaceholder, out var defaultStr))
+                        {
+                            return defaultStr;
+                        }
+        
+                        // 保持占位符
+                        return match.Value;
+                    });
+        
+                    // 如果是显式 null，返回 JValue.CreateNull()
+                    if (isExplicitNull)
+                    {
+                        return JValue.CreateNull();
                     }
+        
+                    if (newVal != strVal && currentPlaceholder != null && typeMap.TryGetValue(currentPlaceholder, out var targetType))
+                    {
+                        try
+                        {
+                            if (targetType != typeof(string))
+                            {
+                                var convertedValue = Convert.ChangeType(newVal, targetType);
+                                return JToken.FromObject(convertedValue);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerHelper.Error($"Option 类型转换失败: {ex.Message}");
+                        }
+                    }
+        
+                    return newVal != strVal ? JToken.FromObject(newVal) : token;
                 }
-                catch (Exception ex)
-                {
-                    LoggerHelper.Error($"Option 类型转换失败: {ex.Message}");
-                }
-            }
-
-            return newVal != strVal ? JToken.FromObject(newVal) : token;
-        }
 
         private JToken ProcessArrayToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
         {

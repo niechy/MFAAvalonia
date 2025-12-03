@@ -8,49 +8,28 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
-using Avalonia.Styling;
-using Avalonia.VisualTree;
-using System.ComponentModel.DataAnnotations;
-using AvaloniaEdit;
-using AvaloniaEdit.Document;
-using AvaloniaEdit.Rendering;
-using AvaloniaExtensions.Axaml.Markup;
-using ExCSS;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
-using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.ViewModels.Pages;
-using MFAAvalonia.ViewModels.UsersControls;
 using MFAAvalonia.Views.UserControls;
 using SukiUI;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Color = Avalonia.Media.Color;
-using FontStyle = Avalonia.Media.FontStyle;
 using FontWeight = Avalonia.Media.FontWeight;
 using HorizontalAlignment = Avalonia.Layout.HorizontalAlignment;
-using Point = Avalonia.Point;
 using VerticalAlignment = Avalonia.Layout.VerticalAlignment;
 using Avalonia.Threading;
 using Avalonia.Xaml.Interactivity;
 using Lang.Avalonia.MarkupExtensions;
-using MFAAvalonia.ViewModels.Other;
 using Newtonsoft.Json.Linq;
-using SukiUI.Extensions;
 
 namespace MFAAvalonia.Views.Pages;
 
@@ -310,35 +289,35 @@ public partial class TaskQueueView : UserControl
         }
     }
 
-        private void RunCheckedFromCurrent(object? sender, RoutedEventArgs e)
+    private void RunCheckedFromCurrent(object? sender, RoutedEventArgs e)
+    {
+        var menuItem = sender as MenuItem;
+        // 空值保护 + 类型校验
+        if (menuItem?.DataContext is DragItemViewModel currentTaskViewModel && DataContext is TaskQueueViewModel vm)
         {
-            var menuItem = sender as MenuItem;
-            // 空值保护 + 类型校验
-            if (menuItem?.DataContext is DragItemViewModel currentTaskViewModel && DataContext is TaskQueueViewModel vm)
+            // 避免任务列表为 null 的异常
+            if (vm.TaskItemViewModels.Count == 0)
+                return;
+
+            // 找到当前任务在列表中的位置
+            int currentTaskIndex = vm.TaskItemViewModels.IndexOf(currentTaskViewModel);
+            // 若当前任务不在列表中，直接退出
+            if (currentTaskIndex < 0)
+                return;
+
+            // 筛选：从当前任务开始，往后所有 IsChecked = true 且支持当前资源包的任务
+            var tasksToRun = vm.TaskItemViewModels
+                .Skip(currentTaskIndex) // 跳过当前任务之前的所有项
+                .Where(task => task.IsChecked && task.IsResourceSupported) // 只保留已勾选且支持当前资源包的任务
+                .ToList(); // 转为列表（避免枚举多次）
+
+            // 有需要运行的任务才调用 Start（避免空集合无效调用）
+            if (tasksToRun.Any())
             {
-                // 避免任务列表为 null 的异常
-                if (vm.TaskItemViewModels.Count == 0)
-                    return;
-    
-                // 找到当前任务在列表中的位置
-                int currentTaskIndex = vm.TaskItemViewModels.IndexOf(currentTaskViewModel);
-                // 若当前任务不在列表中，直接退出
-                if (currentTaskIndex < 0)
-                    return;
-    
-                // 筛选：从当前任务开始，往后所有 IsChecked = true 且支持当前资源包的任务
-                var tasksToRun = vm.TaskItemViewModels
-                    .Skip(currentTaskIndex) // 跳过当前任务之前的所有项
-                    .Where(task => task.IsChecked && task.IsResourceSupported) // 只保留已勾选且支持当前资源包的任务
-                    .ToList(); // 转为列表（避免枚举多次）
-    
-                // 有需要运行的任务才调用 Start（避免空集合无效调用）
-                if (tasksToRun.Any())
-                {
-                    MaaProcessor.Instance.Start(tasksToRun);
-                }
+                MaaProcessor.Instance.Start(tasksToRun);
             }
         }
+    }
 
     #region 任务选项
 
@@ -924,6 +903,9 @@ public partial class TaskQueueView : UserControl
                 option.Data[input.Name] = currentValue;
             }
 
+            // 如果存储的是特殊标记，在 UI 中显示为 "null"
+            var displayValue = currentValue == MaaInterface.MaaInterfaceOption.ExplicitNullMarker ? "null" : currentValue;
+
             var pipelineType = input.PipelineType?.ToLower() ?? "string";
 
             // 对于 bool 类型，使用 ToggleSwitch
@@ -955,7 +937,7 @@ public partial class TaskQueueView : UserControl
                 {
                     MinWidth = 120,
                     Margin = new Thickness(0, 2, 0, 2),
-                    Text = currentValue
+                    Text = displayValue
                 };
                 Grid.SetColumn(textBox, 1);
 
@@ -1016,7 +998,9 @@ public partial class TaskQueueView : UserControl
                         }
                     }
 
-                    option.Data[fieldName] = text;
+                    // 如果输入 "null" 字符串，则存储特殊标记以便在 config 中区分
+                    // 运行时会将特殊标记解析为实际的 null 值
+                    option.Data[fieldName] = text == "null" ? MaaInterface.MaaInterfaceOption.ExplicitNullMarker : text;
 
                     // 生成 pipeline override
                     if (interfaceOption.PipelineOverride != null)

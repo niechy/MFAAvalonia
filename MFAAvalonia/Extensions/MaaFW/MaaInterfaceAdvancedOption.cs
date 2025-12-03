@@ -128,21 +128,34 @@ public class MaaInterfaceAdvancedOption
         }
     }
 // 处理字符串类型的 Token
-    private JToken ProcessStringToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
+    private JToken? ProcessStringToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
     {
         var strVal = token.Value<string>();
         string currentPlaceholder = null;
+        bool isExplicitNull = false;
         var newVal = regex.Replace(strVal, match =>
         {
             currentPlaceholder = match.Groups[1].Value;
             // 首先尝试从输入值获取
             if (inputValues.TryGetValue(currentPlaceholder, out var inputStr))
             {
+                // 检查是否是显式 null 标记
+                if (inputStr == MaaInterface.MaaInterfaceOption.ExplicitNullMarker)
+                {
+                    isExplicitNull = true;
+                    return string.Empty; // 临时返回空字符串，后面会处理
+                }
                 return ApplyTypeConversion(inputStr, currentPlaceholder, typeMap);
             }
             // 输入值不存在，尝试从默认值获取
             return GetDefaultValue(currentPlaceholder, typeMap);
         });
+
+        // 如果是显式 null，返回 JValue.CreateNull()
+        if (isExplicitNull)
+        {
+            return JValue.CreateNull();
+        }
 
         if (newVal != strVal && currentPlaceholder != null)
         {
@@ -181,6 +194,7 @@ public class MaaInterfaceAdvancedOption
         }
         return token; // 未发生变化或处理失败时返回原值
     }
+    
 // 应用类型转换
     private string ApplyTypeConversion(string inputStr, string placeholder, Dictionary<string, Type> typeMap)
     {
