@@ -663,7 +663,7 @@
         <value>No</value>
     </data>
     <data name="NoEmulatorFound" xml:space="preserve">
-        <value>No emulator found! Please ensure that the emulator's ADB function is enabled, bridge mode is disabled, and try connecting again after restarting MFA and the emulator.</value>
+        <value>No emulator found! </value>
     </data>
     <data name="None" xml:space="preserve">
         <value>None</value>
@@ -1282,5 +1282,8 @@
     </data>
     <data name="LoadResourcesFailedDetail" xml:space="preserve">
         <value>Please delete the entire folder and redownload, or contact the project maintainer.</value>
+    </data>
+    <data name="NoEmulatorFoundDetail" xml:space="preserve">
+        <value>Please ensure that the emulator's ADB function is enabled, bridge mode is disabled, and try connecting again after restarting MFA and the emulator.</value>
     </data>
 </root>

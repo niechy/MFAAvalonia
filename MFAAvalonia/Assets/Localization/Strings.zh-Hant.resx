@@ -663,7 +663,7 @@
         <value>否</value>
     </data>
     <data name="NoEmulatorFound" xml:space="preserve">
-        <value>未找到模擬器！請確保模擬器的ADB功能開啟，橋接模式為關閉狀態，重啟MFA和模擬器後重新嘗試連線。</value>
+        <value>未找到模擬器！</value>
     </data>
     <data name="None" xml:space="preserve">
         <value>無</value>
@@ -1282,5 +1282,8 @@
     </data>
     <data name="LoadResourcesFailedDetail" xml:space="preserve">
         <value>請刪除整個資料夾重新下載，或聯絡專案維護者。</value>
+    </data>
+    <data name="NoEmulatorFoundDetail" xml:space="preserve">
+        <value>請確保模擬器的ADB功能開啟，橋接模式為關閉狀態，重啟MFA和模擬器後重新嘗試連線。</value>
     </data>
 </root>

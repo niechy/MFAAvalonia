@@ -896,7 +896,9 @@ public partial class TaskQueueViewModel : ViewModelBase
         if (!hasDevices)
         {
             ToastHelper.Info((
-                isAdb ? LangKeys.NoEmulatorFound : LangKeys.NoWindowFound).ToLocalization());
+                isAdb ? LangKeys.NoEmulatorFound : LangKeys.NoWindowFound).ToLocalization(), (
+                isAdb ? LangKeys.NoEmulatorFoundDetail : "").ToLocalization());
+
         }
     }
 
