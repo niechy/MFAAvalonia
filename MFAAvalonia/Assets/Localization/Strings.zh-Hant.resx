@@ -1286,4 +1286,7 @@
     <data name="NoEmulatorFoundDetail" xml:space="preserve">
         <value>請確保模擬器的ADB功能開啟，橋接模式為關閉狀態，重啟MFA和模擬器後重新嘗試連線。</value>
     </data>
+    <data name="Reset" xml:space="preserve">
+        <value>重置</value>
+    </data>
 </root>

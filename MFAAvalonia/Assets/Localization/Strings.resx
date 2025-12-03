@@ -1095,9 +1095,6 @@
     <data name="GlobalHotkeyServiceError" xml:space="preserve">
         <value>全局热键服务加载失败</value>
     </data>
-    <data name="MultiInstanceModeGlobalHotkeyDisabled" xml:space="preserve">
-        <value>多实例模式：全局热键已禁用</value>
-    </data>
     <data name="UpcomingChanges" xml:space="preserve">
         <value>即将更新</value>
     </data>
@@ -1293,5 +1290,8 @@
     </data>
     <data name="NoEmulatorFoundDetail" xml:space="preserve">
         <value>请确保模拟器的ADB功能打开状态，桥接模式为关闭状态，重启MFA和模拟器后重新尝试连接。</value>
+    </data>
+    <data name="Reset" xml:space="preserve">
+        <value>重置</value>
     </data>
 </root>

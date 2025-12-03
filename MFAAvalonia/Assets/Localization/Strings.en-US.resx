@@ -1286,4 +1286,7 @@
     <data name="NoEmulatorFoundDetail" xml:space="preserve">
         <value>Please ensure that the emulator's ADB function is enabled, bridge mode is disabled, and try connecting again after restarting MFA and the emulator.</value>
     </data>
+    <data name="Reset" xml:space="preserve">
+        <value>Reset</value>
+    </data>
 </root>

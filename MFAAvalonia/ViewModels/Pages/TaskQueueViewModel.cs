@@ -165,6 +165,26 @@ public partial class TaskQueueViewModel : ViewModelBase
         Instances.DialogManager.CreateDialog().WithTitle(LangKeys.AdbEditor.ToLocalization()).WithViewModel(dialog => new AddTaskDialogViewModel(dialog, MaaProcessor.Instance.TasksSource)).TryShow();
     }
 
+    [RelayCommand]
+    private void ResetTasks()
+    {
+        // 清空当前任务列表
+        TaskItemViewModels.Clear();
+
+        // 从 TasksSource 重新填充任务（TasksSource 包含 interface 中定义的原始任务）
+        foreach (var item in MaaProcessor.Instance.TasksSource)
+        {
+            // 克隆任务以避免引用问题
+            TaskItemViewModels.Add(item.Clone());
+        }
+
+        // 更新任务的资源支持状态
+        UpdateTasksForResource(CurrentResource);
+
+        // 保存配置
+        ConfigurationManager.Current.SetValue(ConfigurationKeys.TaskItems, TaskItemViewModels.ToList().Select(model => model.InterfaceItem));
+    }
+
     #endregion
 
     #region 日志
