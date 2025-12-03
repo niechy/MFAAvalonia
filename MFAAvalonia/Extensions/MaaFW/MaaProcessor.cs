@@ -1525,16 +1525,16 @@ public class MaaProcessor
         Instances.TaskQueueViewModel.SetConnected(task?.Status == MaaJobStatus.Succeeded);
     }
 
-        public void Start(bool onlyStart = false, bool checkUpdate = false)
+    public void Start(bool onlyStart = false, bool checkUpdate = false)
+    {
+        if (InitializeData())
         {
-            if (InitializeData())
-            {
-                // 排除不支持当前资源包的任务（IsResourceSupported 为 false 的任务）
-                var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList()
-                    .FindAll(task => (task.IsChecked || task.IsCheckedWithNull == null) && task.IsResourceSupported);
-                StartTask(tasks, onlyStart, checkUpdate);
-            }
+            // 排除不支持当前资源包的任务（IsResourceSupported 为 false 的任务）
+            var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList()
+                .FindAll(task => (task.IsChecked || task.IsCheckedWithNull == null) && task.IsResourceSupported);
+            StartTask(tasks, onlyStart, checkUpdate);
         }
+    }
 
     public void Start(List<DragItemViewModel> dragItemViewModels, bool onlyStart = false, bool checkUpdate = false)
     {
@@ -2372,6 +2372,7 @@ public class MaaProcessor
 
     }
 
+    #endregion
 
     #region 自定义识别和动作注册
 
@@ -2396,10 +2397,10 @@ public class MaaProcessor
                 LoggerHelper.Info("No resource paths found, skipping custom class loading");
                 return;
             }
-            
+
             // LoggerHelper.Info(LangKeys.RegisteringCustomRecognizer.ToLocalization());
             // LoggerHelper.Info(LangKeys.RegisteringCustomAction.ToLocalization());
-
+            resourcePaths.Add(Path.Combine(AppContext.BaseDirectory, "resource"));
             // 遍历所有资源路径，查找 custom 目录
             foreach (var resourcePath in resourcePaths)
             {
@@ -2444,6 +2445,5 @@ public class MaaProcessor
         }
     }
 
-    #endregion
     #endregion
 }

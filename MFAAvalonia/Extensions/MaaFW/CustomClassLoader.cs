@@ -14,7 +14,7 @@ namespace MFAAvalonia.Extensions.MaaFW;
 /// <summary>
 /// 自定义类加载器，用于动态编译和加载 C# 代码文件
 /// </summary>
-public class CustomClassLoader
+public static class CustomClassLoader
 {
     private static List<MetadataReference>? _metadataReferences;
     private static bool _shouldLoadCustomClasses = true;
