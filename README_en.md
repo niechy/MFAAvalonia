@@ -104,7 +104,7 @@ Modify it as follows:
     {
       "name": "Task",
       "entry": "Task Interface",
-      "check": true,  // Default is false, whether the task is selected by default
+      "default_check": true,  // Default is false, whether the task is selected by default
       "doc": "Documentation",  // Default is null, displayed below the task setting options, supports rich text format (details below)
       "repeatable": true,  // Default is false, whether the task can be repeated
       "repeat_count": 1  // Default task repeat count, requires repeatable to be true
