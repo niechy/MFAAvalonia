@@ -7,9 +7,11 @@ using MaaFramework.Binding;
 using MaaFramework.Binding.Buffers;
 using MaaFramework.Binding.Interop.Native;
 using MaaFramework.Binding.Notification;
+using MaaFramework.Binding.Custom;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions.MaaFW.Custom;
 using MFAAvalonia.Helper;
+using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.ViewModels.Other;
@@ -660,7 +662,7 @@ public class MaaProcessor
 
                 _agentStarted = true;
             }
-            // RegisterCustomRecognitionsAndActions(tasker);
+            RegisterCustomRecognitionsAndActions(tasker);
             Instances.TaskQueueViewModel.SetConnected(true);
             //  tasker.Utility.SetOption_Recording(ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false));
             tasker.Global.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
@@ -2369,5 +2371,78 @@ public class MaaProcessor
 
     }
 
+
+    #region 自定义识别和动作注册
+
+    /// <summary>
+    /// 注册自定义识别器和动作
+    /// </summary>
+    /// <param name="tasker">MaaTasker 实例</param>
+    private void RegisterCustomRecognitionsAndActions(MaaTasker tasker)
+    {
+        if (Interface == null) return;
+
+        try
+        {
+
+            // 获取当前资源的自定义目录
+            var currentResource = Instances.TaskQueueViewModel.CurrentResources
+                .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
+            var resourcePaths = currentResource?.ResolvedPath ?? currentResource?.Path;
+
+            if (resourcePaths == null || resourcePaths.Count == 0)
+            {
+                LoggerHelper.Info("No resource paths found, skipping custom class loading");
+                return;
+            }
+            
+            // LoggerHelper.Info(LangKeys.RegisteringCustomRecognizer.ToLocalization());
+            // LoggerHelper.Info(LangKeys.RegisteringCustomAction.ToLocalization());
+
+            // 遍历所有资源路径，查找 custom 目录
+            foreach (var resourcePath in resourcePaths)
+            {
+                var customDir = Path.Combine(resourcePath, "custom");
+                if (!Directory.Exists(customDir))
+                {
+                    LoggerHelper.Info($"Custom directory not found: {customDir}");
+                    continue;
+                }
+
+                var customClasses = CustomClassLoader.GetCustomClasses(customDir, new[]
+                {
+                    nameof(IMaaCustomRecognition),
+                    nameof(IMaaCustomAction)
+                });
+
+                foreach (var customClass in customClasses)
+                {
+                    try
+                    {
+                        if (customClass.Value is IMaaCustomRecognition recognition)
+                        {
+                            tasker.Resource.Register(recognition);
+                            LoggerHelper.Info($"Registered IMaaCustomRecognition: {customClass.Name}");
+                        }
+                        else if (customClass.Value is IMaaCustomAction action)
+                        {
+                            tasker.Resource.Register(action);
+                            LoggerHelper.Info($"Registered IMaaCustomAction: {customClass.Name}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Error($"Failed to register custom class {customClass.Name}: {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"Error during custom recognition/action registration: {ex.Message}");
+        }
+    }
+
+    #endregion
     #endregion
 }
