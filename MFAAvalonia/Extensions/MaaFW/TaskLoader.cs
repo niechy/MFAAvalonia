@@ -68,7 +68,7 @@ public class TaskLoader(MaaInterface? maaInterface)
 
         // 获取当前控制器的名称
         var currentControllerName = GetCurrentControllerName();
-        
+
         // 根据控制器过滤资源
         var filteredResources = FilterResourcesByController(allResources, currentControllerName);
 
@@ -76,7 +76,8 @@ public class TaskLoader(MaaInterface? maaInterface)
         {
             resource.InitializeDisplayName();
         }
-        Instances.TaskQueueViewModel.CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(filteredResources);Instances.TaskQueueViewModel.CurrentResource = ConfigurationManager.Current.GetValue(ConfigurationKeys.Resource, string.Empty);
+        Instances.TaskQueueViewModel.CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(filteredResources);
+        Instances.TaskQueueViewModel.CurrentResource = ConfigurationManager.Current.GetValue(ConfigurationKeys.Resource, string.Empty);
         if (Instances.TaskQueueViewModel.CurrentResources.Count > 0 && Instances.TaskQueueViewModel.CurrentResources.All(r => r.Name != Instances.TaskQueueViewModel.CurrentResource))
             Instances.TaskQueueViewModel.CurrentResource = Instances.TaskQueueViewModel.CurrentResources[0].Name ?? "Default";
     }
@@ -88,11 +89,11 @@ public class TaskLoader(MaaInterface? maaInterface)
     {
         var currentControllerType = Instances.TaskQueueViewModel.CurrentController;
         var controllerTypeKey = currentControllerType.ToJsonKey();
-        
+
         // 从 interface 的 controller 配置中查找匹配的控制器
-        var controller = maaInterface?.Controller?.Find(c => 
+        var controller = maaInterface?.Controller?.Find(c =>
             c.Type != null && c.Type.Equals(controllerTypeKey, StringComparison.OrdinalIgnoreCase));
-        
+
         return controller?.Name;
     }
 
@@ -103,20 +104,21 @@ public class TaskLoader(MaaInterface? maaInterface)
     /// <param name="controllerName">当前控制器名称</param>
     /// <returns>过滤后的资源列表</returns>
     public static List<MaaInterface.MaaInterfaceResource> FilterResourcesByController(
-        List<MaaInterface.MaaInterfaceResource> resources, 
+        List<MaaInterface.MaaInterfaceResource> resources,
         string? controllerName)
     {
-        return resources.Where(r =>{
+        return resources.Where(r =>
+        {
             // 如果资源没有指定 controller，则支持所有控制器
             if (r.Controller == null || r.Controller.Count == 0)
                 return true;
-            
+
             // 如果当前控制器名称为空，则显示所有资源
             if (string.IsNullOrWhiteSpace(controllerName))
                 return true;
-            
+
             // 检查资源是否支持当前控制器
-            return r.Controller.Any(c => 
+            return r.Controller.Any(c =>
                 c.Equals(controllerName, StringComparison.OrdinalIgnoreCase));
         }).ToList();
     }
@@ -177,10 +179,12 @@ public class TaskLoader(MaaInterface? maaInterface)
         oldItem.InterfaceItem.Description = newItem.Description;
         oldItem.InterfaceItem.Document = newItem.Document;
         oldItem.InterfaceItem.Repeatable = newItem.Repeatable;
+        oldItem.InterfaceItem.Resource = newItem.Resource;
 
         UpdateAdvancedOptions(oldItem, newItem);
         UpdateOptions(oldItem, newItem);
     }
+
 
     private void UpdateAdvancedOptions(DragItemViewModel oldItem, MaaInterface.MaaInterfaceTask newItem)
     {
@@ -246,14 +250,17 @@ public class TaskLoader(MaaInterface? maaInterface)
             foreach (var input in io.Inputs)
                 if (!string.IsNullOrEmpty(input.Name) && !option.Data.ContainsKey(input.Name))
                     option.Data[input.Name] = input.Default ?? string.Empty;
-        }}
+        }
+
+    }
 
     private void UpdateViewModels(IList<DragItemViewModel> drags, List<MaaInterface.MaaInterfaceTask> tasks, ObservableCollection<DragItemViewModel> tasksSource)
     {
         var newItems = tasks.Select(t => new DragItemViewModel(t)).ToList();
         foreach (var item in newItems)
         {
-            if (item.InterfaceItem?.Option != null && !drags.Any())item.InterfaceItem.Option.ForEach(option => SetDefaultOptionValue(maaInterface, option));
+            if (item.InterfaceItem?.Option != null && !drags.Any())
+                item.InterfaceItem.Option.ForEach(option => SetDefaultOptionValue(maaInterface, option));
         }
 
         tasksSource.Clear();
@@ -261,5 +268,11 @@ public class TaskLoader(MaaInterface? maaInterface)
 
         if (!Instances.TaskQueueViewModel.TaskItemViewModels.Any())
             Instances.TaskQueueViewModel.TaskItemViewModels = new ObservableCollection<DragItemViewModel>(drags.Any() ? drags : newItems);
+
+        // 根据当前资源更新任务的可见性
+        var currentResource = Instances.TaskQueueViewModel.CurrentResource;
+        Instances.TaskQueueViewModel.UpdateTasksForResource(currentResource);
     }
 }
+
+

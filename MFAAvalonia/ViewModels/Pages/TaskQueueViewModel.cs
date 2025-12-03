@@ -501,65 +501,65 @@ public partial class TaskQueueViewModel : ViewModelBase
     [ObservableProperty] private MaaControllerTypes _currentController =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.CurrentController, MaaControllerTypes.Adb, MaaControllerTypes.None, new UniversalEnumConverter<MaaControllerTypes>());
 
-        partial void OnCurrentControllerChanged(MaaControllerTypes value)
+    partial void OnCurrentControllerChanged(MaaControllerTypes value)
+    {
+        ConfigurationManager.Current.SetValue(ConfigurationKeys.CurrentController, value.ToString());
+        UpdateResourcesForController();
+        Refresh();
+        MaaProcessor.Instance.SetTasker();
+    }
+
+    /// <summary>
+    /// 根据当前控制器更新资源列表
+    /// </summary>
+    public void UpdateResourcesForController()
+    {
+        // 获取所有资源
+        var allResources = MaaProcessor.Interface?.Resources.Values.ToList() ?? new List<MaaInterface.MaaInterfaceResource>();
+
+        if (allResources.Count == 0)
         {
-            ConfigurationManager.Current.SetValue(ConfigurationKeys.CurrentController, value.ToString());
-            UpdateResourcesForController();
-            Refresh();
-            MaaProcessor.Instance.SetTasker();
+            allResources.Add(new MaaInterface.MaaInterfaceResource
+            {
+                Name = "Default",
+                Path = [MaaProcessor.ResourceBase]
+            });
         }
-    
-        /// <summary>
-        /// 根据当前控制器更新资源列表
-        /// </summary>
-        public void UpdateResourcesForController()
+
+        // 获取当前控制器的名称
+        var currentControllerName = GetCurrentControllerName();
+
+        // 根据控制器过滤资源
+        var filteredResources = TaskLoader.FilterResourcesByController(allResources, currentControllerName);
+
+        foreach (var resource in filteredResources)
         {
-            // 获取所有资源
-            var allResources = MaaProcessor.Interface?.Resources.Values.ToList() ?? new List<MaaInterface.MaaInterfaceResource>();
-            
-            if (allResources.Count == 0)
-            {
-                allResources.Add(new MaaInterface.MaaInterfaceResource
-                {
-                    Name = "Default",
-                    Path = [MaaProcessor.ResourceBase]
-                });
-            }
-    
-            // 获取当前控制器的名称
-            var currentControllerName = GetCurrentControllerName();
-            
-            // 根据控制器过滤资源
-            var filteredResources = TaskLoader.FilterResourcesByController(allResources, currentControllerName);
-    
-            foreach (var resource in filteredResources)
-            {
-                resource.InitializeDisplayName();
-            }
-    
-            // 更新资源列表
-            CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(filteredResources);
-            
-            // 如果当前选中的资源不在过滤后的列表中，则选择第一个
-            if (CurrentResources.Count > 0 && CurrentResources.All(r => r.Name != CurrentResource))
-            {
-                CurrentResource = CurrentResources[0].Name ?? "Default";
-            }
+            resource.InitializeDisplayName();
         }
-    
-        /// <summary>
-        /// 获取当前控制器的名称
-        /// </summary>
-        private string? GetCurrentControllerName()
+
+        // 更新资源列表
+        CurrentResources = new ObservableCollection<MaaInterface.MaaInterfaceResource>(filteredResources);
+
+        // 如果当前选中的资源不在过滤后的列表中，则选择第一个
+        if (CurrentResources.Count > 0 && CurrentResources.All(r => r.Name != CurrentResource))
         {
-            var controllerTypeKey = CurrentController.ToJsonKey();
-            
-            // 从 interface 的 controller 配置中查找匹配的控制器
-            var controller = MaaProcessor.Interface?.Controller?.Find(c =>
-                c.Type != null && c.Type.Equals(controllerTypeKey, StringComparison.OrdinalIgnoreCase));
-            
-            return controller?.Name;
+            CurrentResource = CurrentResources[0].Name ?? "Default";
         }
+    }
+
+    /// <summary>
+    /// 获取当前控制器的名称
+    /// </summary>
+    private string? GetCurrentControllerName()
+    {
+        var controllerTypeKey = CurrentController.ToJsonKey();
+
+        // 从 interface 的 controller 配置中查找匹配的控制器
+        var controller = MaaProcessor.Interface?.Controller?.Find(c =>
+            c.Type != null && c.Type.Equals(controllerTypeKey, StringComparison.OrdinalIgnoreCase));
+
+        return controller?.Name;
+    }
 
     [ObservableProperty] private bool _isConnected;
     public void SetConnected(bool isConnected)
@@ -954,7 +954,21 @@ public partial class TaskQueueViewModel : ViewModelBase
                 MaaProcessor.Instance.SetTasker();
                 SetNewProperty(ref field, value);
                 HandlePropertyChanged(ConfigurationKeys.Resource, value);
+                UpdateTasksForResource(value);
             }
+        }
+    }
+
+    /// <summary>
+    /// 根据当前资源更新任务列表的可见性
+    /// </summary>
+    /// <param name="resourceName">资源包名称</param>
+    public void UpdateTasksForResource(string? resourceName)
+    {
+        foreach (var task in TaskItemViewModels)
+        {
+            // 更新每个任务的资源支持状态
+            task.UpdateResourceSupport(resourceName);
         }
     }
 

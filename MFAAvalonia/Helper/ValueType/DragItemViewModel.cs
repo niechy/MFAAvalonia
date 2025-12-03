@@ -12,7 +12,7 @@ public partial class DragItemViewModel : ObservableObject
     public DragItemViewModel(MaaInterface.MaaInterfaceTask? interfaceItem)
     {
         InterfaceItem = interfaceItem;
-        Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName,InterfaceItem.Name  ?? LangKeys.Unnamed);
+        Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName, InterfaceItem.Name ?? LangKeys.Unnamed);
         LanguageHelper.LanguageChanged += OnLanguageChanged;
     }
 
@@ -35,8 +35,7 @@ public partial class DragItemViewModel : ObservableObject
             {
                 _isInitialized = true;
                 SetProperty(ref _isCheckedWithNull, value);
-                if (InterfaceItem != null)
-                    InterfaceItem.Check = IsChecked;
+                if (InterfaceItem != null) InterfaceItem.Check = IsChecked;
             }
             else
             {
@@ -96,12 +95,46 @@ public partial class DragItemViewModel : ObservableObject
 
     [ObservableProperty] private bool _isVisible = true;
 
+    /// <summary>
+    /// 指示任务是否支持当前选中的资源包。
+    /// 当资源包变化时，此属性会被更新。
+    /// </summary>
+    [ObservableProperty] [JsonIgnore] private bool _isResourceSupported = true;
+
+    /// <summary>
+    /// 检查任务是否支持指定的资源包
+    /// </summary>
+    /// <param name="resourceName">资源包名称</param>
+    /// <returns>如果任务支持该资源包或未指定资源限制，则返回 true</returns>
+    public bool SupportsResource(string? resourceName)
+    {
+        // 如果任务没有指定 resource，则支持所有资源包
+        if (InterfaceItem?.Resource == null || InterfaceItem.Resource.Count == 0)
+            return true;
+
+        // 如果资源名称为空，则显示所有任务
+        if (string.IsNullOrWhiteSpace(resourceName))
+            return true;
+
+        // 检查任务是否支持当前资源包
+        return InterfaceItem.Resource.Any(r =>
+            r.Equals(resourceName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// 更新任务对指定资源包的支持状态
+    /// </summary>
+    /// <param name="resourceName">资源包名称</param>
+    public void UpdateResourceSupport(string? resourceName)
+    {
+        IsResourceSupported = SupportsResource(resourceName);
+    }
 
     private void UpdateContent()
     {
         if (!string.IsNullOrEmpty(InterfaceItem?.DisplayName ?? LangKeys.Unnamed))
         {
-            Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName,InterfaceItem.Name  ?? LangKeys.Unnamed);
+            Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName, InterfaceItem.Name ?? LangKeys.Unnamed);
         }
     }
 
@@ -117,7 +150,7 @@ public partial class DragItemViewModel : ObservableObject
     public DragItemViewModel Clone()
     {
         // Clone the InterfaceItem if it's not null
-        MaaInterface.MaaInterfaceTask clonedInterfaceItem = InterfaceItem?.Clone();
+        MaaInterface.MaaInterfaceTask? clonedInterfaceItem = InterfaceItem?.Clone();
 
         // Create a new DragItemViewModel instance with the cloned InterfaceItem
         DragItemViewModel clone = new(clonedInterfaceItem);
@@ -126,6 +159,8 @@ public partial class DragItemViewModel : ObservableObject
         clone.Name = this.Name;
         clone.IsCheckedWithNull = this.IsCheckedWithNull;
         clone.EnableSetting = this.EnableSetting;
+        clone.IsVisible = this.IsVisible;
+        clone.IsResourceSupported = this.IsResourceSupported;
 
         return clone;
     }

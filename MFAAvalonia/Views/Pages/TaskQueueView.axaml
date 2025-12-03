@@ -1,4 +1,5 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
 <UserControl d:DesignHeight="450"
              d:DesignWidth="800"
              mc:Ignorable="d"
@@ -12,7 +13,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:ex="clr-namespace:MFAAvalonia.Extensions"
              xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
-             xmlns:helper="clr-namespace:MFAAvalonia.Helper"
+             xmlns:valueType="clr-namespace:MFAAvalonia.Helper.ValueType"
              xmlns:maa="clr-namespace:MFAAvalonia.Extensions.MaaFW"
              xmlns:markup="https://codewf.com"
              xmlns:controls="clr-namespace:MFAAvalonia.Views.UserControls"
@@ -23,20 +24,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behaviors="using:Avalonia.Xaml.Interactions.Core"
              xmlns:interaction="using:Avalonia.Xaml.Interactivity"
-             xmlns:avalonia="https://github.com/whistyun/Markdown.Avalonia.Tight">
+             xmlns:avalonia="https://github.com/whistyun/Markdown.Avalonia.Tight"
+             xmlns:helper="clr-namespace:MFAAvalonia.Helper">
     <Design.DataContext>
         <pages:TaskQueueViewModel />
     </Design.DataContext>
     <UserControl.Resources>
         <ContextMenu x:Key="TaskMenu">
-                <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
-                          Click="RunSingleTask"
-                          Header="{markup:I18n {x:Static helper:LangKeys.RunSingle}}" />
-                <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
-                          Click="RunCheckedFromCurrent"
-                          Header="{markup:I18n {x:Static helper:LangKeys.RunCheckedFromCurrent}}" />
-                <MenuItem Click="Delete"
-                          Header="{markup:I18n {x:Static helper:LangKeys.Delete}}" />
+            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                      Click="RunSingleTask"
+                      Header="{markup:I18n {x:Static helper:LangKeys.RunSingle}}" />
+            <MenuItem IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                      Click="RunCheckedFromCurrent"
+                      Header="{markup:I18n {x:Static helper:LangKeys.RunCheckedFromCurrent}}" />
+            <MenuItem Click="Delete"
+                      Header="{markup:I18n {x:Static helper:LangKeys.Delete}}" />
         </ContextMenu>
     </UserControl.Resources>
     <Grid ClipToBounds="False"
@@ -185,6 +187,11 @@
                                         <StackPanel />
                                     </ItemsPanelTemplate>
                                 </ListBox.ItemsPanel>
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem" x:DataType="valueType:DragItemViewModel">
+                                        <Setter Property="IsVisible" Value="{Binding IsResourceSupported}" />
+                                    </Style>
+                                </ListBox.Styles>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.TooltipDragLabel}}"
@@ -445,7 +452,7 @@
             </interaction:Interaction.Behaviors>
         </GridSplitter>
         <!-- 右侧列 -->
-        <Grid Grid.Column="4" >
+        <Grid Grid.Column="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -512,7 +519,8 @@
                                                        IconSize="Size16"
                                                        IconVariant="Regular" />
                                 </Button>
-                                <ContentControl Content="{Binding IsConnected, Converter={StaticResource ConnectedConditionConverter}, Source={x:Static helper:Instances.TaskQueueViewModel}}" />
+                                <ContentControl
+                                    Content="{Binding IsConnected, Converter={StaticResource ConnectedConditionConverter}, Source={x:Static helper:Instances.TaskQueueViewModel}}" />
                             </StackPanel>
                         </Grid>
                     </suki:GroupBox.Header>
@@ -560,7 +568,8 @@
                                       HorizontalAlignment="Stretch"
                                       SelectedValue="{Binding CurrentDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                 <ToolTip.Tip>
-                                    <TextBlock Text="{Binding CurrentDevice, Converter={converters:DeviceDisplayConverter}}" />
+                                    <TextBlock
+                                        Text="{Binding CurrentDevice, Converter={converters:DeviceDisplayConverter}}" />
                                 </ToolTip.Tip>
                                 <ComboBox.DataTemplates>
                                     <DataTemplate DataType="binding:AdbDeviceInfo">

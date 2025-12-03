@@ -1522,14 +1522,16 @@ public class MaaProcessor
         Instances.TaskQueueViewModel.SetConnected(task?.Status == MaaJobStatus.Succeeded);
     }
 
-    public void Start(bool onlyStart = false, bool checkUpdate = false)
-    {
-        if (InitializeData())
+        public void Start(bool onlyStart = false, bool checkUpdate = false)
         {
-            var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList().FindAll(task => task.IsChecked || task.IsCheckedWithNull == null);
-            StartTask(tasks, onlyStart, checkUpdate);
+            if (InitializeData())
+            {
+                // 排除不支持当前资源包的任务（IsResourceSupported 为 false 的任务）
+                var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList()
+                    .FindAll(task => (task.IsChecked || task.IsCheckedWithNull == null) && task.IsResourceSupported);
+                StartTask(tasks, onlyStart, checkUpdate);
+            }
         }
-    }
 
     public void Start(List<DragItemViewModel> dragItemViewModels, bool onlyStart = false, bool checkUpdate = false)
     {
@@ -2175,7 +2177,7 @@ public class MaaProcessor
             if (!onlyStart)
             {
                 var list = _tempTasks.Count > 0 ? _tempTasks : Instances.TaskQueueViewModel.TaskItemViewModels.ToList();
-                list.Where(t => t.IsCheckedWithNull == null).ToList().ForEach(d => d.IsCheckedWithNull = false);
+                list.Where(t => t.IsCheckedWithNull == null && !t.IsResourceSupported).ToList().ForEach(d => d.IsCheckedWithNull = false);
 
                 if (_startTime != null)
                 {

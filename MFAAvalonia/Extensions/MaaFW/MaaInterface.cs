@@ -450,34 +450,48 @@ public partial class MaaInterface
         }
     }
 
-    public class MaaInterfaceTask
-    {
-        /// <summary>任务唯一标识符</summary>
-        [JsonProperty("name")] public string? Name;
-
-        /// <summary>任务显示名称，支持国际化（以$开头）。如果未设置，则显示 Name 字段的值。</summary>
-        [JsonProperty("label")] public string? Label;
-
-        /// <summary>任务入口</summary>
-        [JsonProperty("entry")] public string? Entry;
-
-        /// <summary>任务详细描述信息，支持文件路径、URL或直接文本，内容支持Markdown格式。优先于 Document。</summary>
-        [JsonProperty("description")] public string? Description;
-
-        /// <summary>文档说明（旧版兼容）</summary>
-        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("doc")]
-        public List<string>? Document;
-
-        [JsonProperty("default_check",
-            NullValueHandling = NullValueHandling.Include,
-            DefaultValueHandling = DefaultValueHandling.Include)]
-        public bool? Check = false;
-        [JsonProperty("repeatable")] public bool? Repeatable;
-        [JsonProperty("repeat_count")] public int? RepeatCount;
-        [JsonProperty("advanced")] public List<MaaInterfaceSelectAdvanced>? Advanced;
-        [JsonProperty("option")] public List<MaaInterfaceSelectOption>? Option;
-
-        [JsonProperty("pipeline_override")] public Dictionary<string, JToken>? PipelineOverride;
+        public class MaaInterfaceTask
+        {
+            /// <summary>任务唯一标识符，用作任务ID</summary>
+            [JsonProperty("name")] public string? Name;
+    
+            /// <summary>任务显示名称，用于在用户界面中展示。支持国际化字符串（以$开头）。如果未设置，则显示 Name 字段的值。</summary>
+            [JsonProperty("label")] public string? Label;
+    
+            /// <summary>任务入口，为 pipeline 中 Task 的名称</summary>
+            [JsonProperty("entry")] public string? Entry;
+    
+            /// <summary>是否默认选中该任务。Client在初始化时会根据该值决定是否默认勾选该任务。</summary>
+            [JsonProperty("default_check",
+                NullValueHandling = NullValueHandling.Include,
+                DefaultValueHandling = DefaultValueHandling.Include)]
+            public bool? Check = false;
+    
+            /// <summary>任务详细描述信息，帮助用户理解任务功能。支持文件路径、URL或直接文本，内容支持Markdown格式。</summary>
+            [JsonProperty("description")] public string? Description;
+    
+            /// <summary>
+            /// 可选。指定该任务支持的资源包列表。
+            /// 数组元素应与 resource 配置中的 name 字段对应。
+            /// 若不指定，则表示该任务在所有资源包中都可用。
+            /// 当用户选择了某个资源包时，只有支持该资源包的任务才会显示在用户界面中供选择。
+            /// 这允许为不同资源包提供专门的任务配置，比如活动任务只在特定资源包中可用。
+            /// </summary>
+            [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+            [JsonProperty("resource")]
+            public List<string>? Resource;
+    
+            /// <summary>文档说明（旧版兼容）</summary>
+            [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+            [JsonProperty("doc")]
+            public List<string>? Document;
+    
+            [JsonProperty("repeatable")] public bool? Repeatable;
+            [JsonProperty("repeat_count")] public int? RepeatCount;
+            [JsonProperty("advanced")] public List<MaaInterfaceSelectAdvanced>? Advanced;
+            [JsonProperty("option")] public List<MaaInterfaceSelectOption>? Option;
+    
+            [JsonProperty("pipeline_override")] public Dictionary<string, JToken>? PipelineOverride;
 
         /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
         [JsonIgnore]
