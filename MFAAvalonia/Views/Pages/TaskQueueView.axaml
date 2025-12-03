@@ -131,7 +131,7 @@
                                             Margin="2,0,2,0"
                                             Orientation="Horizontal"
                                             VerticalAlignment="Center">
-                                    <Button Classes="Basic Round"
+                                    <Button Classes="Basic Round"  ClipToBounds="False"
                                             Command="{Binding SelectAllCommand}"
                                             Height="16"
                                             IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
@@ -139,11 +139,11 @@
                                             Padding="0"
                                             ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.SelectAll}}"
                                             Width="16">
-                                        <fluent:FluentIcon Icon="SelectAllOn"
+                                        <fluent:FluentIcon Icon="SelectAllOn" 
                                                            IconSize="Size16"
                                                            IconVariant="Regular" />
                                     </Button>
-                                    <Button Classes="Basic Round"
+                                    <Button Classes="Basic Round"  ClipToBounds="False"
                                             Command="{Binding SelectNoneCommand}"
                                             Height="16"
                                             IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
@@ -155,7 +155,7 @@
                                                            IconSize="Size16"
                                                            IconVariant="Regular" />
                                     </Button>
-                                    <Button Classes="Basic Round"
+                                    <Button Classes="Basic Round"  ClipToBounds="False"
                                             Command="{Binding AddTaskCommand}"
                                             Height="16"
                                             IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
@@ -493,9 +493,8 @@
                                         </markup:IfConditionConverter.False>
                                     </markup:IfConditionConverter>
                                 </StackPanel.Resources>
-                                <Button Classes="Basic Round"
+                                <Button Classes="Basic Round"  ClipToBounds="False"
                                         Command="{Binding CustomAdbCommand}"
-                                        Height="16"
                                         IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                                         IsVisible="{calcBinding:Binding 'CurrentController == maa:MaaControllerTypes.Adb'}"
                                         Margin="3,0,2,0"
@@ -506,9 +505,8 @@
                                                        IconSize="Size16"
                                                        IconVariant="Regular" />
                                 </Button>
-                                <Button Classes="Basic Round"
+                                <Button Classes="Basic Round"  ClipToBounds="False"
                                         Command="{Binding RefreshCommand}"
-                                        Height="17"
                                         IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                                         Margin="3,0,3,0"
                                         Padding="0"
@@ -599,29 +597,28 @@
                                        Text="{markup:I18n {x:Static helper:LangKeys.LogRecord}}"
                                        VerticalAlignment="Center" />
                             <StackPanel Orientation="Horizontal"
+                                        ClipToBounds="False"
                                         HorizontalAlignment="Right">
                                 <Button Classes="Basic Round"
                                         Command="{Binding ExportCommand}"
-                                        Height="17"
                                         IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
-                                        Margin="3,0,3,0"
-                                        Padding="0"
+                                        Padding="0" Margin="3,-3,3,0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.ExportLog}}"
                                         VerticalAlignment="Center">
-                                    <fluent:FluentIcon Height="18"
-                                                       Icon="ArrowExport"
-                                                       IconSize="Size16"
+                                    <fluent:FluentIcon Height="20"   
+                                                       Icon="FolderArrowRight" 
+                                                       IconSize="Size16" VerticalAlignment="Center"
                                                        IconVariant="Regular" />
                                 </Button>
+                           
                                 <Button Classes="Basic Round"
                                         Command="{Binding ClearCommand}"
-                                        Height="17"
                                         IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                                         Margin="3,0,3,0"
                                         Padding="0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.ButtonClear}}"
                                         VerticalAlignment="Center">
-                                    <fluent:FluentIcon Height="18"
+                                    <fluent:FluentIcon
                                                        Icon="ArrowSync"
                                                        IconSize="Size16"
                                                        IconVariant="Regular" />
