@@ -1,8 +1,12 @@
 ﻿using Avalonia.Collections;
+using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MFAAvalonia.Configuration;
+using MFAAvalonia.Extensions;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.ViewModels.Other;
@@ -14,7 +18,9 @@ using SukiUI.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MFAAvalonia.ViewModels.UsersControls.Settings;
 
@@ -45,6 +51,26 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
     [ObservableProperty] private bool _shouldMinimizeToTray = ConfigurationManager.Current.GetValue(ConfigurationKeys.ShouldMinimizeToTray, false);
     partial void OnShouldMinimizeToTrayChanged(bool value) => HandlePropertyChanged(ConfigurationKeys.ShouldMinimizeToTray, value);
 
+    // Background Image properties
+    [ObservableProperty] private string? _backgroundImagePath =
+        ConfigurationManager.Current.GetValue(ConfigurationKeys.BackgroundImagePath, string.Empty);
+
+    [ObservableProperty] private Bitmap? _backgroundImage;
+
+    [ObservableProperty] private double _backgroundImageOpacity =
+        ConfigurationManager.Current.GetValue(ConfigurationKeys.BackgroundImageOpacity, 0.2);
+
+    [ObservableProperty] private bool _hasBackgroundImage;
+
+    partial void OnBackgroundImagePathChanged(string? value)
+    {
+        HandlePropertyChanged(ConfigurationKeys.BackgroundImagePath, value ?? string.Empty);
+        LoadBackgroundImage();
+    }
+
+    partial void OnBackgroundImageOpacityChanged(double value) =>
+        HandlePropertyChanged(ConfigurationKeys.BackgroundImageOpacity, value);
+
     protected override void Initialize()
     {
         SupportedLanguages = new AvaloniaList<SupportedLanguage>(LanguageHelper.SupportedLanguages);
@@ -54,6 +80,7 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
             if (_theme.ColorThemes.All(theme => theme.DisplayName != color.DisplayName))
                 _theme.AddColorTheme(color);
         }
+
         CurrentColorTheme = ConfigurationManager.Current.GetValue(ConfigurationKeys.ColorTheme, _theme.ColorThemes.First(t => t.DisplayName.Equals("blue", StringComparison.OrdinalIgnoreCase)));
 
         BaseTheme =
@@ -80,6 +107,70 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
         {
             CurrentLanguage = args.Value.Key;
         };
+
+        // Load background image if path exists
+        LoadBackgroundImage();
+    }
+
+    private void LoadBackgroundImage()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(BackgroundImagePath) && File.Exists(BackgroundImagePath))
+            {
+                BackgroundImage = new Bitmap(BackgroundImagePath);
+                HasBackgroundImage = true;
+            }
+            else
+            {
+                BackgroundImage = null;
+                HasBackgroundImage = false;
+            }
+        }
+        catch
+        {
+            BackgroundImage = null;
+            HasBackgroundImage = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SelectBackgroundImage()
+    {
+        var topLevel = TopLevel.GetTopLevel(Instances.RootView);
+        if (topLevel == null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "SelectBackgroundImage".ToLocalization(),
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType(LangKeys.ImageFilter.ToLocalization())
+                {
+                    Patterns =
+                    [
+                        "*.png",
+                        "*.jpg",
+                        "*.jpeg",
+                        "*.bmp",
+                        "*.gif",
+                        "*.webp"
+                    ]
+                }
+            ]
+        });
+
+        if (files.Count > 0)
+        {
+            BackgroundImagePath = files[0].Path.LocalPath;
+        }
+    }
+
+    [RelayCommand]
+    private void ClearBackgroundImage()
+    {
+        BackgroundImagePath = string.Empty;
     }
 
     [RelayCommand]
@@ -107,7 +198,7 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
         OtherColorThemes.Add(color);
         ConfigurationManager.Current.SetValue(ConfigurationKeys.OtherColorTheme, OtherColorThemes);
     }
-    
+
     public void RemoveOtherColor(SukiColorTheme color)
     {
         OtherColorThemes.Remove(color);

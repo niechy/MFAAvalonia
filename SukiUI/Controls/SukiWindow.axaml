@@ -10,7 +10,9 @@
                          CanPin="True">
             <suki:GlassCard Margin="20">
                 <suki:GroupBox Header="SukiUI">
-                    <SelectableTextBlock Text="SukiUI makes your Avalonia applications more modern. The library offers a large number of animated controls and theme switches." TextWrapping="Wrap" />
+                    <SelectableTextBlock
+                        Text="SukiUI makes your Avalonia applications more modern. The library offers a large number of animated controls and theme switches."
+                        TextWrapping="Wrap" />
                 </suki:GroupBox>
             </suki:GlassCard>
         </suki:SukiWindow>
@@ -34,6 +36,9 @@
                                        BackgroundStyle="{TemplateBinding BackgroundStyle}"
                                        BackgroundTransitionTime="{TemplateBinding BackgroundTransitionTime}"
                                        BackgroundTransitionsEnabled="{TemplateBinding BackgroundTransitionsEnabled}"
+                                       BackgroundImage="{TemplateBinding BackgroundImage}"
+                                       BackgroundImageStretch="{TemplateBinding BackgroundImageStretch}"
+                                       BackgroundImageOpacity="{TemplateBinding BackgroundImageOpacity}"
                                        CornerRadius="{TemplateBinding RootCornerRadius}"
                                        Foreground="{TemplateBinding Foreground}"
                                        Hosts="{Binding Hosts, RelativeSource={RelativeSource AncestorType={x:Type suki:SukiWindow}}}">
@@ -58,10 +63,13 @@
                                                             <Setter Property="Width" Value="10" />
                                                         </Style>
                                                     </StackPanel.Styles>
-                                                    <ItemsControl ItemsSource="{TemplateBinding RightWindowTitleBarControls}">
+                                                    <ItemsControl
+                                                        ItemsSource="{TemplateBinding RightWindowTitleBarControls}">
                                                         <ItemsControl.ItemsPanel>
                                                             <ItemsPanelTemplate>
-                                                                <StackPanel FlowDirection="{DynamicResource FlowDirectionOpposite}" Orientation="Horizontal" />
+                                                                <StackPanel
+                                                                    FlowDirection="{DynamicResource FlowDirectionOpposite}"
+                                                                    Orientation="Horizontal" />
                                                             </ItemsPanelTemplate>
                                                         </ItemsControl.ItemsPanel>
                                                     </ItemsControl>
@@ -69,13 +77,15 @@
                                                             Classes="WindowControlsButton"
                                                             IsEnabled="{TemplateBinding CanFullScreen}"
                                                             IsVisible="{TemplateBinding CanFullScreen}">
-                                                        <PathIcon x:Name="FullScreenIcon" Data="{x:Static icons:Icons.WindowFullScreen}" />
+                                                        <PathIcon x:Name="FullScreenIcon"
+                                                                  Data="{x:Static icons:Icons.WindowFullScreen}" />
                                                     </Button>
                                                     <Button Name="PART_PinButton"
                                                             Classes="WindowControlsButton"
                                                             IsEnabled="{TemplateBinding CanPin}"
                                                             IsVisible="{TemplateBinding CanPin}">
-                                                        <PathIcon x:Name="PinIcon" Data="{x:Static icons:Icons.WindowPin}" />
+                                                        <PathIcon x:Name="PinIcon"
+                                                                  Data="{x:Static icons:Icons.WindowPin}" />
                                                     </Button>
                                                     <Button Name="PART_MinimizeButton"
                                                             VerticalContentAlignment="Bottom"
@@ -88,9 +98,11 @@
                                                     <Button Name="PART_MaximizeButton"
                                                             Classes="WindowControlsButton"
                                                             IsVisible="{TemplateBinding CanMaximize}">
-                                                        <PathIcon x:Name="MaximizeIcon" Data="{x:Static icons:Icons.WindowMaximize}" />
+                                                        <PathIcon x:Name="MaximizeIcon"
+                                                                  Data="{x:Static icons:Icons.WindowMaximize}" />
                                                     </Button>
-                                                    <Button Name="PART_CloseButton" Classes="WindowControlsButton Close">
+                                                    <Button Name="PART_CloseButton"
+                                                            Classes="WindowControlsButton Close">
                                                         <PathIcon Data="{x:Static icons:Icons.WindowClose}" />
                                                     </Button>
                                                 </StackPanel>

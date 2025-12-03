@@ -1288,5 +1288,20 @@
     </data>
     <data name="Reset" xml:space="preserve">
         <value>重置</value>
+     </data>
+    <data name="BackgroundImageTitle" xml:space="preserve">
+        <value>背景圖片</value>
+    </data>
+    <data name="BackgroundImageDescription" xml:space="preserve">
+        <value>選擇一張圖片作為視窗背景，將覆蓋在預設背景效果之上。</value>
+    </data>
+    <data name="SelectBackgroundImage" xml:space="preserve">
+        <value>選擇背景圖片</value>
+    </data>
+    <data name="BackgroundImageOpacityTitle" xml:space="preserve">
+        <value>背景圖片不透明度</value>
+    </data>
+    <data name="BackgroundImageOpacityDescription" xml:space="preserve">
+        <value>調整背景圖片的不透明度，值越小圖片越透明。</value>
     </data>
 </root>

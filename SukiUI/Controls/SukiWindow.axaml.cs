@@ -436,20 +436,50 @@ public class SukiWindow : Window, IDisposable
         set => SetValue(BackgroundTransitionTimeProperty, value);
     }
 
-    public static readonly StyledProperty<bool> BackgroundForceSoftwareRenderingProperty =
-        SukiMainHost.BackgroundForceSoftwareRenderingProperty.AddOwner<SukiWindow>();
-
-    /// <summary>
-    /// Forces the background of the window to utilise software rendering.
-    /// This prevents use of any advanced effects or animations and provides only a flat background colour that changes with the theme.
-    /// </summary>
-    public bool BackgroundForceSoftwareRendering
-    {
-        get => GetValue(BackgroundForceSoftwareRenderingProperty);
-        set => SetValue(BackgroundForceSoftwareRenderingProperty, value);
-    }
-
-    public static readonly StyledProperty<Avalonia.Controls.Controls> RightWindowTitleBarControlsProperty =
+        public static readonly StyledProperty<bool> BackgroundForceSoftwareRenderingProperty =
+            SukiMainHost.BackgroundForceSoftwareRenderingProperty.AddOwner<SukiWindow>();
+    
+        /// <summary>
+        /// Forces the background of the window to utilise software rendering.
+        /// This prevents use of any advanced effects or animations and provides only a flat background colour that changes with the theme.
+        /// </summary>
+        public bool BackgroundForceSoftwareRendering
+        {
+            get => GetValue(BackgroundForceSoftwareRenderingProperty);
+            set => SetValue(BackgroundForceSoftwareRenderingProperty, value);
+        }
+    
+        public static readonly StyledProperty<Avalonia.Media.IImage?> BackgroundImageProperty =
+            SukiMainHost.BackgroundImageProperty.AddOwner<SukiWindow>();
+    
+        /// <inheritdoc cref="SukiMainHost.BackgroundImage"/>
+        public Avalonia.Media.IImage? BackgroundImage
+        {
+            get => GetValue(BackgroundImageProperty);
+            set => SetValue(BackgroundImageProperty, value);
+        }
+    
+        public static readonly StyledProperty<Avalonia.Media.Stretch> BackgroundImageStretchProperty =
+            SukiMainHost.BackgroundImageStretchProperty.AddOwner<SukiWindow>();
+    
+        /// <inheritdoc cref="SukiMainHost.BackgroundImageStretch"/>
+        public Avalonia.Media.Stretch BackgroundImageStretch
+        {
+            get => GetValue(BackgroundImageStretchProperty);
+            set => SetValue(BackgroundImageStretchProperty, value);
+        }
+    
+        public static readonly StyledProperty<double> BackgroundImageOpacityProperty =
+            SukiMainHost.BackgroundImageOpacityProperty.AddOwner<SukiWindow>();
+    
+        /// <inheritdoc cref="SukiMainHost.BackgroundImageOpacity"/>
+        public double BackgroundImageOpacity
+        {
+            get => GetValue(BackgroundImageOpacityProperty);
+            set => SetValue(BackgroundImageOpacityProperty, value);
+        }
+    
+        public static readonly StyledProperty<Avalonia.Controls.Controls> RightWindowTitleBarControlsProperty =
         AvaloniaProperty.Register<SukiWindow, Avalonia.Controls.Controls>(nameof(RightWindowTitleBarControls));
 
     /// <summary>

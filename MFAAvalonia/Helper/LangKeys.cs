@@ -435,4 +435,9 @@ public static class LangKeys
 	public static readonly string LoadResourcesFailedDetail = "LoadResourcesFailedDetail";
 	public static readonly string NoEmulatorFoundDetail = "NoEmulatorFoundDetail";
 	public static readonly string Reset = "Reset";
+	public static readonly string BackgroundImageTitle = "BackgroundImageTitle";
+	public static readonly string BackgroundImageDescription = "BackgroundImageDescription";
+	public static readonly string SelectBackgroundImage = "SelectBackgroundImage";
+	public static readonly string BackgroundImageOpacityTitle = "BackgroundImageOpacityTitle";
+	public static readonly string BackgroundImageOpacityDescription = "BackgroundImageOpacityDescription";
 }

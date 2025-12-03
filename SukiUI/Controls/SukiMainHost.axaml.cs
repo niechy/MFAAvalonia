@@ -2,6 +2,8 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
 using Avalonia.Controls.Primitives;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using SukiUI.Enums;
 
 namespace SukiUI.Controls;
@@ -9,6 +11,7 @@ namespace SukiUI.Controls;
 [TemplatePart("PART_Root", typeof(Panel))]
 [TemplatePart("PART_VisualLayerManager", typeof(VisualLayerManager))]
 [TemplatePart("PART_Background", typeof(SukiBackground))]
+[TemplatePart("PART_BackgroundImage", typeof(Image))]
 public class SukiMainHost : ContentControl
 {
     // Background properties
@@ -84,6 +87,43 @@ public class SukiMainHost : ContentControl
     {
         get => GetValue(BackgroundForceSoftwareRenderingProperty);
         set => SetValue(BackgroundForceSoftwareRenderingProperty, value);
+    }
+
+    public static readonly StyledProperty<IImage?> BackgroundImageProperty =
+        AvaloniaProperty.Register<SukiMainHost, IImage?>(nameof(BackgroundImage));
+
+    /// <summary>
+    /// Gets or sets the background image to display behind the content.
+    /// When set, this image will be displayed instead of the shader background.
+    /// </summary>
+    public IImage? BackgroundImage
+    {
+        get => GetValue(BackgroundImageProperty);
+        set => SetValue(BackgroundImageProperty, value);
+    }
+
+    public static readonly StyledProperty<Stretch> BackgroundImageStretchProperty =
+        AvaloniaProperty.Register<SukiMainHost, Stretch>(nameof(BackgroundImageStretch), defaultValue: Stretch.UniformToFill);
+
+    /// <summary>
+    /// Gets or sets how the background image should be stretched to fill the available space.
+    /// </summary>
+    public Stretch BackgroundImageStretch
+    {
+        get => GetValue(BackgroundImageStretchProperty);
+        set => SetValue(BackgroundImageStretchProperty, value);
+    }
+
+    public static readonly StyledProperty<double> BackgroundImageOpacityProperty =
+        AvaloniaProperty.Register<SukiMainHost, double>(nameof(BackgroundImageOpacity), defaultValue: 1.0);
+
+    /// <summary>
+    /// Gets or sets the opacity of the background image.
+    /// </summary>
+    public double BackgroundImageOpacity
+    {
+        get => GetValue(BackgroundImageOpacityProperty);
+        set => SetValue(BackgroundImageOpacityProperty, value);
     }
 
     public static readonly StyledProperty<Avalonia.Controls.Controls> HostsProperty =

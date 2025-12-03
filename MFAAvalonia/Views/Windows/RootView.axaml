@@ -2,6 +2,8 @@
     BackgroundAnimationEnabled="{Binding BackgroundAnimations, Source={x:Static helper:Instances.GuiSettingsUserControlModel}}"
     BackgroundStyle="{Binding BackgroundStyle, Source={x:Static helper:Instances.GuiSettingsUserControlModel}}"
     BackgroundTransitionsEnabled="{Binding BackgroundTransitions, Source={x:Static helper:Instances.GuiSettingsUserControlModel}}"
+    BackgroundImage="{Binding BackgroundImage, Source={x:Static helper:Instances.GuiSettingsUserControlModel}}"
+    BackgroundImageOpacity="{Binding BackgroundImageOpacity, Source={x:Static helper:Instances.GuiSettingsUserControlModel}}"
     IsVisible="{Binding IsWindowVisible}"
     MinHeight="360"
     MinWidth="650"

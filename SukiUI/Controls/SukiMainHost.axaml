@@ -46,22 +46,29 @@
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
                         </VisualLayerManager.ChromeOverlayLayer>
-                        <Panel Name="PART_Root">
-                            <!--  Margin -100 is there to exclude the unwanted bright corners  -->
-                            <suki:SukiBackground Name="PART_Background"
-                                                 Margin="-150"
-                                                 AnimationEnabled="{TemplateBinding BackgroundAnimationEnabled}"
-                                                 ForceSoftwareRendering="{TemplateBinding BackgroundForceSoftwareRendering}"
-                                                 ShaderCode="{TemplateBinding BackgroundShaderCode}"
-                                                 ShaderFile="{TemplateBinding BackgroundShaderFile}"
-                                                 Style="{TemplateBinding BackgroundStyle}"
-                                                 TransitionTime="{TemplateBinding BackgroundTransitionTime}"
-                                                 TransitionsEnabled="{TemplateBinding BackgroundTransitionsEnabled}" />
-
-                            <Border Background="White"
-                                    IsHitTestVisible="False"
-                                    IsVisible="{DynamicResource IsLight}"
-                                    Opacity="0.1" />
+                                                <Panel Name="PART_Root">
+                                                    <!--  Margin -100 is there to exclude the unwanted bright corners  -->
+                                                    <suki:SukiBackground Name="PART_Background"
+                                                                         Margin="-150"
+                                                                         AnimationEnabled="{TemplateBinding BackgroundAnimationEnabled}"
+                                                                         ForceSoftwareRendering="{TemplateBinding BackgroundForceSoftwareRendering}"
+                                                                         ShaderCode="{TemplateBinding BackgroundShaderCode}"
+                                                                         ShaderFile="{TemplateBinding BackgroundShaderFile}"
+                                                                         Style="{TemplateBinding BackgroundStyle}"
+                                                                         TransitionTime="{TemplateBinding BackgroundTransitionTime}"
+                                                                         TransitionsEnabled="{TemplateBinding BackgroundTransitionsEnabled}" />
+                        
+                                                    <!-- Background Image Layer -->
+                                                    <Image Name="PART_BackgroundImage"
+                                                           Source="{TemplateBinding BackgroundImage}"
+                                                           Stretch="{TemplateBinding BackgroundImageStretch}"
+                                                           Opacity="{TemplateBinding BackgroundImageOpacity}"
+                                                           IsHitTestVisible="False" />
+                        
+                                                    <Border Background="White"
+                                                            IsHitTestVisible="False"
+                                                            IsVisible="{DynamicResource IsLight}"
+                                                            Opacity="0.1" />
 
                             <ContentPresenter x:Name="PART_ContentPresenter"
                                               Margin="{TemplateBinding Padding}"

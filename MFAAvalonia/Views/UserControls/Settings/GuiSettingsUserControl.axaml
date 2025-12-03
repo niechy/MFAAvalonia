@@ -16,10 +16,11 @@
     xmlns:other="clr-namespace:MFAAvalonia.ViewModels.Other"
     xmlns:settings="clr-namespace:MFAAvalonia.ViewModels.UsersControls.Settings"
     xmlns:suki="https://github.com/kikipoulet/SukiUI"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent">
     <UserControl.Resources>
         <ContextMenu x:Key="ThemeColorContextMenu">
-            <MenuItem  Click="Delete"
+            <MenuItem Click="Delete"
                       Header="{markup:I18n {x:Static helper:LangKeys.Delete}}" />
         </ContextMenu>
     </UserControl.Resources>
@@ -89,7 +90,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="other:ThemeItemViewModel">
-                    <RadioButton 
+                    <RadioButton
                         Classes="GigaChips"
                         CornerRadius="50"
                         GroupName="RadioColorTheme"
@@ -107,13 +108,13 @@
         <suki:GlassCard Margin="0,25,0,0" Padding="25">
             <StackPanel Spacing="20">
                 <DockPanel>
-                    <Button 
-                            Command="{Binding CreateCustomThemeCommand}"
-                            Content="{markup:I18n {x:Static helper:LangKeys.Custom}}"
-                            DockPanel.Dock="Right"
-                            Height="40"
-                            Margin="0,0,4,0"
-                            Width="205" />
+                    <Button
+                        Command="{Binding CreateCustomThemeCommand}"
+                        Content="{markup:I18n {x:Static helper:LangKeys.Custom}}"
+                        DockPanel.Dock="Right"
+                        Height="40"
+                        Margin="0,0,4,0"
+                        Width="205" />
                     <StackPanel HorizontalAlignment="Left">
                         <TextBlock
                             FontSize="16"
@@ -178,6 +179,61 @@
                             Foreground="{DynamicResource SukiLowText}"
                             Margin="0,12,70,0"
                             Text="{markup:I18n {x:Static helper:LangKeys.BackgroundTransitionsDescription}}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </DockPanel>
+                <!-- Background Image Settings -->
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                        <Button 
+                            Command="{Binding ClearBackgroundImageCommand}" Classes="Basic Round" 
+                            IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                            Margin="7,0,8,0"
+                            Padding="0"
+                            ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.ButtonClear}}">
+                            <fluent:FluentIcon Height="18"
+                                               Icon="ArrowSync"
+                                               IconSize="Size16"
+                                               IconVariant="Regular" />
+                        </Button>
+                        <Button
+                            Command="{Binding SelectBackgroundImageCommand}"
+                            Content="{markup:I18n {x:Static helper:LangKeys.Select}}"
+                            Height="40" 
+                            Width="215"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Left">
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="DemiBold"
+                            Text="{markup:I18n {x:Static helper:LangKeys.BackgroundImageTitle}}" />
+                        <TextBlock
+                            Foreground="{DynamicResource SukiLowText}"
+                            Margin="0,12,70,0"
+                            Text="{markup:I18n {x:Static helper:LangKeys.BackgroundImageDescription}}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Background Image Opacity -->
+                <DockPanel IsVisible="{Binding HasBackgroundImage}">
+                    <Slider
+                        DockPanel.Dock="Right"
+                        Width="215"
+                        Minimum="0"
+                        Maximum="1"
+                        Value="{Binding BackgroundImageOpacity}"
+                        TickFrequency="0.1"
+                        IsSnapToTickEnabled="False" />
+                    <StackPanel HorizontalAlignment="Left">
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="DemiBold"
+                            Text="{markup:I18n {x:Static helper:LangKeys.BackgroundImageOpacityTitle}}" />
+                        <TextBlock
+                            Foreground="{DynamicResource SukiLowText}"
+                            Margin="0,12,70,0"
+                            Text="{markup:I18n {x:Static helper:LangKeys.BackgroundImageOpacityDescription}}"
                             TextWrapping="Wrap" />
                     </StackPanel>
                 </DockPanel>
