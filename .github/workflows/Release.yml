@@ -230,7 +230,6 @@ jobs:
           tag_name: ${{ needs.meta.outputs.tag }}
           body: |
             ${{ needs.changelog.outputs.release_body }}
-            [已有Mirror酱 CDk?前往Mirror酱 高速下载](https://mirrorchyan.com/zh/projects?rid=MFAAvalonia&source=mfaagh-release)
           files: |
             artifacts/*.zip
             artifacts/*.tar.gz
