@@ -608,7 +608,7 @@ public static class EmulatorHelper
     /// <returns>Whether the operation is successful.</returns>
     public static bool KillEmulator()
     {
-        int pid = 0;
+        //  int pid = 0;
         string address = MaaProcessor.Config.AdbDevice.AdbSerial;
         var port = address.StartsWith("127") && address.Length > 10 ? address[10..] : "5555";
         LoggerHelper.Info($"address: {address}, port: {port}");
@@ -617,10 +617,11 @@ public static class EmulatorHelper
         {
             return KillEmulatorWindows(address, port);
         }
-        else
+        else if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
         {
             return KillEmulatorUnix(port);
         }
+        return false;
     }
 
     /// <summary>

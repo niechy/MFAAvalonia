@@ -45,7 +45,7 @@ sealed class Program
     private static Mutex? _mutex;
     private static bool _mutexReleased = false;
     private static readonly object _mutexLock = new();
-    private static int _mutexOwnerThreadId = -1;
+    // private static int _mutexOwnerThreadId = -1;
     public static bool IsNewInstance = true;
 
     public static void ReleaseMutex()

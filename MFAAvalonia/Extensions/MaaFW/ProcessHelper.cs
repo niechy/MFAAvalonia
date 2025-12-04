@@ -48,7 +48,10 @@ public static class ProcessHelper
 
         if (OperatingSystem.IsWindows())
         {
-            await Task.Run(() => RestartAdbWindows(adbPath));
+            await Task.Run(() =>
+            {
+                if (OperatingSystem.IsWindows()) RestartAdbWindows(adbPath);
+            });
         }
         else
         {
@@ -120,7 +123,11 @@ public static class ProcessHelper
 
         if (OperatingSystem.IsWindows())
         {
-            await Task.Run(() => ReconnectByAdbWindows(adbPath, address));
+            await Task.Run(() =>
+            {
+                if (OperatingSystem.IsWindows())
+                    ReconnectByAdbWindows(adbPath, address);
+            });
         }
         else
         {
@@ -429,12 +436,12 @@ public static class ProcessHelper
     {
         ExecuteShellCommand($"sudo kill -9 {pid}");
     }
-    
+
     [SupportedOSPlatform("linux")]
     [SupportedOSPlatform("macos")]
     [DllImport("libc", EntryPoint = "getuid")]
     private static extern uint GetUid();
-    
+
     [SupportedOSPlatform("linux")]
     [SupportedOSPlatform("macos")]
     private static uint GetUnixUserId() => GetUid();

@@ -1,23 +1,13 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
-using Avalonia.Threading;
+﻿using Avalonia.Controls;
 using MaaFramework.Binding;
 using MaaFramework.Binding.Buffers;
-using MaaFramework.Binding.Interop.Native;
 using MaaFramework.Binding.Notification;
 using MaaFramework.Binding.Custom;
 using MFAAvalonia.Configuration;
-using MFAAvalonia.Extensions.MaaFW.Custom;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.ValueType;
 using MFAAvalonia.Helper.Converters;
-using MFAAvalonia.Helper.ValueType;
-using MFAAvalonia.ViewModels.Other;
 using MFAAvalonia.ViewModels.Pages;
-using MFAAvalonia.Views.Pages;
 using MFAAvalonia.Views.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -42,8 +32,6 @@ using MaaGlobal = MaaFramework.Binding.MaaGlobal;
 using MaaResource = MaaFramework.Binding.MaaResource;
 using MaaTasker = MaaFramework.Binding.MaaTasker;
 using MaaToolkit = MaaFramework.Binding.MaaToolkit;
-using Pen = Avalonia.Media.Pen;
-using Size = Avalonia.Size;
 
 namespace MFAAvalonia.Extensions.MaaFW;
 #pragma warning  disable CS4014 // 由于此调用不会等待，因此在此调用完成之前将会继续执行当前方法.
