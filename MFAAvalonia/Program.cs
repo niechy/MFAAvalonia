@@ -66,7 +66,7 @@ sealed class Program
                 _mutex = null;
                 _mutexReleased = true;
             }
-            catch (ApplicationException ex)
+            catch (ApplicationException)
             {
                 // Mutex was not owned by the current thread, just close it
                 // 不记录错误日志，因为这是预期行为
