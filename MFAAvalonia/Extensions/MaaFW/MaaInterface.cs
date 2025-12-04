@@ -279,70 +279,70 @@ public partial class MaaInterface
             };
         }
 
-                /// <summary>
-                /// 特殊标记，表示用户显式输入的 null 值
-                /// </summary>
-                public const string ExplicitNullMarker = "\0null";
-        
-                private JToken? ProcessStringToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
+        /// <summary>
+        /// 特殊标记，表示用户显式输入的 null 值
+        /// </summary>
+        public const string ExplicitNullMarker = "\0null";
+
+        private JToken? ProcessStringToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
+        {
+            var strVal = token.Value<string>();
+            if (string.IsNullOrEmpty(strVal)) return token;
+
+            string? currentPlaceholder = null;
+            var defaults = GetDefaultValues();
+            bool isExplicitNull = false;
+
+            var newVal = regex.Replace(strVal, match =>
+            {
+                currentPlaceholder = match.Groups[1].Value;
+
+                // 首先尝试从输入值获取
+                if (inputValues.TryGetValue(currentPlaceholder, out var inputStr))
                 {
-                    var strVal = token.Value<string>();
-                    if (string.IsNullOrEmpty(strVal)) return token;
-        
-                    string? currentPlaceholder = null;
-                    var defaults = GetDefaultValues();
-                    bool isExplicitNull = false;
-        
-                    var newVal = regex.Replace(strVal, match =>
+                    // 检查是否是显式 null 标记
+                    if (inputStr == ExplicitNullMarker)
                     {
-                        currentPlaceholder = match.Groups[1].Value;
-        
-                        // 首先尝试从输入值获取
-                        if (inputValues.TryGetValue(currentPlaceholder, out var inputStr))
-                        {
-                            // 检查是否是显式 null 标记
-                            if (inputStr == ExplicitNullMarker)
-                            {
-                                isExplicitNull = true;
-                                return string.Empty; // 临时返回空字符串，后面会处理
-                            }
-                            return inputStr;
-                        }
-        
-                        // 尝试从默认值获取
-                        if (defaults.TryGetValue(currentPlaceholder, out var defaultStr))
-                        {
-                            return defaultStr;
-                        }
-        
-                        // 保持占位符
-                        return match.Value;
-                    });
-        
-                    // 如果是显式 null，返回 JValue.CreateNull()
-                    if (isExplicitNull)
-                    {
-                        return JValue.CreateNull();
+                        isExplicitNull = true;
+                        return string.Empty; // 临时返回空字符串，后面会处理
                     }
-        
-                    if (newVal != strVal && currentPlaceholder != null && typeMap.TryGetValue(currentPlaceholder, out var targetType))
-                    {
-                        try
-                        {
-                            if (targetType != typeof(string))
-                            {
-                                var convertedValue = Convert.ChangeType(newVal, targetType);
-                                return JToken.FromObject(convertedValue);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LoggerHelper.Error($"Option 类型转换失败: {ex.Message}");
-                        }
-                    }
-        
-                    return newVal != strVal ? JToken.FromObject(newVal) : token;
+                    return inputStr;
                 }
+
+                // 尝试从默认值获取
+                if (defaults.TryGetValue(currentPlaceholder, out var defaultStr))
+                {
+                    return defaultStr;
+                }
+
+                // 保持占位符
+                return match.Value;
+            });
+
+            // 如果是显式 null，返回 JValue.CreateNull()
+            if (isExplicitNull)
+            {
+                return JValue.CreateNull();
+            }
+
+            if (newVal != strVal && currentPlaceholder != null && typeMap.TryGetValue(currentPlaceholder, out var targetType))
+            {
+                try
+                {
+                    if (targetType != typeof(string))
+                    {
+                        var convertedValue = Convert.ChangeType(newVal, targetType);
+                        return JToken.FromObject(convertedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Error($"Option 类型转换失败: {ex.Message}");
+                }
+            }
+
+            return newVal != strVal ? JToken.FromObject(newVal) : token;
+        }
 
         private JToken ProcessArrayToken(JToken token, Regex regex, Dictionary<string, string> inputValues, Dictionary<string, Type> typeMap)
         {
@@ -468,48 +468,46 @@ public partial class MaaInterface
         }
     }
 
-        public class MaaInterfaceTask
-        {
-            /// <summary>任务唯一标识符，用作任务ID</summary>
-            [JsonProperty("name")] public string? Name;
-    
-            /// <summary>任务显示名称，用于在用户界面中展示。支持国际化字符串（以$开头）。如果未设置，则显示 Name 字段的值。</summary>
-            [JsonProperty("label")] public string? Label;
-    
-            /// <summary>任务入口，为 pipeline 中 Task 的名称</summary>
-            [JsonProperty("entry")] public string? Entry;
-    
-            /// <summary>是否默认选中该任务。Client在初始化时会根据该值决定是否默认勾选该任务。</summary>
-            [JsonProperty("default_check",
-                NullValueHandling = NullValueHandling.Include,
-                DefaultValueHandling = DefaultValueHandling.Include)]
-            public bool? Check = false;
-    
-            /// <summary>任务详细描述信息，帮助用户理解任务功能。支持文件路径、URL或直接文本，内容支持Markdown格式。</summary>
-            [JsonProperty("description")] public string? Description;
-    
-            /// <summary>
-            /// 可选。指定该任务支持的资源包列表。
-            /// 数组元素应与 resource 配置中的 name 字段对应。
-            /// 若不指定，则表示该任务在所有资源包中都可用。
-            /// 当用户选择了某个资源包时，只有支持该资源包的任务才会显示在用户界面中供选择。
-            /// 这允许为不同资源包提供专门的任务配置，比如活动任务只在特定资源包中可用。
-            /// </summary>
-            [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
-            [JsonProperty("resource")]
-            public List<string>? Resource;
-    
-            /// <summary>文档说明（旧版兼容）</summary>
-            [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
-            [JsonProperty("doc")]
-            public List<string>? Document;
-    
-            [JsonProperty("repeatable")] public bool? Repeatable;
-            [JsonProperty("repeat_count")] public int? RepeatCount;
-            [JsonProperty("advanced")] public List<MaaInterfaceSelectAdvanced>? Advanced;
-            [JsonProperty("option")] public List<MaaInterfaceSelectOption>? Option;
-    
-            [JsonProperty("pipeline_override")] public Dictionary<string, JToken>? PipelineOverride;
+    public class MaaInterfaceTask
+    {
+        /// <summary>任务唯一标识符，用作任务ID</summary>
+        [JsonProperty("name")] public string? Name;
+
+        /// <summary>任务显示名称，用于在用户界面中展示。支持国际化字符串（以$开头）。如果未设置，则显示 Name 字段的值。</summary>
+        [JsonProperty("label")] public string? Label;
+
+        /// <summary>任务入口，为 pipeline 中 Task 的名称</summary>
+        [JsonProperty("entry")] public string? Entry;
+
+        /// <summary>是否默认选中该任务。Client在初始化时会根据该值决定是否默认勾选该任务。</summary>
+        [JsonProperty("default_check",
+            NullValueHandling = NullValueHandling.Include,
+            DefaultValueHandling = DefaultValueHandling.Include)]
+        public bool? Check = false;
+
+        /// <summary>任务详细描述信息，帮助用户理解任务功能。支持文件路径、URL或直接文本，内容支持Markdown格式。</summary>
+        [JsonProperty("description")] public string? Description;
+
+        /// <summary>
+        /// 可选。指定该任务支持的资源包列表。
+        /// 数组元素应与 resource 配置中的 name 字段对应。
+        /// 若不指定，则表示该任务在所有资源包中都可用。
+        /// 当用户选择了某个资源包时，只有支持该资源包的任务才会显示在用户界面中供选择。
+        /// 这允许为不同资源包提供专门的任务配置，比如活动任务只在特定资源包中可用。
+        /// </summary>
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("resource")]
+        public List<string>? Resource;
+
+        /// <summary>文档说明（旧版兼容）</summary>
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))] [JsonProperty("doc")]
+        public List<string>? Document;
+
+        [JsonProperty("repeatable")] public bool? Repeatable;
+        [JsonProperty("repeat_count")] public int? RepeatCount;
+        [JsonProperty("advanced")] public List<MaaInterfaceSelectAdvanced>? Advanced;
+        [JsonProperty("option")] public List<MaaInterfaceSelectOption>? Option;
+
+        [JsonProperty("pipeline_override")] public Dictionary<string, JToken>? PipelineOverride;
 
         /// <summary>获取显示名称（优先 Label，否则 Name）</summary>
         [JsonIgnore]
@@ -793,16 +791,18 @@ public partial class MaaInterface
         }
         else
         {
+            var path = Path.Combine(safeReplacement, input);
             // 无占位符
             if (checkIfPath)
             {
-                // 不是路径，原样返回
-                return input;
+                if (File.Exists(path))
+                    return path;
+                result = input;
             }
             else
             {
                 // 未开启路径检查：直接拼接
-                result = Path.Combine(safeReplacement, input);
+                result = path;
             }
         }
 

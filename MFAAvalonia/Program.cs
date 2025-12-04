@@ -43,18 +43,49 @@ sealed class Program
     // yet and stuff might break.
     public static Dictionary<string, string> Args { get; private set; } = new();
     private static Mutex? _mutex;
+    private static bool _mutexReleased = false;
+    private static readonly object _mutexLock = new();
+    private static int _mutexOwnerThreadId = -1;
     public static bool IsNewInstance = true;
+
     public static void ReleaseMutex()
     {
-        try
+        lock (_mutexLock)
         {
-            _mutex?.ReleaseMutex();
-            _mutex?.Close();
-            _mutex = null;
-        }
-        catch (Exception e)
-        {
-            LoggerHelper.Error(e);
+            if (_mutexReleased || _mutex == null)
+            {
+                return;
+            }
+
+            try
+            {
+
+                _mutex.ReleaseMutex();
+
+                _mutex.Close();
+                _mutex = null;
+                _mutexReleased = true;
+            }
+            catch (ApplicationException ex)
+            {
+                // Mutex was not owned by the current thread, just close it
+                // 不记录错误日志，因为这是预期行为
+                try
+                {
+                    _mutex?.Close();
+                    _mutex = null;
+                    _mutexReleased = true;
+                }
+                catch (Exception)
+                {
+                    // 忽略关闭时的异常
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Error(e);
+            }
+
         }
     }
 
@@ -67,7 +98,7 @@ sealed class Program
             Directory.SetCurrentDirectory(AppContext.BaseDirectory);
 
             PrivatePathHelper.CleanupDuplicateLibraries(AppContext.BaseDirectory, AppContext.GetData("SubdirectoriesToProbe") as string);
-            
+
             PrivatePathHelper.SetupNativeLibraryResolver();
 
             List<string> resultDirectories = new List<string>();

@@ -228,7 +228,6 @@ public class MaaProcessor
             MaaTasker?.Stop().Wait();
             _agentStarted = false;
             SafeKillAgentProcess();
-            MaaTasker?.Dispose();
             Instances.TaskQueueViewModel.SetConnected(false);
         }
         MaaTasker = maaTasker;
@@ -456,12 +455,15 @@ public class MaaProcessor
                     var timeOut = Interface?.Agent?.Timeout ?? 120;
                     _agentClient.SetTimeout(TimeSpan.FromSeconds(timeOut < 0 ? int.MaxValue : timeOut));
                     _agentClient.AttachDisposeToResource();
-                    _agentClient.Releasing += (_, _) => LoggerHelper.Info("退出Agent进程");
+                    _agentClient.Releasing += (_, _) =>
+                    {
+                        LoggerHelper.Info("退出Agent进程");
+                    };
 
                     LoggerHelper.Info($"Agent Client Hash: {_agentClient?.GetHashCode()}");
                     if (!Directory.Exists($"{AppContext.BaseDirectory}"))
                         Directory.CreateDirectory($"{AppContext.BaseDirectory}");
-                    var program = MaaInterface.ReplacePlaceholder(agentConfig.ChildExec, AppContext.BaseDirectory);
+                    var program = MaaInterface.ReplacePlaceholder(agentConfig.ChildExec, AppContext.BaseDirectory, true);
                     if (IsPathLike(program))
                         program = Path.GetFullPath(program, AppContext.BaseDirectory);
                     var rawArgs = agentConfig.ChildArgs ?? [];
@@ -484,7 +486,7 @@ public class MaaProcessor
                         })
                         .Select(ConvertPath).ToList();
 
-                    var executablePath = PythonPathFinder.FindPythonPath(program);
+                    var executablePath = PathFinder.FindPath(program);
 
                     // 检查可执行文件是否存在
                     if (!File.Exists(executablePath))
@@ -518,6 +520,8 @@ public class MaaProcessor
                             _agentProcess.Exited += (_, _) =>
                             {
                                 LoggerHelper.Info("Agent process exited!");
+                                if (MaaTasker is { IsStateless: false, IsInvalid: false })
+                                    MaaTasker?.Dispose();
                                 _agentProcess = null;
                             };
                             _agentProcess.OutputDataReceived += (sender, args) =>
@@ -581,23 +585,99 @@ public class MaaProcessor
                         }
                         return _agentProcess;
                     };
-                    if (!_agentClient.LinkStart(method, token))
+                    // 添加重连逻辑，最多重试3次
+                    const int maxRetries = 3;
+                    bool linkStartSuccess = false;
+                    Exception? lastException = null;
+
+                    for (int retryCount = 0; retryCount < maxRetries && !linkStartSuccess; retryCount++)
+                    {
+                        try
+                        {
+                            if (retryCount > 0)
+                            {
+                                LoggerHelper.Info($"Agent LinkStart retry attempt {retryCount + 1}/{maxRetries}");
+                                RootView.AddLog($"Agent 连接重试 ({retryCount + 1}/{maxRetries})...", Brushes.Orange, changeColor: false);
+
+                                // 等待一段时间后重试
+                                await Task.Delay(1000 * retryCount, token);
+
+                                // 重新启动进程
+                                if (_agentProcess != null && !_agentProcess.HasExited)
+                                {
+                                    try
+                                    {
+                                        _agentProcess.Kill(true);
+                                        _agentProcess.WaitForExit(3000);
+                                    }
+                                    catch (Exception killEx)
+                                    {
+                                        LoggerHelper.Warning($"Failed to kill agent process: {killEx.Message}");
+                                    }
+                                    _agentProcess.Dispose();
+                                    _agentProcess = null;
+                                }
+                            }
+
+                            linkStartSuccess = _agentClient.LinkStart(method, token);
+                        }
+                        catch (SEHException sehEx)
+                        {
+                            lastException = sehEx;
+                            LoggerHelper.Warning($"SEHException during LinkStart (attempt {retryCount + 1}): {sehEx.Message}");
+
+                            if (retryCount < maxRetries - 1)
+                            {
+                                // 清理当前状态，准备重试
+                                SafeKillAgentProcess();
+
+                                // 重新创建 AgentClient
+                                try
+                                {
+                                    _agentClient = MaaAgentClient.Create(identifier, tasker);
+                                    timeOut = Interface?.Agent?.Timeout ?? 120;
+                                    _agentClient.SetTimeout(TimeSpan.FromSeconds(timeOut < 0 ? int.MaxValue : timeOut));
+                                    _agentClient.AttachDisposeToResource();
+                                    _agentClient.Releasing += (_, _) =>
+                                    {
+                                        LoggerHelper.Info("退出Agent进程");
+                                    };
+                                }
+                                catch (Exception recreateEx)
+                                {
+                                    LoggerHelper.Error($"Failed to recreate AgentClient: {recreateEx.Message}");
+                                    throw;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            lastException = ex;
+                            LoggerHelper.Warning($"Exception during LinkStart (attempt {retryCount + 1}): {ex.Message}");
+
+                            // 对于非 SEHException，不进行重试
+                            break;
+                        }
+                    }
+
+                    if (!linkStartSuccess)
                     {
                         // 尝试获取进程的错误输出
-                        var errorMessage = "Failed to LinkStart agentClient!";
+                        var errorMessage = lastException?.Message ?? "Failed to LinkStart agentClient!";
                         var agentProcess = _agentProcess;
                         if (agentProcess != null)
                         {
                             try
                             {
                                 var errorDetails = new StringBuilder();
+                                errorDetails.AppendLine(errorMessage);
 
                                 // 如果进程已经退出，尝试读取错误输出
                                 if (agentProcess.HasExited)
                                 {
                                     var exitCode = agentProcess.ExitCode;
-                                    var stderr = agentProcess.StandardError.ReadToEnd();
-                                    var stdout = agentProcess.StandardOutput.ReadToEnd();
+                                    var stderr = await agentProcess.StandardError.ReadToEndAsync(token);
+                                    var stdout = await agentProcess.StandardOutput.ReadToEndAsync(token);
 
                                     errorDetails.AppendLine($"Agent process exited with code: {exitCode}");
 
@@ -621,8 +701,8 @@ public class MaaProcessor
                                     if (agentProcess.WaitForExit(3000))
                                     {
                                         var exitCode = agentProcess.ExitCode;
-                                        var stderr = agentProcess.StandardError.ReadToEnd();
-                                        var stdout = agentProcess.StandardOutput.ReadToEnd();
+                                        var stderr = await agentProcess.StandardError.ReadToEndAsync(token);
+                                        var stdout = await agentProcess.StandardOutput.ReadToEndAsync(token);
 
                                         errorDetails.AppendLine($"Agent process exited with code: {exitCode}");
 
@@ -2093,24 +2173,89 @@ public class MaaProcessor
     /// <param name="forceKill">是否使用强制终止模式</param>
     private void SafeKillAgentProcess()
     {
-        _agentClient?.LinkStop();
-        _agentClient?.Dispose();
-        _agentClient?.DetachDisposeToResource();
+        // 然后安全地停止和释放 AgentClient
+        try
+        {
+            if (_agentClient is { IsStateless: false, IsInvalid: false })
+                _agentClient?.LinkStop();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Warning($"AgentClient LinkStop failed: {e.Message}");
+        }
+
+        try
+        {
+            if (_agentClient is { IsStateless: false, IsInvalid: false })
+                _agentClient?.DetachDisposeToResource();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Warning($"DetachDisposeToResource failed: {e.Message}");
+        }
+        try
+        {
+            if (_agentClient is { IsStateless: false, IsInvalid: false })
+                _agentClient.Dispose();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Warning($"AgentClient Dispose failed: {e.Message}");
+        }
+
         _agentClient = null;
         try
         {
-            LoggerHelper.Info(_agentProcess?.HasExited == false ? $"Kill AgentProcess: {_agentProcess?.ProcessName}" : "AgentProcess has exited");
-            if (_agentProcess?.HasExited == false)
-                _agentProcess?.Kill(true);
-            if (_agentProcess?.HasExited == false)
-                _agentProcess?.WaitForExit();
-            if (_agentProcess?.HasExited == false)
-                _agentProcess?.Dispose();
+            if (MaaTasker is { IsStateless: false, IsInvalid: false })
+                MaaTasker.Dispose();
+        }
+        catch (Exception e)
+        {
+            LoggerHelper.Warning($"MaaTasker Dispose failed: {e.Message}");
+        }
+
+        // 处理 Agent 进程
+        try
+        {
+            if (_agentProcess != null)
+            {
+                try
+                {
+                    // 先检查进程是否有效（有关联的进程）
+                    var hasExited = true;
+                    try
+                    {
+                        hasExited = _agentProcess.HasExited;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // 进程对象没有关联的进程，视为已退出
+                        hasExited = true;
+                    }
+
+                    LoggerHelper.Info(!hasExited ? $"Kill AgentProcess: {_agentProcess.ProcessName}" : "AgentProcess has exited or is not associated");
+
+                    if (!hasExited)
+                    {
+                        _agentProcess.Kill(true);
+                        _agentProcess.WaitForExit();
+                    }
+                }
+                finally
+                {
+                    _agentProcess.Dispose();
+                }
+            }
+            else
+            {
+                LoggerHelper.Info("AgentProcess is null");
+            }
         }
         catch (Exception e)
         {
             LoggerHelper.Error(e);
         }
+
         _agentProcess = null;
     }
 
@@ -2240,7 +2385,7 @@ public class MaaProcessor
                 CloseSoftwareAndMFA();
                 break;
             case "ShutDown":
-                Instances.ShutdownApplication();
+                Instances.ShutdownSystem();
                 break;
             case "CloseEmulatorAndRestartMFA":
                 CloseSoftwareAndRestartMFA();

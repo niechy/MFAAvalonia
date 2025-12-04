@@ -659,7 +659,6 @@ public static class VersionChecker
             Dismiss(sukiToast);
         shouldShowToast = true;
         action?.Invoke();
-        Program.ReleaseMutex();
         await RestartApplicationAsync(exeName);
     }
     /// <summary>
@@ -678,7 +677,7 @@ public static class VersionChecker
 
                 // 2. macOS 专属启动方式
                 StartMacOSApplication(exeName);
-
+                DispatcherHelper.PostOnMainThread(Instances.RootView.BeforeClosed);
                 // 3. 短暂延迟确保新进程启动，再关闭当前应用
                 await Task.Delay(1000);
                 Instances.ShutdownApplication();
@@ -693,6 +692,7 @@ public static class VersionChecker
         {
             // ==== Windows/Linux 完全保留原有逻辑 ====
             Process.Start(exeName);
+            DispatcherHelper.PostOnMainThread(Instances.RootView.BeforeClosed);
             Instances.ShutdownApplication();
         }
     }
