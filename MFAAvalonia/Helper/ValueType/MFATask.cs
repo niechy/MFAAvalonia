@@ -39,6 +39,8 @@ public partial class MFATask : ObservableObject
     {
         try
         {
+            if (Count < 0)
+                Count = int.MaxValue;
             for (int i = 0; i < Count; i++)
             {
                 token.ThrowIfCancellationRequested();
