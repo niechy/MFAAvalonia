@@ -591,14 +591,18 @@ public class MaaProcessor
                         return _agentProcess;
                     };
                     // 添加重连逻辑，最多重试3次
+                    // 添加重连逻辑，最多重试3次
                     const int maxRetries = 3;
                     bool linkStartSuccess = false;
                     Exception? lastException = null;
 
-                    for (int retryCount = 0; retryCount < maxRetries && !linkStartSuccess; retryCount++)
+                    for (int retryCount = 0; retryCount < maxRetries && !linkStartSuccess && !token.IsCancellationRequested; retryCount++)
                     {
                         try
                         {
+                            // 在每次迭代开始时检测token
+                            token.ThrowIfCancellationRequested();
+
                             if (retryCount > 0)
                             {
                                 LoggerHelper.Info($"Agent LinkStart retry attempt {retryCount + 1}/{maxRetries}");
@@ -626,6 +630,12 @@ public class MaaProcessor
 
                             linkStartSuccess = _agentClient.LinkStart(method, token);
                         }
+                        catch (OperationCanceledException)
+                        {
+                            // 任务被取消，直接退出重试循环
+                            LoggerHelper.Info("Agent LinkStart was canceled by user");
+                            throw;
+                        }
                         catch (SEHException sehEx)
                         {
                             lastException = sehEx;
@@ -633,6 +643,13 @@ public class MaaProcessor
 
                             if (retryCount < maxRetries - 1)
                             {
+                                // 在重试前检测token
+                                if (token.IsCancellationRequested)
+                                {
+                                    LoggerHelper.Info("Agent retry canceled by user");
+                                    token.ThrowIfCancellationRequested();
+                                }
+
                                 // 清理当前状态，准备重试
                                 SafeKillAgentProcess();
 
@@ -664,7 +681,12 @@ public class MaaProcessor
                             break;
                         }
                     }
-
+                    // 循环结束后检查是否因为取消而退出
+                    if (token.IsCancellationRequested && !linkStartSuccess)
+                    {
+                        LoggerHelper.Info("Agent LinkStart loop exited due to cancellation");
+                        token.ThrowIfCancellationRequested();
+                    }
                     if (!linkStartSuccess)
                     {
                         // 尝试获取进程的错误输出
