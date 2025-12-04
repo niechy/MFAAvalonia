@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -316,6 +317,10 @@ public class MaaProcessor
         AutoInitDictionary.Clear();
         LoggerHelper.Info(LangKeys.LoadingResources.ToLocalization());
 
+        if (Design.IsDesignMode)
+        {
+            return (null, false, false);
+        }
         MaaResource maaResource = null;
         try
         {
@@ -597,8 +602,8 @@ public class MaaProcessor
                             if (retryCount > 0)
                             {
                                 LoggerHelper.Info($"Agent LinkStart retry attempt {retryCount + 1}/{maxRetries}");
-                                RootView.AddLog($"Agent 连接重试 ({retryCount + 1}/{maxRetries})...", Brushes.Orange, changeColor: false);
 
+                                RootView.AddLog(LangKeys.AgentConnectionRetry.ToLocalizationFormatted(false, $"{retryCount + 1}/{maxRetries}"), Brushes.Orange, changeColor: false);
                                 // 等待一段时间后重试
                                 await Task.Delay(1000 * retryCount, token);
 
@@ -2106,9 +2111,10 @@ public class MaaProcessor
 
                         for (int i = 0; i < maxRetries; i++)
                         {
-
+                            LoggerHelper.Info($"Stopping tasker attempt {i + 1}");
                             stopResult = AbortCurrentTasker();
                             LoggerHelper.Info($"Stopping tasker attempt {i + 1} returned {stopResult}, retrying...");
+
                             if (stopResult == MaaJobStatus.Succeeded)
                                 break;
 

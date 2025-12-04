@@ -1304,4 +1304,7 @@
     <data name="BackgroundImageOpacityDescription" xml:space="preserve">
         <value>Adjust the opacity of the background image. Lower values make the image more transparent.</value>
     </data>
+    <data name="AgentConnectionRetry" xml:space="preserve">
+        <value>Agent connection retry ({0})...</value>
+    </data>
 </root>

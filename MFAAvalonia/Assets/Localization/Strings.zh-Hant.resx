@@ -1304,4 +1304,7 @@
     <data name="BackgroundImageOpacityDescription" xml:space="preserve">
         <value>調整背景圖片的不透明度，值越小圖片越透明。</value>
     </data>
+    <data name="AgentConnectionRetry" xml:space="preserve">
+        <value>Agent 連線重試 ({0})...</value>
+    </data>
 </root>

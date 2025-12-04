@@ -1077,11 +1077,14 @@
         <value>CDK 类型与资源不匹配</value>
     </data>
     <data name="StartingAgent" xml:space="preserve">
-        <value>正在启动 Agent(耗时可能较久)</value>
-    </data>
+            <value>正在启动 Agent(耗时可能较久)</value>
+        </data>
+    <data name="AgentConnectionRetry" xml:space="preserve">
+            <value>Agent 连接重试 ({0})...</value>
+        </data>
     <data name="AgentStartFailed" xml:space="preserve">
-        <value>Agent启动失败</value>
-    </data>
+            <value>Agent启动失败</value>
+        </data>
     <data name="AgentExecutableNotFound" xml:space="preserve">
         <value>Agent 可执行文件不存在: {0}</value>
     </data>
