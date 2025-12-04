@@ -22,6 +22,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading.Tasks;
@@ -47,11 +48,11 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
         LanguageHelper.Initialize();
         ConfigurationManager.Initialize();
-        
+
         // 保存引用以便在退出时正确释放
         _memoryCracker = new AvaloniaMemoryCracker();
         _memoryCracker.Cracker();
-        
+
         GlobalHotkeyService.Initialize();
         TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException; //Task线程内未捕获异常处理事件
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException; //非UI线程内未捕获异常处理事件
@@ -91,11 +92,11 @@ public partial class App : Application
 
         MaaProcessor.Instance.SetTasker();
         GlobalHotkeyService.Shutdown();
-        
+
         // 释放内存优化器
         _memoryCracker?.Dispose();
         _memoryCracker = null;
-        
+
         // 取消全局异常事件订阅，避免内存泄漏
         TaskScheduler.UnobservedTaskException -= TaskScheduler_UnobservedTaskException;
         AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
@@ -283,13 +284,21 @@ public partial class App : Application
             errorMessage = "代理设置的SSL验证错误";
             return true;
         }
-
         if (ex is Tmds.DBus.Protocol.DBusException dbusEx && dbusEx.ErrorName == "org.freedesktop.DBus.Error.ServiceUnknown" && dbusEx.Message.Contains("com.canonical.AppMenu.Registrar"))
         {
             errorMessage = "检测到DBus服务(com.canonical.AppMenu.Registrar)不可用，这在非Unity桌面环境中是正常现象";
             return true;
         }
 
+// 忽略 SEHException，这通常是由于外部组件（如 MaaFramework）的问题导致的
+// 这些异常已经在业务逻辑中处理了（如显示连接失败消息），不应该再次显示给用户
+        if (ex is SEHException)
+        {
+            errorMessage = "已忽略外部组件异常(SEHException): " + ex.Message;
+            return true;
+        }
+
+        return false;
         return false;
     }
 }

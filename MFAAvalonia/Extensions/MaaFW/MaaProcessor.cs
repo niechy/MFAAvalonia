@@ -758,6 +758,13 @@ public class MaaProcessor
                         throw new Exception(errorMessage);
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    // 任务被用户取消，直接向上抛出，不显示错误信息
+                    LoggerHelper.Info("Agent initialization was canceled by user");
+                    SafeKillAgentProcess();
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     RootView.AddLogByKey(LangKeys.AgentStartFailed, Brushes.OrangeRed, changeColor: false);
@@ -2005,13 +2012,19 @@ public class MaaProcessor
 
     private void HandleConnectionFailureAsync(bool isAdb, CancellationToken token)
     {
-        token.ThrowIfCancellationRequested();
+        // 如果 token 已取消，不需要再调用 Stop，因为已经在其他地方处理了
+        if (token.IsCancellationRequested)
+        {
+            LoggerHelper.Info("HandleConnectionFailureAsync: token is already canceled, skipping Stop call");
+            return;
+        }
         LoggerHelper.Warning(LangKeys.ConnectFailed.ToLocalization());
         RootView.AddLogByKey(LangKeys.ConnectFailed);
         Instances.TaskQueueViewModel.SetConnected(false);
         ToastHelper.Warn(LangKeys.Warning_CannotConnect.ToLocalizationFormatted(true, isAdb ? LangKeys.Emulator : LangKeys.Window));
         Stop(MFATask.MFATaskStatus.STOPPED);
     }
+
 
     private void AddCoreTasksAsync(List<NodeAndParam> taskAndParams, CancellationToken token)
     {
@@ -2090,10 +2103,10 @@ public class MaaProcessor
     }
 
     #endregion
-
     #region 停止任务
 
     private Lock stop = new Lock();
+
     public void Stop(MFATask.MFATaskStatus status, bool finished = false, bool onlyStart = false, Action? action = null)
     {
         lock (stop)
@@ -2159,12 +2172,12 @@ public class MaaProcessor
 
     private void CancelOperations(bool killAgent = false)
     {
+        _emulatorCancellationTokenSource?.SafeCancel();
+        CancellationTokenSource.SafeCancel();
         if (killAgent)
         {
             SafeKillAgentProcess();
         }
-        _emulatorCancellationTokenSource?.SafeCancel();
-        CancellationTokenSource.SafeCancel();
     }
 
     [SupportedOSPlatform("windows")]
@@ -2201,91 +2214,204 @@ public class MaaProcessor
     /// <param name="forceKill">是否使用强制终止模式</param>
     private void SafeKillAgentProcess()
     {
-        // 然后安全地停止和释放 AgentClient
-        try
+        // 获取当前引用的本地副本，避免在检查和使用之间被其他线程修改
+        var agentClient = _agentClient;
+        var agentProcess = _agentProcess;
+        var maaTasker = MaaTasker;
+        // 安全地停止和释放 AgentClient
+        if (agentClient != null)
         {
-            if (_agentClient is { IsStateless: false, IsInvalid: false })
-                _agentClient?.LinkStop();
-        }
-        catch (Exception e)
-        {
-            LoggerHelper.Warning($"AgentClient LinkStop failed: {e.Message}");
-        }
+            try
+            {
+                // 使用 try-catch 包装属性访问，因为对象可能已被释放
+                bool shouldStop = false;
+                try
+                {
+                    shouldStop = !agentClient.IsStateless && !agentClient.IsInvalid;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 对象已被释放，跳过
+                }
+                if (shouldStop)
+                {
+                    try
+                    {
+                        agentClient.LinkStop();
+                    }
+                    catch (Exception e)
+                    {
+                        LoggerHelper.Warning($"AgentClient LinkStop failed: {e.Message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warning($"AgentClient LinkStop check failed: {e.Message}");
+            }
 
-        try
-        {
-            if (_agentClient is { IsStateless: false, IsInvalid: false })
-                _agentClient?.DetachDisposeToResource();
+            try
+            {
+                bool shouldDetach = false;
+                try
+                {
+                    shouldDetach = !agentClient.IsStateless && !agentClient.IsInvalid;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 对象已被释放，跳过
+                }
+
+                if (shouldDetach)
+                {
+                    try
+                    {
+                        agentClient.DetachDisposeToResource();
+                    }
+                    catch (Exception e)
+                    {
+                        LoggerHelper.Warning($"DetachDisposeToResource failed: {e.Message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warning($"DetachDisposeToResource check failed: {e.Message}");
+            }
+
+            try
+            {
+                bool shouldDispose = false;
+                try
+                {
+                    shouldDispose = !agentClient.IsStateless && !agentClient.IsInvalid;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 对象已被释放，跳过
+                }
+
+                if (shouldDispose)
+                {
+                    try
+                    {
+                        agentClient.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        LoggerHelper.Warning($"AgentClient Dispose failed: {e.Message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warning($"AgentClient Dispose check failed: {e.Message}");
+            }
         }
-        catch (Exception e)
+        else
         {
-            LoggerHelper.Warning($"DetachDisposeToResource failed: {e.Message}");
-        }
-        try
-        {
-            if (_agentClient is { IsStateless: false, IsInvalid: false })
-                _agentClient.Dispose();
-        }
-        catch (Exception e)
-        {
-            LoggerHelper.Warning($"AgentClient Dispose failed: {e.Message}");
+            LoggerHelper.Info("AgentClient is null, skipping cleanup");
         }
 
         _agentClient = null;
-        try
+
+        // 安全地释放 MaaTasker
+        if (maaTasker != null)
         {
-            if (MaaTasker is { IsStateless: false, IsInvalid: false })
-                MaaTasker.Dispose();
-        }
-        catch (Exception e)
-        {
-            LoggerHelper.Warning($"MaaTasker Dispose failed: {e.Message}");
+            try
+            {
+                bool shouldDispose = false;
+                try
+                {
+                    shouldDispose = !maaTasker.IsStateless && !maaTasker.IsInvalid;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 对象已被释放，跳过
+                }
+
+                if (shouldDispose)
+                {
+                    try
+                    {
+                        maaTasker.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        LoggerHelper.Warning($"MaaTasker Dispose failed: {e.Message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warning($"MaaTasker Dispose check failed: {e.Message}");
+            }
         }
 
         // 处理 Agent 进程
-        try
+        if (agentProcess != null)
         {
-            if (_agentProcess != null)
+            try
+            {
+                // 先检查进程是否有效（有关联的进程）
+                var hasExited = true;
+                try
+                {
+                    hasExited = agentProcess.HasExited;
+                }
+                catch (InvalidOperationException)
+                {
+                    // 进程对象没有关联的进程，视为已退出
+                    hasExited = true;
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Warning($"Failed to check if agent process has exited: {ex.Message}");
+                    hasExited = true;
+                }
+
+                if (!hasExited)
+                {
+                    try
+                    {
+                        LoggerHelper.Info($"Kill AgentProcess: {agentProcess.ProcessName}");
+                        agentProcess.Kill(true);
+                        agentProcess.WaitForExit(5000); // 添加超时，避免无限等待
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Warning($"Failed to kill agent process: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    LoggerHelper.Info("AgentProcess has exited or is not associated");
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Error($"Error handling agent process: {e.Message}");
+            }
+            finally
             {
                 try
                 {
-                    // 先检查进程是否有效（有关联的进程）
-                    var hasExited = true;
-                    try
-                    {
-                        hasExited = _agentProcess.HasExited;
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // 进程对象没有关联的进程，视为已退出
-                        hasExited = true;
-                    }
-
-                    LoggerHelper.Info(!hasExited ? $"Kill AgentProcess: {_agentProcess.ProcessName}" : "AgentProcess has exited or is not associated");
-
-                    if (!hasExited)
-                    {
-                        _agentProcess.Kill(true);
-                        _agentProcess.WaitForExit();
-                    }
+                    agentProcess.Dispose();
                 }
-                finally
+                catch (Exception e)
                 {
-                    _agentProcess.Dispose();
+                    LoggerHelper.Warning($"AgentProcess Dispose failed: {e.Message}");
                 }
-            }
-            else
-            {
-                LoggerHelper.Info("AgentProcess is null");
             }
         }
-        catch (Exception e)
+        else
         {
-            LoggerHelper.Error(e);
+            LoggerHelper.Info("AgentProcess is null");
         }
 
         _agentProcess = null;
     }
+
 
     private bool ShouldProcessStop(bool finished)
     {
@@ -2348,11 +2474,11 @@ public class MaaProcessor
         }
         else if (status == MFATask.MFATaskStatus.STOPPED)
         {
-            ToastHelper.Info(LangKeys.TaskStopped.ToLocalization());
             TaskManager.RunTask(() =>
             {
                 Task.Delay(400).ContinueWith(_ =>
                 {
+                    ToastHelper.Info(LangKeys.TaskStopped.ToLocalization());
                     RootView.AddLogByKey(LangKeys.TaskAbandoned);
                 });
             });
@@ -2477,9 +2603,7 @@ public class MaaProcessor
 
         Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false);
     }
-
     private CancellationTokenSource? _emulatorCancellationTokenSource;
-
     private static Process? _softwareProcess;
 
     public async Task StartSoftware()
