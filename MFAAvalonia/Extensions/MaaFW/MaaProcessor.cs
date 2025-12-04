@@ -2209,14 +2209,10 @@ public class MaaProcessor
             catch (ArgumentException) { } // 进程已退出
         }
     }
-
-    /// <summary>
-    /// 安全地终止 Agent 进程
-    /// </summary>
-    /// <summary>
+    
     /// 强制终止 Agent 进程（用于窗口关闭等紧急情况）
     /// </summary>
-    /// <param name="forceKill">是否使用强制终止模式</param>
+    /// <param name="taskerToDispose">原tasker</param>
     private void SafeKillAgentProcess(MaaTasker? taskerToDispose = null)
     {
         // 获取当前引用的本地副本，避免在检查和使用之间被其他线程修改
@@ -2224,180 +2220,144 @@ public class MaaProcessor
         var agentProcess = _agentProcess;
         // 如果传入了 taskerToDispose，使用它；否则使用当前的 MaaTasker
         var maaTasker = taskerToDispose ?? MaaTasker;
-
-        LoggerHelper.Info("SAFE KILL");
+        
         int i = 0;
 
         // 先清除引用，防止在后续操作中被其他线程访问
         _agentClient = null;
         _agentProcess = null;
-        //
-        // // 重要：必须按照正确的顺序释放资源，避免堆内存损坏
-        // //顺序：1. 先停止 AgentClient 连接  2. 终止 Agent 进程  3. 解除绑定  4. 释放 MaaTasker
-        //
-        // // 步骤 1: 先停止 AgentClient 连接（在释放任何资源之前）
-        // if (agentClient != null)
-        // {
-        //     LoggerHelper.Info($"SAFE KILL {++i}: Stopping AgentClient connection");
-        //     try
-        //     {
-        //         bool shouldStop = false;
-        //         try
-        //         {
-        //             shouldStop = !agentClient.IsStateless && !agentClient.IsInvalid;
-        //         }
-        //         catch (ObjectDisposedException)
-        //         {
-        //             // 对象已被释放，跳过
-        //         }
-        //
-        //         if (shouldStop)
-        //         {
-        //             try
-        //             {
-        //                 agentClient.LinkStop();
-        //                 LoggerHelper.Info("AgentClient LinkStop succeeded");
-        //             }
-        //             catch (Exception e)
-        //             {
-        //                 LoggerHelper.Warning($"AgentClient LinkStop failed: {e.Message}");
-        //             }
-        //         }
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         LoggerHelper.Warning($"AgentClient LinkStop check failed: {e.Message}");
-        //     }
-        //
-        //     // 步骤 2: 解除 AgentClient 与资源的绑定（在 Dispose MaaTasker 之前）
-        //     LoggerHelper.Info($"SAFE KILL {++i}: Detaching AgentClient from resource");
-        //     try
-        //     {
-        //         bool shouldDetach = false;
-        //         try
-        //         {
-        //             shouldDetach = !agentClient.IsStateless && !agentClient.IsInvalid;
-        //         }
-        //         catch (ObjectDisposedException)
-        //         {
-        //             // 对象已被释放，跳过
-        //         }
-        //
-        //         if (shouldDetach)
-        //         {
-        //             try
-        //             {
-        //                 agentClient.DetachDisposeToResource();
-        //                 LoggerHelper.Info("AgentClient DetachDisposeToResource succeeded");
-        //             }
-        //             catch (Exception e)
-        //             {
-        //                 LoggerHelper.Warning($"DetachDisposeToResource failed: {e.Message}");
-        //             }
-        //         }
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         LoggerHelper.Warning($"DetachDisposeToResource check failed: {e.Message}");
-        //     }
-        // }
-        //
-        // // 步骤 3: 终止 Agent 进程（在释放 MaaTasker 之前）
-        // if (agentProcess != null)
-        // {
-        //     LoggerHelper.Info($"SAFE KILL {++i}: Terminating Agent process");
-        //     try
-        //     {
-        //         var hasExited = true;
-        //         try
-        //         {
-        //             hasExited = agentProcess.HasExited;
-        //         }
-        //         catch (InvalidOperationException)
-        //         {
-        //             hasExited = true;
-        //         }
-        //         catch (Exception ex)
-        //         {
-        //             LoggerHelper.Warning($"Failed to check if agent process has exited: {ex.Message}");
-        //             hasExited = true;
-        //         }
-        //
-        //         if (!hasExited)
-        //         {
-        //             try
-        //             {
-        //                 LoggerHelper.Info($"Kill AgentProcess: {agentProcess.ProcessName}");
-        //                 agentProcess.Kill(true);
-        //                 agentProcess.WaitForExit(5000);
-        //                 LoggerHelper.Info("Agent process killed successfully");
-        //             }
-        //             catch (Exception ex)
-        //             {
-        //                 LoggerHelper.Warning($"Failed to kill agent process: {ex.Message}");
-        //             }
-        //         }
-        //         else
-        //         {
-        //             LoggerHelper.Info("AgentProcess has already exited");
-        //         }
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         LoggerHelper.Error($"Error handling agent process: {e.Message}");
-        //     }
-        //     finally
-        //     {
-        //         try
-        //         {
-        //             agentProcess.Dispose();
-        //         }
-        //         catch (Exception e)
-        //         {
-        //             LoggerHelper.Warning($"AgentProcess Dispose failed: {e.Message}");
-        //         }
-        //     }
-        // }
-        //
-        // // 步骤 4: 手动释放 AgentClient（如果还没有被释放）
-        // if (agentClient != null)
-        // {
-        //     LoggerHelper.Info($"SAFE KILL {++i}: Disposing AgentClient");
-        //     try
-        //     {
-        //         bool shouldDispose = false;
-        //         try
-        //         {
-        //             shouldDispose = !agentClient.IsStateless && !agentClient.IsInvalid;
-        //         }
-        //         catch (ObjectDisposedException)
-        //         {
-        //             // 对象已被释放，跳过
-        //         }
-        //
-        //         if (shouldDispose)
-        //         {
-        //             try
-        //             {
-        //                 agentClient.Dispose();
-        //                 LoggerHelper.Info("AgentClient disposed successfully");
-        //             }
-        //             catch (Exception e)
-        //             {
-        //                 LoggerHelper.Warning($"AgentClient Dispose failed: {e.Message}");
-        //             }
-        //         }
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         LoggerHelper.Warning($"AgentClient Dispose check failed: {e.Message}");
-        //     }
-        // }
 
-        // 步骤 5: 最后释放 MaaTasker（此时 AgentClient 已经被解除绑定并释放）
+        // 重要：必须按照正确的顺序释放资源，避免原生代码访问冲突
+        // 步骤 1: 先解除 AgentClient 与资源的绑定（在Dispose MaaTasker 之前）
+        // 这样 MaaTasker.Dispose() 就不会触发 MaaAgentClient.OnResourceReleasing 事件
+        if (agentClient != null)
+        {
+            LoggerHelper.Info($"Detaching AgentClient from resource");
+            try
+            {
+                bool shouldDetach = false;
+                try
+                {
+                    shouldDetach = !agentClient.IsStateless && !agentClient.IsInvalid;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 对象已被释放，跳过
+                }
+
+                if (shouldDetach)
+                {
+                    try
+                    {
+                        // 解除绑定，这样 MaaTasker.Dispose() 就不会触发 AgentClient 的释放
+                        agentClient.DetachDisposeToResource();
+                        LoggerHelper.Info("AgentClient DetachDisposeToResource succeeded");
+                    }
+                    catch (Exception e)
+                    {
+                        LoggerHelper.Warning($"DetachDisposeToResource failed: {e.Message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warning($"DetachDisposeToResource check failed: {e.Message}");
+            }
+
+            // 停止 AgentClient 连接
+            LoggerHelper.Info($"topping AgentClient connection");
+            try
+            {
+                bool shouldStop = false;
+                try
+                {
+                    shouldStop = !agentClient.IsStateless && !agentClient.IsInvalid;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 对象已被释放，跳过
+                }
+
+                if (shouldStop)
+                {
+                    try
+                    {
+                        agentClient.LinkStop();
+                        LoggerHelper.Info("AgentClient LinkStop succeeded");
+                    }
+                    catch (Exception e)
+                    {
+                        LoggerHelper.Warning($"AgentClient LinkStop failed: {e.Message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Warning($"AgentClient LinkStop check failed: {e.Message}");
+            }
+        }
+
+        // 步骤 2: 终止 Agent 进程（在释放 MaaTasker 之前）
+        if (agentProcess != null)
+        {
+            LoggerHelper.Info($"Terminating Agent process");
+            try
+            {
+                var hasExited = true;
+                try
+                {
+                    hasExited = agentProcess.HasExited;
+                }
+                catch (InvalidOperationException)
+                {
+                    hasExited = true;
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Warning($"Failed to check if agent process has exited: {ex.Message}");
+                    hasExited = true;
+                }
+
+                if (!hasExited)
+                {
+                    try
+                    {
+                        LoggerHelper.Info($"Kill AgentProcess: {agentProcess.ProcessName}");
+                        agentProcess.Kill(true);
+                        agentProcess.WaitForExit(5000);
+                        LoggerHelper.Info("Agent process killed successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Warning($"Failed to kill agent process: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    LoggerHelper.Info("AgentProcess has already exited");
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerHelper.Error($"Error handling agent process: {e.Message}");
+            }
+            finally
+            {
+                try
+                {
+                    agentProcess.Dispose();
+                }
+                catch (Exception e)
+                {
+                    LoggerHelper.Warning($"AgentProcess Dispose failed: {e.Message}");
+                }
+            }
+        }
+
+        // 步骤 3: 释放 MaaTasker（由于已经解除了 AgentClient 的绑定，不会触发 AgentClient 释放）
         if (maaTasker != null)
         {
-            LoggerHelper.Info($"SAFE KILL {++i}: Disposing MaaTasker");
+            LoggerHelper.Info($"Disposing MaaTasker");
             try
             {
                 maaTasker.Dispose();
@@ -2411,10 +2371,6 @@ public class MaaProcessor
             {
                 LoggerHelper.Warning($"MaaTasker Dispose failed: {e.Message}");
             }
-        }
-        else
-        {
-            LoggerHelper.Info("MaaTasker is null, skipping disposal");
         }
     }
 
@@ -2699,20 +2655,22 @@ public class MaaProcessor
         try
         {
 
-            // 获取当前资源的自定义目录
-            var currentResource = Instances.TaskQueueViewModel.CurrentResources
-                .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
-            var resourcePaths = currentResource?.ResolvedPath ?? currentResource?.Path;
-
-            if (resourcePaths == null || resourcePaths.Count == 0)
-            {
-                LoggerHelper.Info("No resource paths found, skipping custom class loading");
-                return;
-            }
-
-            // LoggerHelper.Info(LangKeys.RegisteringCustomRecognizer.ToLocalization());
-            // LoggerHelper.Info(LangKeys.RegisteringCustomAction.ToLocalization());
-            resourcePaths.Add(Path.Combine(AppContext.BaseDirectory, "resource"));
+                        // 获取当前资源的自定义目录
+                        var currentResource = Instances.TaskQueueViewModel.CurrentResources
+                            .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
+                        var originalPaths = currentResource?.ResolvedPath ?? currentResource?.Path;
+            
+                        if (originalPaths == null || originalPaths.Count == 0)
+                        {
+                            LoggerHelper.Info("No resource paths found, skipping custom class loading");
+                            return;
+                        }
+            
+                        // 创建副本，避免修改原始列表
+                        var resourcePaths = new List<string>(originalPaths);
+                        // LoggerHelper.Info(LangKeys.RegisteringCustomRecognizer.ToLocalization());
+                        // LoggerHelper.Info(LangKeys.RegisteringCustomAction.ToLocalization());
+                        resourcePaths.Add(Path.Combine(AppContext.BaseDirectory, "resource"));
             // 遍历所有资源路径，查找 custom 目录
             foreach (var resourcePath in resourcePaths)
             {
