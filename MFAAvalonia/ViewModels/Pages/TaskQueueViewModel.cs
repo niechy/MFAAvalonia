@@ -526,7 +526,6 @@ public partial class TaskQueueViewModel : ViewModelBase
         ConfigurationManager.Current.SetValue(ConfigurationKeys.CurrentController, value.ToString());
         UpdateResourcesForController();
         Refresh();
-        MaaProcessor.Instance.SetTasker();
     }
 
     /// <summary>
@@ -597,6 +596,7 @@ public partial class TaskQueueViewModel : ViewModelBase
 
 
     private CancellationTokenSource? _refreshCancellationTokenSource;
+
     [RelayCommand]
     private void Refresh()
     {
@@ -605,6 +605,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token), _refreshCancellationTokenSource.Token, name: "刷新", handleError: (e) => HandleDetectionError(e, CurrentController == MaaControllerTypes.Adb),
             catchException: true, shouldLog: true);
     }
+
     [RelayCommand]
     private void CloseE()
     {

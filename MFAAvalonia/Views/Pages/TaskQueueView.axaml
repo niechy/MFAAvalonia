@@ -166,12 +166,12 @@
                                                            IconSize="Size16"
                                                            IconVariant="Regular" />
                                     </Button>
-                                    <Button 
-                                            Command="{Binding ResetTasksCommand}" Classes="Basic Round" 
-                                            IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
-                                            Margin="7,0,8,0"
-                                            Padding="0"
-                                            ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.Reset}}">
+                                    <Button
+                                        Command="{Binding ResetTasksCommand}" Classes="Basic Round"
+                                        IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                                        Margin="7,0,8,0"
+                                        Padding="0"
+                                        ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.Reset}}">
                                         <fluent:FluentIcon Height="18"
                                                            Icon="ArrowSync"
                                                            IconSize="Size16"
