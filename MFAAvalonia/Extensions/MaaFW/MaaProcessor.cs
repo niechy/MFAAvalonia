@@ -463,7 +463,6 @@ public class MaaProcessor
                     _agentClient = MaaAgentClient.Create(identifier, tasker);
                     var timeOut = Interface?.Agent?.Timeout ?? 120;
                     _agentClient.SetTimeout(TimeSpan.FromSeconds(timeOut < 0 ? int.MaxValue : timeOut));
-                    _agentClient.AttachDisposeToResource();
                     _agentClient.Releasing += (_, _) =>
                     {
                         LoggerHelper.Info("退出Agent进程");
@@ -664,7 +663,6 @@ public class MaaProcessor
                                     _agentClient = MaaAgentClient.Create(identifier, tasker);
                                     timeOut = Interface?.Agent?.Timeout ?? 120;
                                     _agentClient.SetTimeout(TimeSpan.FromSeconds(timeOut < 0 ? int.MaxValue : timeOut));
-                                    _agentClient.AttachDisposeToResource();
                                     _agentClient.Releasing += (_, _) =>
                                     {
                                         LoggerHelper.Info("退出Agent进程");
@@ -2232,40 +2230,8 @@ public class MaaProcessor
         // 这样 MaaTasker.Dispose() 就不会触发 MaaAgentClient.OnResourceReleasing 事件
         if (agentClient != null)
         {
-            LoggerHelper.Info($"Detaching AgentClient from resource");
-            try
-            {
-                bool shouldDetach = false;
-                try
-                {
-                    shouldDetach = !agentClient.IsStateless && !agentClient.IsInvalid;
-                }
-                catch (ObjectDisposedException)
-                {
-                    // 对象已被释放，跳过
-                }
-
-                if (shouldDetach)
-                {
-                    try
-                    {
-                        // 解除绑定，这样 MaaTasker.Dispose() 就不会触发 AgentClient 的释放
-                        agentClient.DetachDisposeToResource();
-                        LoggerHelper.Info("AgentClient DetachDisposeToResource succeeded");
-                    }
-                    catch (Exception e)
-                    {
-                        LoggerHelper.Warning($"DetachDisposeToResource failed: {e.Message}");
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                LoggerHelper.Warning($"DetachDisposeToResource check failed: {e.Message}");
-            }
-
             // 停止 AgentClient 连接
-            LoggerHelper.Info($"topping AgentClient connection");
+            LoggerHelper.Info($"Stopping AgentClient connection");
             try
             {
                 bool shouldStop = false;
