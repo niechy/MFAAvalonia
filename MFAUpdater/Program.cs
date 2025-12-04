@@ -51,6 +51,13 @@ public class Program
             Log("MFAUpdater Version: v" + version);
             Log("Command Line Arguments: " + string.Join(", ", args));
 
+            // 无参数运行时，检查临时目录并执行自动更新
+            if (args.Length == 0)
+            {
+                HandleAutoUpdate();
+                return;
+            }
+
             ValidateArguments(args);
             int mainProcessId = ParseMainProcessId(args);
             WaitForMainProcessExit(mainProcessId);
@@ -67,11 +74,159 @@ public class Program
         }
     }
 
+
     private static void Log(object message)
     {
         string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
         Console.WriteLine(logEntry);
         LogBuilder.AppendLine(logEntry);
+    }
+
+    /// <summary>
+    /// 处理无参数运行时的自动更新逻辑
+    /// 检查 temp_res 或 temp_mfa 目录，找到里面的文件夹并将其内容复制到当前目录
+    /// </summary>
+    private static void HandleAutoUpdate()
+    {
+        Log("无参数运行，开始检查临时更新目录...");
+
+        string baseDir = AppContext.BaseDirectory;
+        string[] tempDirNames =
+        {
+            "temp_res",
+            "temp_mfa"
+        };
+
+        foreach (string tempDirName in tempDirNames)
+        {
+            string tempDir = Path.Combine(baseDir, tempDirName);
+
+            if (!Directory.Exists(tempDir))
+            {
+                Log($"目录不存在: {tempDir}");
+                continue;
+            }
+
+            Log($"找到临时目录: {tempDir}");
+
+            // 查找目录中的子文件夹（排除压缩包）
+            var subDirectories = Directory.GetDirectories(tempDir);
+
+            if (subDirectories.Length == 0)
+            {
+                Log($"临时目录 {tempDirName} 中没有子文件夹");
+                continue;
+            }
+
+            //遍历所有子文件夹，将内容复制到当前目录
+            foreach (string sourceDir in subDirectories)
+            {
+                Log($"找到更新源目录: {sourceDir}");
+
+                try
+                {
+                    // 将子文件夹中的所有内容复制到当前目录
+                    CopyDirectoryContents(sourceDir, baseDir);
+                    Log($"已从 {sourceDir} 复制更新文件到 {baseDir}");
+                }
+                catch (Exception ex)
+                {
+                    Log($"复制更新文件失败: {ex.Message}");
+                }
+            }
+
+            // 清理临时目录
+            try
+            {
+                Directory.Delete(tempDir, true);
+                Log($"已删除临时目录: {tempDir}");
+            }
+            catch (Exception ex)
+            {
+                Log($"删除临时目录失败: {ex.Message}");
+            }
+        }
+
+        Log("自动更新检查完成");
+    }
+
+    /// <summary>
+    /// 将源目录中的所有内容（文件和子目录）复制到目标目录，覆盖已存在的文件
+    /// </summary>
+    private static void CopyDirectoryContents(string sourceDir, string destDir)
+    {
+        // 复制所有文件
+        foreach (string sourceFile in Directory.GetFiles(sourceDir, "*", SearchOption.TopDirectoryOnly))
+        {
+            string fileName = Path.GetFileName(sourceFile);
+            string destFile = Path.Combine(destDir, fileName);
+
+            try
+            {
+                File.Copy(sourceFile, destFile, true);
+                Log($"复制文件: {fileName}");
+                SetUnixPermissions(destFile);
+            }
+            catch (Exception ex)
+            {
+                Log($"复制文件 {fileName} 失败: {ex.Message}");
+            }
+        }
+
+        // 递归复制所有子目录
+        foreach (string sourceSubDir in Directory.GetDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
+        {
+            string dirName = Path.GetFileName(sourceSubDir);
+            string destSubDir = Path.Combine(destDir, dirName);
+
+            try
+            {
+                // 确保目标子目录存在
+                Directory.CreateDirectory(destSubDir);
+
+                // 递归复制子目录内容
+                CopyDirectoryContentsRecursive(sourceSubDir, destSubDir);
+                Log($"复制目录: {dirName}");
+            }
+            catch (Exception ex)
+            {
+                Log($"复制目录 {dirName} 失败: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 递归复制目录内容
+    /// </summary>
+    private static void CopyDirectoryContentsRecursive(string sourceDir, string destDir)
+    {
+        // 确保目标目录存在
+        Directory.CreateDirectory(destDir);
+
+        // 复制所有文件
+        foreach (string sourceFile in Directory.GetFiles(sourceDir))
+        {
+            string fileName = Path.GetFileName(sourceFile);
+            string destFile = Path.Combine(destDir, fileName);
+
+            try
+            {
+                File.Copy(sourceFile, destFile, true);
+                SetUnixPermissions(destFile);
+            }
+            catch (Exception ex)
+            {
+                Log($"复制文件 {fileName} 失败: {ex.Message}");
+            }
+        }
+
+        // 递归复制子目录
+        foreach (string sourceSubDir in Directory.GetDirectories(sourceDir))
+        {
+            string dirName = Path.GetFileName(sourceSubDir);
+            string destSubDir = Path.Combine(destDir, dirName);
+            CopyDirectoryContentsRecursive(sourceSubDir, destSubDir);
+        }
     }
 
     /// <summary>
