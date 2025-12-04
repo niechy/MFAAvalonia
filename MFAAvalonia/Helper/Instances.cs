@@ -202,6 +202,7 @@ public static partial class Instances
     /// </summary>
     public static void ShutdownSystem()
     {
+        RootView.BeforeClosed();
         try
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -221,6 +222,7 @@ public static partial class Instances
         {
             LoggerHelper.Error($"关机失败: {ex.Message}");
         }
+        ShutdownApplication();
     }
     /// <summary>
     /// 跨平台重启操作系统（需要管理员/root权限）
