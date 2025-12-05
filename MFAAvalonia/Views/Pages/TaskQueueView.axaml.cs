@@ -1232,9 +1232,7 @@ public partial class TaskQueueView : UserControl
         // 优先使用 Description
         if (!string.IsNullOrWhiteSpace(description))
         {
-            LoggerHelper.Info(description);
             var result = description.ResolveMarkdownContentAsync(transform: false).GetAwaiter().GetResult();
-           
             return result;
         }
 
@@ -1790,9 +1788,6 @@ public partial class TaskQueueView : UserControl
 
     public static string ConvertCustomMarkup(string input, string outputFormat = "html")
     {
-        // 预处理换行符
-        input = input.Replace(@"\n", "\n");
-
         // 定义简单替换规则（不需要动态逻辑的规则）
         var simpleRules = new Dictionary<string, Dictionary<string, string>>
         {
@@ -1943,16 +1938,43 @@ public partial class TaskQueueView : UserControl
             RegexOptions.IgnoreCase
         );
 
-        // 处理换行符
+
         input = outputFormat switch
         {
-            "markdown" => input.Replace("\n", "  \n"), // Markdown换行需两个空格
-            "html" => input.Replace("\n", "<br/>"), // HTML换行用<br/>
+            "markdown" => ConvertLineBreaksForMarkdown(input), // Markdown换行需两个空格，但表格行除外
+            "html" => ConvertLineBreaksForMarkdown(input.Replace("</br>", "<br/>")), // HTML换行，但表格行除外
             _ => input
         };
-
         return input;
     }
+    /// <summary>
+    /// 智能转换换行符，为非表格行添加 Markdown 换行所需的两个空格
+    /// 表格行（以 | 结尾）不添加空格，以保持表格格式正确
+    /// </summary>
+    private static string ConvertLineBreaksForMarkdown(string input)
+    {
+        // 先将转义的 \n 转换为实际换行符
+        return input;
+        // 按行分割
+        var lines = input.Split('\n');
+
+        for (int i = 0; i < lines.Length - 1; i++) // 最后一行不需要处理
+        {
+            var line = lines[i].TrimEnd();
+
+            // 检查是否是表格行（以 | 结尾）或表格分隔行（包含 :---: 或 --- 等模式）
+            bool isTableLine = line.EndsWith("|") || Regex.IsMatch(line, @"^\s*\|[\s\-:|]+\|\s*$");
+
+            // 非表格行添加两个空格以实现 Markdown 换行
+            if (!isTableLine && !lines[i].EndsWith("  "))
+            {
+                lines[i] += "  ";
+            }
+        }
+
+        return string.Join("\n", lines);
+    }
+
 
     // private static List<TextStyleMetadata> _currentStyles = new();
     //

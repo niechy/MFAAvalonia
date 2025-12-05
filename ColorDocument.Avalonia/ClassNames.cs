@@ -20,6 +20,13 @@ namespace ColorDocument.Avalonia
         public const string NoContainerClass = "NoContainer";
         public const string BlockquoteClass = "Blockquote";
         public const string NoteClass = "Note";
+        
+        // GitHub-style alert classes
+        public const string AlertNoteClass = "AlertNote";
+        public const string AlertTipClass = "AlertTip";
+        public const string AlertImportantClass = "AlertImportant";
+        public const string AlertWarningClass = "AlertWarning";
+        public const string AlertCautionClass = "AlertCaution";
 
         public const string ParagraphClass = "Paragraph";
 

@@ -33,8 +33,7 @@ public partial class AnnouncementViewModel : ViewModelBase
     [ObservableProperty] private AvaloniaList<AnnouncementItem> _announcementItems = new();
     [ObservableProperty] private AnnouncementItem? _selectedAnnouncement;
     [ObservableProperty] private string _announcementContent; // 绑定到 MarkdownScrollViewer.Markdown
-    [ObservableProperty]
-    private bool _doNotRemindThisAnnouncementAgain = Convert.ToBoolean(
+    [ObservableProperty] private bool _doNotRemindThisAnnouncementAgain = Convert.ToBoolean(
         GlobalConfiguration.GetValue(ConfigurationKeys.DoNotShowAnnouncementAgain, bool.FalseString));
 
     #region 懒加载核心字段（适配 MarkdownScrollViewer 内部 ScrollViewer）
@@ -305,7 +304,11 @@ public partial class AnnouncementViewModel : ViewModelBase
 
     public static void AddAnnouncement(string announcement)
     {
-        _publicAnnouncementItems.Add(new AnnouncementItem { Title = "Welcome", Content = announcement });
+        _publicAnnouncementItems.Add(new AnnouncementItem
+        {
+            Title = "Welcome",
+            Content = announcement
+        });
     }
 
     /// <summary>

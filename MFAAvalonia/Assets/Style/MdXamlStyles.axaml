@@ -35,6 +35,33 @@
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
     </Style>
+    
+    <!-- ~1~ GitHub-style Alert Blocks @1@ -->
+    <!-- ~1~ Note Alert (Blue) @1@ -->
+    <!-- <Style Selector="Border.AlertNote"> -->
+    <!--     <Setter Property="Background" Value="#ddf4ff" /> -->
+    <!-- </Style> -->
+    <!-- -->
+    <!-- ~1~ Tip Alert (Green) @1@ -->
+    <!-- <Style Selector="Border.AlertTip"> -->
+    <!--     <Setter Property="Background" Value="#d1f7c4" /> -->
+    <!-- </Style> -->
+    <!-- -->
+    <!-- ~1~ Important Alert (Purple) @1@ -->
+    <!-- <Style Selector="Border.AlertImportant"> -->
+    <!--     <Setter Property="Background" Value="#fbefff" /> -->
+    <!-- </Style> -->
+    <!-- -->
+    <!-- ~1~ Warning Alert (Yellow) @1@ -->
+    <!-- <Style Selector="Border.AlertWarning"> -->
+    <!--     <Setter Property="Background" Value="#fff8c5" /> -->
+    <!-- </Style> -->
+    <!-- -->
+    <!-- ~1~ Caution Alert (Red) @1@ -->
+    <!-- <Style Selector="Border.AlertCaution"> -->
+    <!--     <Setter Property="Background" Value="#ffebe9" /> -->
+    <!-- </Style> -->
+    
     <!-- <Style Selector="ctxt|CCode.CodeBlock"> -->
     <!--     <Style.Setters> -->
     <!--         <Setter Property="MonospaceFontFamily" Value="Consolas, Microsoft YaHei, Global Monospace" /> -->

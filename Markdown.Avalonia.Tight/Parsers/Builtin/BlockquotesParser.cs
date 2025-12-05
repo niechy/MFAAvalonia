@@ -18,6 +18,10 @@ namespace Markdown.Avalonia.Parsers.Builtin
             [\n]*
             ", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
 
+        // GitHub-style alert pattern: [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION]
+        private static readonly Regex _alertPattern = new(@"^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         private bool _supportTextAlignment;
 
         public BlockquotesParser(bool supportTextAlignment) : base(_blockquoteFirst, "BlockquotesEvaluator")
@@ -31,23 +35,51 @@ namespace Markdown.Avalonia.Parsers.Builtin
             parseTextEnd = firstMatch.Index + firstMatch.Length;
 
             // trim '>'
-            var trimmedTxt = string.Join(
-                    "\n",
-                    firstMatch.Value.Trim().Split('\n')
-                        .Select(txt =>
-                        {
-                            if (txt.Length <= 1) return string.Empty;
-                            var trimmed = txt.Substring(1);
-                            if (trimmed.FirstOrDefault() == ' ') trimmed = trimmed.Substring(1);
-                            return trimmed;
-                        })
-                        .ToArray()
-            );
+            var lines = firstMatch.Value.Trim().Split('\n')
+                .Select(txt =>
+                {
+                    if (txt.Length <= 1) return string.Empty;
+                    var trimmed = txt.Substring(1);
+                    if (trimmed.FirstOrDefault() == ' ') trimmed = trimmed.Substring(1);
+                    return trimmed;
+                })
+                .ToArray();
 
-            var newStatus = new ParseStatus(true & _supportTextAlignment);
-            var blocks = engine.ParseGamutElement(trimmedTxt + "\n", newStatus);
+            // Check if first line is a GitHub-style alert marker
+            if (lines.Length > 0)
+            {
+                var alertMatch = _alertPattern.Match(lines[0]);
+                if (alertMatch.Success)
+                {
+                    var alertTypeStr = alertMatch.Groups[1].Value.ToUpperInvariant();
+                    var alertType = alertTypeStr switch
+                    {
+                        "TIP" => AlertType.Tip,
+                        "IMPORTANT" => AlertType.Important,
+                        "WARNING" => AlertType.Warning,
+                        "CAUTION" => AlertType.Caution,
+                        _ => AlertType.Note
+                    };
 
-            return new[] { new BlockquoteElement(blocks) };
+                    // Get content after the alert marker (skip first line)
+                    var contentLines = lines.Skip(1).ToArray();
+                    var trimmedTxt = string.Join("\n", contentLines);
+
+                    var newStatus = new ParseStatus(true & _supportTextAlignment);
+                    var blocks = engine.ParseGamutElement(trimmedTxt + "\n", newStatus);
+
+                    return new[] { new AlertBlockElement(blocks, alertType) };
+                }
+            }
+
+            // Regular blockquote
+            var trimmedText = string.Join("\n", lines);
+
+            var regularStatus = new ParseStatus(true & _supportTextAlignment);
+            var regularBlocks = engine.ParseGamutElement(trimmedText + "\n", regularStatus);
+
+            return new[] { new BlockquoteElement(regularBlocks) };
         }
     }
 }
+
