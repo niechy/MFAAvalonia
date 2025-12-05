@@ -13,12 +13,14 @@
                  x:Class="MFAAvalonia.Views.Windows.NotificationView" Width="400" TitleBarAutoHideDelay="0"
                  TitleBarAnimationEnabled="False" TitleBarVisibilityOnFullScreen="Hidden"
                  MinHeight="40" CanFullScreen="False" CanMinimize="False" CanPin="False" CanMaximize="False"
-                 SizeToContent="Height" CanResize="False" CanMove="False" IsTitleBarVisible="False"  ShowActivated="False"
+                 SizeToContent="Height" CanResize="False" CanMove="False" IsTitleBarVisible="False"
+                 ShowActivated="False"
                  Focusable="False"
                  Topmost="True">
     <suki:SukiWindow.Resources>
         <converters:BoolToGridLengthConverter x:Key="Converter" />
     </suki:SukiWindow.Resources>
+
     <Grid Margin="10" x:Name="AnimationHost">
         <Grid.RowDefinitions>
             <!-- 第一行：标题和消息（高度自适应内容） -->
@@ -31,12 +33,13 @@
                            Converter={StaticResource Converter}}" />
 
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Left" TextAlignment="Left" FontWeight="Medium" Margin="7 0 0 0 "
+        <TextBlock Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Left" TextAlignment="Left"
+                   FontWeight="Medium" Margin="7 0 0 0 "
                    Text="{markupExtensions:I18n {x:Static helper:LangKeys.Notification}}" />
 
         <Button
             Grid.Row="0"
-            Classes="Basic Round" 
+            Classes="Basic Round"
             Click="CloseButton_OnClick"
             Height="17"
             Margin="3,5,3,0"
