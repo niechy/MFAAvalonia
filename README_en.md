@@ -178,9 +178,9 @@ Task documentation (`doc`) supports the following formats:
 
 ### Advanced Field (Experimental)
 
-> 💡 Recommended to
-> use [InterfaceV2](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-ProjectInterfaceV2%E5%8D%8F%E8%AE%AE.md)
-> input types
+> 💡 It is recommended to use
+> [InterfaceV2](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-ProjectInterfaceV2%E5%8D%8F%E8%AE%AE.md)
+> input types.
 
 The `advanced` field allows dynamic configuration of `pipeline_override` through UI input fields, providing users with
 more flexible customization options.
