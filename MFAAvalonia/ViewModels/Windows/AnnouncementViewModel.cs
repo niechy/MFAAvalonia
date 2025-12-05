@@ -375,21 +375,15 @@ public partial class AnnouncementViewModel : ViewModelBase
                     LoggerHelper.Error($"读取公告元数据失败: {mdFile}, 错误: {ex.Message}");
                 }
             }
-
             // UI 线程更新公告列表
             await DispatcherHelper.RunOnMainThreadAsync(() =>
             {
                 AnnouncementItems.Clear();
                 AnnouncementItems.AddRange(tempItems);
-
-                // 默认选中第一个公告
-                if (AnnouncementItems.Any())
-                {
-                    SelectedAnnouncement = AnnouncementItems[0];
-                }
                 AnnouncementItems.AddRange(_publicAnnouncementItems);
-                LoggerHelper.Info($"公告数量：{AnnouncementItems.Count}");
+                LoggerHelper.Info($"公告数量：{AnnouncementItems.Count}"); // 注意：不在这里选中第一个公告，由 CheckAnnouncement 在 View 设置完成后选中
             });
+
         }
         catch (Exception ex)
         {
@@ -471,6 +465,14 @@ public partial class AnnouncementViewModel : ViewModelBase
             };
             viewModel.SetView(announcementView);
             viewModel.SetMarkdownScrollViewer(announcementView.Viewer);
+
+            // 在 View 和 ScrollViewer 设置完成后，再选中第一个公告
+            // 这样懒加载的滚动监听才能正确设置
+            if (viewModel.AnnouncementItems.Any())
+            {
+                viewModel.SelectedAnnouncement = viewModel.AnnouncementItems[0];
+            }
+
             announcementView.Show();
         }
         catch (Exception ex)
