@@ -19,10 +19,12 @@
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.9" />
-    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
-  </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Avalonia" Version="11.3.9" />
+      <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
+      <PackageReference Include="AvaloniaEdit.TextMate" Version="11.3.0" />
+      <PackageReference Include="TextMateSharp.Grammars" Version="1.0.70" />
+    </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Markdown.Avalonia.Tight\Markdown.Avalonia.Tight.csproj" PrivateAssets="All" />

@@ -55,9 +55,9 @@ public partial class AnnouncementViewModel : ViewModelBase
     }
 
     // 选中项变更时：清理之前的懒加载状态，重新初始化
-    partial void OnSelectedAnnouncementChanged(AnnouncementItem? value)
+    partial void OnSelectedAnnouncementChanged(AnnouncementItem? oldValue, AnnouncementItem? newValue)
     {
-        if (value is null) return;
+        if (newValue is null || oldValue == newValue) return;
 
         // 取消之前的加载任务
         if (_lazyLoadCts != null)
@@ -72,7 +72,7 @@ public partial class AnnouncementViewModel : ViewModelBase
         AnnouncementContent = string.Empty;
         _view?.Viewer.ScrollViewer.ScrollToHome();
 
-        _ = LoadContentForSelectedItemAsync(value);
+        _ = LoadContentForSelectedItemAsync(newValue);
         SetMarkdownScrollViewer(_view?.Viewer, false);
 
     }
@@ -137,7 +137,11 @@ public partial class AnnouncementViewModel : ViewModelBase
     {
         if (sender is not ScrollViewer scrollViewer) return;
         if (_isLoadingNextBatch) return; // 正在加载中，忽略
-        if (_currentBatchIndex >= _allBatches.Count) return; // 所有批次已加载完成
+
+        // 安全检查：确保批次列表有效且索引在范围内
+        var batches = _allBatches;
+        var currentIndex = _currentBatchIndex;
+        if (batches == null || batches.Count == 0 || currentIndex >= batches.Count) return;
 
         // 触底判断：当前滚动偏移 + 可视高度 >= 内容总高度 - 阈值（避免空白）
         bool isNearBottom = scrollViewer.Offset.Y + scrollViewer.Viewport.Height
@@ -148,6 +152,7 @@ public partial class AnnouncementViewModel : ViewModelBase
             await LoadNextBatchAsync();
         }
     }
+
 
     /// <summary>
     /// 初始化懒加载：拆分 Markdown 文本为批次 + 加载初始批次
@@ -188,11 +193,18 @@ public partial class AnnouncementViewModel : ViewModelBase
     /// </summary>
     async private Task LoadInitialBatchesAsync(CancellationToken cancellationToken)
     {
-        int loadCount = Math.Min(_initialBatchCount, _allBatches.Count);
+        var batches = _allBatches;
+        if (batches == null || batches.Count == 0) return;
+
+        int loadCount = Math.Min(_initialBatchCount, batches.Count);
         for (int i = 0; i < loadCount; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await LoadBatchAsync(_allBatches[i]);
+
+            // 安全检查索引有效性
+            if (i >= batches.Count) break;
+
+            await LoadBatchAsync(batches[i]);
             _currentBatchIndex++;
         }
     }
@@ -202,18 +214,25 @@ public partial class AnnouncementViewModel : ViewModelBase
     /// </summary>
     async private Task LoadNextBatchAsync()
     {
-        if (_isLoadingNextBatch || _currentBatchIndex >= _allBatches.Count)
+        // 安全检查：确保批次列表有效且索引在范围内
+        var batches = _allBatches;
+        if (_isLoadingNextBatch || batches == null || batches.Count == 0 || _currentBatchIndex >= batches.Count)
             return;
 
         _isLoadingNextBatch = true;
         try
         {
-            var batchText = _allBatches[_currentBatchIndex];
+            // 再次检查索引有效性（防止竞态条件）
+            var currentIndex = _currentBatchIndex;
+            if (currentIndex < 0 || currentIndex >= batches.Count)
+                return;
+
+            var batchText = batches[currentIndex];
             await LoadBatchAsync(batchText);
             _currentBatchIndex++;
 
             // 所有批次加载完成，移除滚动监听
-            if (_currentBatchIndex >= _allBatches.Count)
+            if (_currentBatchIndex >= batches.Count)
             {
                 CleanupScrollListener();
             }
@@ -427,13 +446,12 @@ public partial class AnnouncementViewModel : ViewModelBase
         _view = view;
     }
 
-    public static async void CheckAnnouncement(bool forceShow = false)
+    public static async Task CheckAnnouncement(bool forceShow = false)
     {
         try
         {
             var viewModel = new AnnouncementViewModel();
             await viewModel.LoadAnnouncementMetadataAsync();
-
             if (forceShow)
             {
                 if (!viewModel.AnnouncementItems.Any())
@@ -460,6 +478,7 @@ public partial class AnnouncementViewModel : ViewModelBase
             LoggerHelper.Error($"显示公告窗口失败: {ex.Message}");
         }
     }
+
 
     // 窗口关闭时清理资源
     public void Cleanup()

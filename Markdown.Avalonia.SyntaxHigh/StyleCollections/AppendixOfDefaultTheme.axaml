@@ -21,6 +21,6 @@
   </Style>
 
   <Style Selector=".CodeBlock Button.CopyButton TextBlock">
-    <Setter Property="Text" Value="Copy"/>
+    <Setter Property="Text" Value="{DynamicResource STRING_MENU_COPY}"/>
   </Style>
 </Styles>

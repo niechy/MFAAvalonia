@@ -41,7 +41,13 @@ namespace Markdown.Avalonia.SyntaxHigh
             if (_definitions.TryGetValue(lang, out var def))
                 return def;
 
-            return HighlightingManager.Instance.GetDefinitionByExtension("." + lang);
+            // Try to get definition by extension first
+            var result = HighlightingManager.Instance.GetDefinitionByExtension("." + lang);
+            if (result != null)
+                return result;
+
+            // If not found by extension, try to get by name
+            return HighlightingManager.Instance.GetDefinition(lang);
         }
 
         private void AliasesCollectionChanged(NotifyCollectionChangedEventArgs? arg)
@@ -96,6 +102,7 @@ namespace Markdown.Avalonia.SyntaxHigh
             _nameSolver["powershell"] = "ps1";
             _nameSolver["python"] = "py";
             _nameSolver["markdown"] = "md";
+
         }
 
         private IHighlightingDefinition? Load(Uri source)
@@ -103,14 +110,10 @@ namespace Markdown.Avalonia.SyntaxHigh
             switch (source.Scheme)
             {
                 case "file":
-                    return File.Exists(source.LocalPath) ?
-                        Open(File.OpenRead(source.LocalPath)) :
-                        null;
+                    return File.Exists(source.LocalPath) ? Open(File.OpenRead(source.LocalPath)) : null;
 
                 case "avares":
-                    return AssetLoader.Exists(source) ?
-                        Open(AssetLoader.Open(source)) :
-                        null;
+                    return AssetLoader.Exists(source) ? Open(AssetLoader.Open(source)) : null;
 
                 default:
                     throw new ArgumentException($"unsupport scheme '{source.Scheme}'");
