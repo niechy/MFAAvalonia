@@ -52,7 +52,6 @@ public static class MFAExtensions
         {
             // 1. 国际化处理（以$开头）
             var content = transform ? LanguageHelper.GetLocalizedString(input) : input;
-
             // 2. 判断是否为 URL
             if (Uri.TryCreate(content, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
@@ -60,16 +59,17 @@ public static class MFAExtensions
                 var path = uri.AbsolutePath;
                 if (TextFileExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
                 {
-                    return await content.FetchUrlContentAsync();
+                    return await content.FetchUrlContentAsync().ConfigureAwait(false);
                 }
                 // 返回 Markdown 超链接格式
                 return $"[{content}]({content})";
             }
             // 3. 判断是否为文件路径
-            var filePath = MaaInterface.ReplacePlaceholder(content, projectDir);
+            var filePath = MaaInterface.ReplacePlaceholder(content, projectDir, true);
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
-                return await File.ReadAllTextAsync(filePath);
+                // 使用 ConfigureAwait(false) 避免在 UI 线程上使用 .Result 时死锁
+                return await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
             }
 
             // 4. 直接返回文本（可能是 Markdown）

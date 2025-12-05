@@ -6,6 +6,7 @@ using Markdown.Avalonia;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
 using MFAAvalonia.Helper;
+using MFAAvalonia.Views.Pages;
 using MFAAvalonia.Views.Windows;
 using System;
 using System.Collections.Generic;
@@ -343,7 +344,7 @@ public partial class AnnouncementViewModel : ViewModelBase
                     {
                         Title = title,
                         FilePath = mdFile,
-                        Content = content,
+                        Content = TaskQueueView.ConvertCustomMarkup(content),
                         LastModified = File.GetLastWriteTime(mdFile)
                     });
                 }

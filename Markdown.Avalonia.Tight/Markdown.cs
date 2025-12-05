@@ -92,7 +92,20 @@ namespace Markdown.Avalonia
         /// </summary>
         private static readonly HashSet<string> _selfClosingTags = new(StringComparer.OrdinalIgnoreCase)
         {
-            "img", "br", "hr", "input", "meta", "link", "area", "base", "col", "embed", "param", "source", "track", "wbr"
+            "img",
+            "br",
+            "hr",
+            "input",
+            "meta",
+            "link",
+            "area",
+            "base",
+            "col",
+            "embed",
+            "param",
+            "source",
+            "track",
+            "wbr"
         };
 
         #endregion
@@ -643,10 +656,8 @@ namespace Markdown.Avalonia
             return htmlBlocks.Any(block => position >= block.StartIdx && position <= block.EndIdx);
         }
 
-
-
-
         #endregion
+
         #region 核心：通用成对符号解析（可扩展、支持嵌套）
 
         private List<(int Start, int End)> FindAllHtmlTags(string text)
@@ -1029,16 +1040,14 @@ namespace Markdown.Avalonia
                 // 遍历所有成对符号，统计嵌套次数
                 foreach (var (start, end, _) in _pairSymbols)
                 {
-                    if (currentIdx + start.Length <= endIdx && 
-                        text.AsSpan(currentIdx, start.Length).SequenceEqual(start.AsSpan()))
+                    if (currentIdx + start.Length <= endIdx && text.AsSpan(currentIdx, start.Length).SequenceEqual(start.AsSpan()))
                     {
                         nestLevel++;
                         currentIdx += start.Length;
                         matched = true;
                         break;
                     }
-                    if (currentIdx + end.Length <= endIdx && 
-                        text.AsSpan(currentIdx, end.Length).SequenceEqual(end.AsSpan()))
+                    if (currentIdx + end.Length <= endIdx && text.AsSpan(currentIdx, end.Length).SequenceEqual(end.AsSpan()))
                     {
                         nestLevel--;
                         currentIdx += end.Length;
@@ -1061,10 +1070,66 @@ namespace Markdown.Avalonia
         #region 原Parser处理逻辑（分阶段第二步：处理非成对符号文本）
 
         /// <summary>
-        /// 对非成对符号的文本，执行原有的InlineParser Pattern判断（保持原逻辑不变）
+        /// 块级 HTML 标签集合（用于判断是否需要包装成 CInlineUIContainer）
         /// </summary>
+        private static readonly HashSet<string> _blockHtmlTags = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "address",
+            "article",
+            "aside",
+            "blockquote",
+            "center",
+            "dd",
+            "details",
+            "dialog",
+            "dir",
+            "div",
+            "dl",
+            "dt",
+            "fieldset",
+            "figcaption",
+            "figure",
+            "footer",
+            "form",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "header",
+            "hr",
+            "li",
+            "main",
+            "menu",
+            "nav",
+            "ol",
+            "p",
+            "pre",
+            "section",
+            "summary",
+            "table",
+            "tbody",
+            "td",
+            "tfoot",
+            "th",
+            "thead",
+            "tr",
+            "ul"
+        };
+
         /// <summary>
-        /// 处理HTML解析（行级+块级），通过isBlockContext避免循环递归
+        /// 判断 HTML 标签是否为块级标签
+        /// </summary>
+        private static bool IsBlockHtmlTag(string tagName)
+        {
+            return _blockHtmlTags.Contains(tagName);
+        }
+
+        /// <summary>
+        /// 处理HTML解析，区分行级和块级标签
+        /// - 行级标签（如 font、span）：直接返回 CInline 元素
+        /// - 块级标签（如 div）：包装成 CInlineUIContainer
         /// </summary>
         /// <param name="text">待解析文本</param>
         /// <param name="level">递归层级</param>
@@ -1072,53 +1137,67 @@ namespace Markdown.Avalonia
         private List<CInline> ProcessWithHTMLParsers(string text, int level, bool isBlockContext = false)
         {
             var rtn = new List<CInline>();
-            if (!isBlockContext)
+
+            // 检查是否为 HTML 标签
+            string tagName = GetHtmlTagName(text);
+
+            if (!string.IsNullOrEmpty(tagName) && !isBlockContext)
             {
-                var parseStatus = new ParseStatus(_supportTextAlignment);
-                var blockElements = new List<DocumentElement>();
-                int blockParseIndex = 0;
-                int textLength = text.Length;
-
-                ProcessBlockGamut(text, ref blockParseIndex, textLength, parseStatus, blockElements);
-
-                foreach (var blockElement in blockElements)
+                // 判断是行级还是块级标签
+                if (IsBlockHtmlTag(tagName))
                 {
-                    // 1. 调整内部控件的布局：清除默认边距，使用基线对齐
-                    var innerControl = blockElement.Control;
-                    innerControl.VerticalAlignment = VerticalAlignment.Top; // 改为基线对齐
-                    innerControl.Margin = new Thickness(0); // 清除默认边距
+                    // 块级标签：使用块级解析器处理，然后包装成 CInlineUIContainer
+                    var parseStatus = new ParseStatus(_supportTextAlignment);
+                    var blockElements = new List<DocumentElement>();
+                    int blockParseIndex = 0;
+                    int textLength = text.Length;
 
-                    if (innerControl is Panel panel)
+                    ProcessBlockGamut(text, ref blockParseIndex, textLength, parseStatus, blockElements);
+
+                    foreach (var blockElement in blockElements)
                     {
-                        // 强制面板内所有子元素基线对齐，清除边距
-                        foreach (var child in panel.Children)
+                        var innerControl = blockElement.Control;
+                        innerControl.VerticalAlignment = VerticalAlignment.Top;
+                        innerControl.Margin = new Thickness(0);
+
+                        if (innerControl is Panel panel)
                         {
-                            child.VerticalAlignment = VerticalAlignment.Top;
-                            child.Margin = new Thickness(0);
+                            foreach (var child in panel.Children)
+                            {
+                                child.VerticalAlignment = VerticalAlignment.Top;
+                                child.Margin = new Thickness(0);
+                            }
                         }
+
+                        var inlineUIContainer = new CInlineUIContainer(innerControl)
+                        {
+                            TextVerticalAlignment = TextVerticalAlignment.Center,
+                        };
+                        rtn.Add(inlineUIContainer);
                     }
 
-                    // 2. 容器使用基线对齐，与文本流保持一致
-                    var inlineUIContainer = new CInlineUIContainer(innerControl)
+                    if (blockParseIndex < textLength)
                     {
-                        TextVerticalAlignment = TextVerticalAlignment.Center, // 关键：文本基线对齐
-                    };
-                    rtn.Add(inlineUIContainer);
+                        string remainingText = text.Substring(blockParseIndex);
+                        OriginalRunSpanRest(remainingText, 0, remainingText.Length, 0, rtn);
+                    }
                 }
-
-                if (blockParseIndex < textLength)
+                else
                 {
-                    string remainingText = text.Substring(blockParseIndex);
-                    OriginalRunSpanRest(remainingText, 0, remainingText.Length, 0, rtn);
+                    // 行级标签（如 font、span）：直接使用行级解析器处理
+                    // 不包装成 CInlineUIContainer，保持文本流的正确布局
+                    OriginalRunSpanRest(text, 0, text.Length, 0, rtn);
                 }
             }
             else
             {
+                // 非 HTML 标签或已在块级上下文中：直接使用行级解析器
                 OriginalRunSpanRest(text, 0, text.Length, 0, rtn);
             }
 
             return rtn;
         }
+
         /// <summary>
         /// 复用原 PrivateRunBlockGamut 的块级解析逻辑，提取为独立方法
         /// 处理 _topBlockParsers + _blockParsers，将结果存入 blockElements
@@ -1673,7 +1752,10 @@ namespace Markdown.Avalonia
         /// <param name="minCount">最少需要的标记数量</param>
         /// <param name="factory">创建结果元素的工厂方法</param>
         /// <returns>解析结果，失败返回 null</returns>
-        private T? ParseAsDecoration<T>(string text, ref int start, char marker, int minCount, 
+        private T? ParseAsDecoration<T>(string text,
+            ref int start,
+            char marker,
+            int minCount,
             Func<IEnumerable<CInline>, T> factory) where T : CInline
         {
             var bgnCnt = CountRepeat(text, start, marker);

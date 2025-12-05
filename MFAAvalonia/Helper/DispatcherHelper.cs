@@ -54,8 +54,8 @@ public static class DispatcherHelper
         return Dispatcher.UIThread.InvokeAsync(func).GetTask();
     }
 
-    public static void PostOnMainThread(Action func)
+    public static void PostOnMainThread(Action func, DispatcherPriority priority = default)
     {
-        Dispatcher.UIThread.Post(func);
+        Dispatcher.UIThread.Post(func, priority);
     }
 }

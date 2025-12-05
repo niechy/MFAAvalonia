@@ -596,7 +596,7 @@ public partial class TaskQueueView : UserControl
 
         return true;
     }
-    
+
     private string FilterToInteger(string text)
     {
         // 1. 去除所有非数字和非负号字符
@@ -1232,7 +1232,10 @@ public partial class TaskQueueView : UserControl
         // 优先使用 Description
         if (!string.IsNullOrWhiteSpace(description))
         {
-            return description.ResolveMarkdownContentAsync(transform: false).Result;
+            LoggerHelper.Info(description);
+            var result = description.ResolveMarkdownContentAsync(transform: false).GetAwaiter().GetResult();
+           
+            return result;
         }
 
         // 没有 Description 则使用 Document
@@ -1785,13 +1788,13 @@ public partial class TaskQueueView : UserControl
             Instances.TaskQueueViewModel.TaskItemViewModels.Select(m => m.InterfaceItem));
     }
 
-    public static string ConvertCustomMarkup(string input, string outputFormat = "markdown")
+    public static string ConvertCustomMarkup(string input, string outputFormat = "html")
     {
         // 预处理换行符
         input = input.Replace(@"\n", "\n");
 
-        // 定义替换规则字典
-        var replacementRules = new Dictionary<string, Dictionary<string, string>>
+        // 定义简单替换规则（不需要动态逻辑的规则）
+        var simpleRules = new Dictionary<string, Dictionary<string, string>>
         {
             // 颜色标记 [color:red]
             {
@@ -1825,91 +1828,120 @@ public partial class TaskQueueView : UserControl
                         "markdown", "<div style='text-align: $1;'>"
                     },
                     {
-                        "html", "<div style='text-align: $1;'>"
+                        "html", "<div align='$1'>"
                     }
                 }
             },
+            // 关闭颜色标记 [/color]
             {
-                @"\[/(color)\]", new Dictionary<string, string>
+                @"\[/color\]", new Dictionary<string, string>
                 {
                     {
                         "markdown", "%"
                     },
                     {
-                        "html", "$1" switch { "align" => "</div>", _ => "</span>" }
+                        "html", "</span>"
                     }
                 }
             },
+            // 关闭字号标记 [/size]
             {
-                @"\[/(align)\]", new Dictionary<string, string>
+                @"\[/size\]", new Dictionary<string, string>
                 {
                     {
-                        "markdown", "$1" switch { "align" => "</div>", _ => "</span>" }
+                        "markdown", "</span>"
                     },
                     {
-                        "html", "$1" switch { "align" => "</div>", _ => "</span>" }
+                        "html", "</span>"
                     }
                 }
             },
-            // 关闭标记 [/color] [/size] [/align]
+            // 关闭对齐标记 [/align]
             {
-                @"\[/(size)\]", new Dictionary<string, string>
+                @"\[/align\]", new Dictionary<string, string>
                 {
                     {
-                        "markdown", "$1" switch { "align" => "</div>", _ => "</span>" }
+                        "markdown", "</div>"
                     },
                     {
-                        "html", "$1" switch { "align" => "</div>", _ => "</span>" }
-                    }
-                }
-            },
-            // 粗体、斜体等简单标记
-            {
-                @"\[(b|i|u|s)\]", new Dictionary<string, string>
-                {
-                    {
-                        "markdown", "$1" switch
-                        {
-                            "b" => "**", "i" => "*", "u" => "<u>", "s" => "~~", _ => ""
-                        }
-                    },
-                    {
-                        "html", "$1" switch
-                        {
-                            "b" => "<strong>", "i" => "<em>", "u" => "<u>", "s" => "<s>", _ => ""
-                        }
-                    }
-                }
-            },
-            {
-                @"\[/(b|i|u|s)\]", new Dictionary<string, string>
-                {
-                    {
-                        "markdown", "$1" switch
-                        {
-                            "b" => "**", "i" => "*", "u" => "</u>", "s" => "~~", _ => ""
-                        }
-                    },
-                    {
-                        "html", "$1" switch
-                        {
-                            "b" => "</strong>", "i" => "</em>", "u" => "</u>", "s" => "</s>", _ => ""
-                        }
+                        "html", "</div>"
                     }
                 }
             }
         };
 
-        // 执行正则替换
-        foreach (var rule in replacementRules)
+        // 执行简单规则替换
+        foreach (var rule in simpleRules)
         {
             input = Regex.Replace(
                 input,
                 rule.Key,
-                m => rule.Value[outputFormat].Replace("$1", m.Groups[1].Value),
+                m => rule.Value[outputFormat].Replace("$1", m.Groups.Count > 1 ? m.Groups[1].Value : ""),
                 RegexOptions.IgnoreCase
             );
         }
+
+        // 粗体、斜体等需要动态逻辑的标记 - 开始标记
+        input = Regex.Replace(
+            input,
+            @"\[(b|i|u|s)\]",
+            m =>
+            {
+                var tag = m.Groups[1].Value.ToLower();
+                return outputFormat switch
+                {
+                    "markdown" => tag switch
+                    {
+                        "b" => "**",
+                        "i" => "*",
+                        "u" => "<u>",
+                        "s" => "~~",
+                        _ => ""
+                    },
+                    "html" => tag switch
+                    {
+                        "b" => "<strong>",
+                        "i" => "<em>",
+                        "u" => "<u>",
+                        "s" => "<s>",
+                        _ => ""
+                    },
+                    _ => ""
+                };
+            },
+            RegexOptions.IgnoreCase
+        );
+
+        // 粗体、斜体等需要动态逻辑的标记 - 结束标记
+        input = Regex.Replace(
+            input,
+            @"\[/(b|i|u|s)\]",
+            m =>
+            {
+                var tag = m.Groups[1].Value.ToLower();
+                return outputFormat switch
+                {
+                    "markdown" => tag switch
+                    {
+                        "b" => "**",
+                        "i" => "*",
+                        "u" => "</u>",
+                        "s" => "~~",
+                        _ => ""
+                    },
+                    "html" => tag switch
+                    {
+                        "b" => "</strong>",
+                        "i" => "</em>",
+                        "u" => "</u>",
+                        "s" => "</s>",
+                        _ => ""
+                    },
+                    _ => ""
+                };
+            },
+            RegexOptions.IgnoreCase
+        );
 
         // 处理换行符
         input = outputFormat switch
@@ -1921,6 +1953,7 @@ public partial class TaskQueueView : UserControl
 
         return input;
     }
+
     // private static List<TextStyleMetadata> _currentStyles = new();
     //
     // private class RichTextLineTransformer : DocumentColorizingTransformer
