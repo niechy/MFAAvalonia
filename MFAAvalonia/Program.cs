@@ -45,7 +45,7 @@ sealed class Program
     private static Mutex? _mutex;
     private static bool _mutexReleased = false;
     private static readonly object _mutexLock = new();
-    // private static int _mutexOwnerThreadId = -1;
+    private static int _mutexOwnerThreadId = -1;
     public static bool IsNewInstance = true;
 
     public static void ReleaseMutex()
@@ -57,11 +57,51 @@ sealed class Program
                 return;
             }
 
+            // 检查当前线程是否是获取 Mutex 的线程
+            if (Environment.CurrentManagedThreadId != _mutexOwnerThreadId)
+            {
+                // 如果不是，尝试通过 UI 线程（主线程）来释放
+                // 因为在 Avalonia 中，UI 线程就是主线程
+                try
+                {
+
+                    // 同步调用到 UI 线程执行释放
+                    DispatcherHelper.RunOnMainThread(ReleaseMutexInternal);
+
+                }
+                catch (Exception)
+                {
+                    // Dispatcher 可能已经关闭，直接关闭 Mutex 句柄
+                    try
+                    {
+                        _mutex?.Close();
+                        _mutex = null;
+                        _mutexReleased = true;
+                    }
+                    catch
+                    {
+                        // 忽略
+                    }
+                }
+                return;
+            }
+
+            ReleaseMutexInternal();
+        }
+    }
+
+    private static void ReleaseMutexInternal()
+    {
+        lock (_mutexLock)
+        {
+            if (_mutexReleased || _mutex == null)
+            {
+                return;
+            }
+
             try
             {
-
                 _mutex.ReleaseMutex();
-
                 _mutex.Close();
                 _mutex = null;
                 _mutexReleased = true;
@@ -69,7 +109,6 @@ sealed class Program
             catch (ApplicationException)
             {
                 // Mutex was not owned by the current thread, just close it
-                // 不记录错误日志，因为这是预期行为
                 try
                 {
                     _mutex?.Close();
@@ -85,7 +124,6 @@ sealed class Program
             {
                 LoggerHelper.Error(e);
             }
-
         }
     }
 
@@ -151,6 +189,7 @@ sealed class Program
                     .Replace("/", "_")
                     .Replace(":", string.Empty);
             _mutex = new Mutex(true, mutexName, out IsNewInstance);
+            _mutexOwnerThreadId = Environment.CurrentManagedThreadId;
 
             try
             {
