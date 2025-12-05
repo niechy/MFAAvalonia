@@ -5,6 +5,7 @@ using AvaloniaEdit.TextMate;
 using TextMateSharp.Grammars;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Markdown.Avalonia.SyntaxHigh
 {
@@ -13,7 +14,6 @@ namespace Markdown.Avalonia.SyntaxHigh
     /// </summary>
     public class TextMateHighlightProvider : IDisposable
     {
-        private static TextMateHighlightProvider? _instance;
         private static readonly object _lock = new object();
         private readonly RegistryOptions _registryOptions;
         private readonly Dictionary<TextEditor, TextMate.Installation> _installations = new();
@@ -24,14 +24,14 @@ namespace Markdown.Avalonia.SyntaxHigh
         {
             get
             {
-                if (_instance == null)
+                if (field == null)
                 {
                     lock (_lock)
                     {
-                        _instance ??= new TextMateHighlightProvider();
+                        field ??= new TextMateHighlightProvider();
                     }
                 }
-                return _instance;
+                return field;
             }
         }
 
@@ -45,6 +45,33 @@ namespace Markdown.Avalonia.SyntaxHigh
             if (Application.Current != null)
             {
                 Application.Current.ActualThemeVariantChanged += OnThemeChanged;
+            }
+            
+            // Preload common language grammars in background to speed up first-time highlighting
+            _ = Task.Run(PreloadCommonGrammars);
+        }
+        /// <summary>
+        /// Preload common language grammars to speed up first-time syntax highlighting
+        /// </summary>
+        private void PreloadCommonGrammars()
+        {
+            var commonLanguages = new[] { "json", "jsonc", "csharp", "cs", "python", "py", "javascript", "js", "typescript", "ts", "xml", "yaml", "markdown", "md", "bash", "sh", "powershell", "ps1", "sql", "html", "css" };
+            
+            foreach (var lang in commonLanguages)
+            {
+                try
+                {
+                    var language = GetLanguageByIdOrExtension(lang);
+                    if (language != null)
+                    {
+                        // Just accessing the scope name triggers grammar loading
+                        _ = _registryOptions.GetScopeByLanguageId(language.Id);
+                    }
+                }
+                catch
+                {
+                    // Ignore errors during preloading
+                }
             }
         }
 

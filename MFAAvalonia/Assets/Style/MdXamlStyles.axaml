@@ -113,7 +113,7 @@
 
     <!-- ==================== 列表样式 ==================== -->
     <Style Selector=".Markdown_Avalonia_MarkdownViewer Grid.List">
-        <Setter Property="Margin" Value="16,0,0,0" />
+        <Setter Property="Margin" Value="12,0,0,0" />
     </Style>
     <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock.ListMarker">
         <Setter Property="Margin" Value="0,5,5,5" />
