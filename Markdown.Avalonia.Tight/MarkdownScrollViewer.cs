@@ -9,9 +9,9 @@ using Avalonia.Media;
 using Avalonia.Metadata;
 using Avalonia.Platform;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using ColorDocument.Avalonia;
 using ColorDocument.Avalonia.DocumentElements;
-using ColorTextBlock.Avalonia;
 using Markdown.Avalonia.Plugins;
 using Markdown.Avalonia.StyleCollections;
 using Markdown.Avalonia.Utils;
@@ -21,6 +21,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using MdStyle = Markdown.Avalonia.MarkdownStyle;
 
 namespace Markdown.Avalonia
@@ -66,6 +68,26 @@ namespace Markdown.Avalonia
                 nameof(SaveScrollValueWhenContentUpdated),
                 defaultValue: false);
 
+        public static readonly StyledProperty<bool> EnableProgressiveRenderingProperty =
+            AvaloniaProperty.Register<MarkdownScrollViewer, bool>(
+                nameof(EnableProgressiveRendering),
+                defaultValue: true);
+
+        public static readonly StyledProperty<int> InitialRenderLinesProperty =
+            AvaloniaProperty.Register<MarkdownScrollViewer, int>(
+                nameof(InitialRenderLines),
+                defaultValue: 300); // 初始渲染300行，确保用户能看到足够内容
+
+        public static readonly StyledProperty<int> ProgressiveRenderBatchSizeProperty =
+            AvaloniaProperty.Register<MarkdownScrollViewer, int>(
+                nameof(ProgressiveRenderBatchSize),
+                defaultValue: 200); // 每批次渲染200行，加快渲染速度
+
+        public static readonly StyledProperty<int> ProgressiveRenderDelayMsProperty =
+            AvaloniaProperty.Register<MarkdownScrollViewer, int>(
+                nameof(ProgressiveRenderDelayMs),
+                defaultValue: 10); // 减少延迟，加快渲染
+
         public static readonly AvaloniaProperty<Vector> ScrollValueProperty =
             AvaloniaProperty.RegisterDirect<MarkdownScrollViewer, Vector>(
                 nameof(ScrollValue),
@@ -82,12 +104,96 @@ namespace Markdown.Avalonia
                 (owner, v) => owner.SelectionEnabled = v);
 
         private static readonly HttpClient s_httpclient = new();
-        
+
         /// <summary>
         /// 预编译的换行符分割正则
         /// </summary>
         private static readonly Regex s_newlineSplitter = new(@"\r\n|\r|\n", RegexOptions.Compiled);
-        
+
+        #region 文档缓存
+
+        /// <summary>
+        /// 获取文档缓存管理器实例
+        /// </summary>
+        public static MarkdownDocumentCache DocumentCache => MarkdownDocumentCache.Instance;
+
+        /// <summary>
+        /// 计算 Markdown 内容的哈希值
+        /// </summary>
+        private static string ComputeContentHash(string content)
+        {
+            return MarkdownDocumentCache.ComputeContentHash(content);
+        }
+
+        /// <summary>
+        /// 尝试从缓存获取已解析的文档
+        /// </summary>
+        private static DocumentElement? TryGetFromCache(string contentHash)
+        {
+            DocumentCache.TryGet(contentHash, out var document);
+            return document;
+        }
+
+        /// <summary>
+        /// 将解析后的文档添加到缓存
+        /// </summary>
+        private static void AddToCache(string contentHash, DocumentElement document, string markdownContent)
+        {
+            DocumentCache.Add(contentHash, document, markdownContent);
+        }
+
+        /// <summary>
+        /// 清除文档缓存
+        /// </summary>
+        public static void ClearDocumentCache()
+        {
+            DocumentCache.Clear();
+        }
+
+        /// <summary>
+        /// 获取当前缓存大小
+        /// </summary>
+        public static int CacheSize => DocumentCache.Count;
+
+        /// <summary>
+        /// 获取缓存统计信息
+        /// </summary>
+        public static CacheStatistics GetCacheStatistics()
+        {
+            return DocumentCache.GetStatistics();
+        }
+
+        #endregion
+
+        #region 渐进式渲染
+
+        /// <summary>
+        /// 大文件阈值（行数），超过此值启用渐进式渲染
+        /// </summary>
+        private const int LargeFileThreshold = 200;
+
+        /// <summary>
+        /// 当前渐进式渲染的取消令牌源
+        /// </summary>
+        private CancellationTokenSource? _progressiveRenderCts;
+
+        /// <summary>
+        /// 是否正在进行渐进式渲染
+        /// </summary>
+        private bool _isProgressiveRendering;
+
+        /// <summary>
+        /// 渐进式渲染完成事件
+        /// </summary>
+        public event EventHandler? ProgressiveRenderingCompleted;
+
+        /// <summary>
+        /// 渐进式渲染进度变化事件
+        /// </summary>
+        public event EventHandler<ProgressiveRenderingProgressEventArgs>? ProgressiveRenderingProgress;
+
+        #endregion
+
         private readonly ScrollViewer _viewer;
         private SetupInfo _setup;
         private DocumentElement? _document;
@@ -316,17 +422,111 @@ namespace Markdown.Avalonia
             }
         }
 
+        /// <summary>
+        /// 当前内容的哈希值（用于缓存检查）
+        /// </summary>
+        private string? _currentContentHash;
+
+        /// <summary>
+        /// 是否启用渐进式渲染
+        /// </summary>
+        public bool EnableProgressiveRendering
+        {
+            get => GetValue(EnableProgressiveRenderingProperty);
+            set => SetValue(EnableProgressiveRenderingProperty, value);
+        }
+
+        /// <summary>
+        /// 初始渲染的行数
+        /// </summary>
+        public int InitialRenderLines
+        {
+            get => GetValue(InitialRenderLinesProperty);
+            set => SetValue(InitialRenderLinesProperty, value);
+        }
+
+        /// <summary>
+        /// 渐进式渲染每批次的行数
+        /// </summary>
+        public int ProgressiveRenderBatchSize
+        {
+            get => GetValue(ProgressiveRenderBatchSizeProperty);
+            set => SetValue(ProgressiveRenderBatchSizeProperty, value);
+        }
+
+        /// <summary>
+        /// 渐进式渲染批次之间的延迟（毫秒）
+        /// </summary>
+        public int ProgressiveRenderDelayMs
+        {
+            get => GetValue(ProgressiveRenderDelayMsProperty);
+            set => SetValue(ProgressiveRenderDelayMsProperty, value);
+        }
+
+        /// <summary>
+        /// 是否正在进行渐进式渲染
+        /// </summary>
+        public bool IsProgressiveRendering => _isProgressiveRendering;
+
+        /// <summary>
+        /// 取消当前的渐进式渲染
+        /// </summary>
+        public void CancelProgressiveRendering()
+        {
+            _progressiveRenderCts?.Cancel();
+            _progressiveRenderCts = null;
+            _isProgressiveRendering = false;
+        }
+
         private void UpdateMarkdown()
         {
             if (_wrapper.Document is null && String.IsNullOrEmpty(Markdown))
                 return;
 
+            // 首先取消任何正在进行的渐进式渲染
+            CancelProgressiveRendering();
+
             try
             {
-                _document = _engine.TransformElement(Markdown ?? "");
-                _document.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+                var markdownContent = Markdown ?? "";
+                var contentHash = ComputeContentHash(markdownContent);
+
+                // 如果内容哈希相同，无需更新
+                if (_currentContentHash == contentHash && _wrapper.Document != null && !_isProgressiveRendering)
+                {
+                    System.Diagnostics.Debug.WriteLine("Markdown 内容未变化，跳过更新");
+                    return;
+                }
 
                 var ofst = _viewer.Offset;
+                DocumentElement? newDocument = null;
+
+                // 注意：由于 Avalonia 控件不能被多个父级共享，我们不再使用缓存的文档进行增量更新
+                // 每次内容变化都需要重新解析以获得新的控件实例，这样可以避免控件复用导致的显示问题
+
+                // 重新解析内容
+                // 检查是否需要渐进式渲染
+                var lines = markdownContent.Split(new[]
+                {
+                    "\r\n",
+                    "\r",
+                    "\n"
+                }, StringSplitOptions.None);
+                bool shouldUseProgressiveRendering = EnableProgressiveRendering && lines.Length > LargeFileThreshold;
+
+                if (shouldUseProgressiveRendering)
+                {
+                    // 使用渐进式渲染
+                    StartProgressiveRendering(markdownContent, lines, contentHash, ofst);
+                    return;
+                }
+
+                newDocument = _engine.TransformElement(markdownContent);
+                newDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+
+                // 全量更新（不使用增量更新，避免控件复用导致的显示问题）
+                _document = newDocument;
+                _currentContentHash = contentHash;
 
                 if (_wrapper.Document?.Control is Control oldContentControl)
                 {
@@ -344,6 +544,7 @@ namespace Markdown.Avalonia
 
                 if (SaveScrollValueWhenContentUpdated)
                     _viewer.Offset = ofst;
+
             }
             catch (StackOverflowException ex)
             {
@@ -372,6 +573,296 @@ namespace Markdown.Avalonia
             }
         }
 
+        /// <summary>
+        /// 启动渐进式渲染
+        /// </summary>
+        private void StartProgressiveRendering(string fullContent, string[] lines, string contentHash, Vector savedOffset)
+        {
+            // 取消之前的渐进式渲染
+            CancelProgressiveRendering();
+
+            _progressiveRenderCts = new CancellationTokenSource();
+            _isProgressiveRendering = true;
+
+            var ct = _progressiveRenderCts.Token;
+
+            // 计算安全的初始渲染行数（不在代码块中间分割）
+            int initialLines = FindSafeBreakPoint(lines, Math.Min(InitialRenderLines, lines.Length));
+            string initialContent = string.Join("\n", lines.Take(initialLines));
+
+            try
+            {
+                // 先渲染初始部分
+                var initialDocument = _engine.TransformElement(initialContent);
+                initialDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+
+                // 更新显示
+                _document = initialDocument;
+                _currentContentHash = null; // 暂时不设置哈希，因为还没渲染完
+
+                if (_wrapper.Document?.Control is Control oldContentControl)
+                {
+                    oldContentControl.SizeChanged -= OnViewportSizeChanged;
+                }
+
+                _wrapper.Document = _document;
+
+                if (_wrapper.Document?.Control is Control newContentControl)
+                {
+                    newContentControl.SizeChanged += OnViewportSizeChanged;
+                }
+
+                _headerRects = null;
+
+                if (SaveScrollValueWhenContentUpdated)
+                    _viewer.Offset = savedOffset;
+
+                // 触发进度事件
+                ProgressiveRenderingProgress?.Invoke(this, new ProgressiveRenderingProgressEventArgs(initialLines, lines.Length));
+
+                // 如果还有剩余内容，异步加载
+                if (initialLines < lines.Length)
+                {
+                    _ = ContinueProgressiveRenderingReplaceAsync(lines, initialLines, contentHash, fullContent, ct);
+                }
+                else
+                {
+                    // 渲染完成
+                    _currentContentHash = contentHash;
+                    AddToCache(contentHash, _document, fullContent);
+                    _isProgressiveRendering = false;
+                    ProgressiveRenderingCompleted?.Invoke(this, EventArgs.Empty);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"渐进式渲染初始部分失败: {ex.Message}");
+                _isProgressiveRendering = false;
+
+                // 回退到普通渲染
+                try
+                {
+                    var fallbackDocument = _engine.TransformElement(fullContent);
+                    fallbackDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+                    _document = fallbackDocument;
+                    _currentContentHash = contentHash;
+                    AddToCache(contentHash, _document, fullContent);
+
+                    if (_wrapper.Document?.Control is Control oldCtrl)
+                    {
+                        oldCtrl.SizeChanged -= OnViewportSizeChanged;
+                    }
+
+                    _wrapper.Document = _document;
+
+                    if (_wrapper.Document?.Control is Control newCtrl)
+                    {
+                        newCtrl.SizeChanged += OnViewportSizeChanged;
+                    }
+
+                    _headerRects = null;
+
+                    if (SaveScrollValueWhenContentUpdated)
+                        _viewer.Offset = savedOffset;
+                }
+                catch (Exception fallbackEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"回退渲染也失败: {fallbackEx.Message}");
+                    CreateErrorDocument($"Markdown 渲染失败: {fallbackEx.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 代码块开始标记的正则表达式（匹配 ``` 或 ~~~，可能带语言标识）
+        /// </summary>
+        private static readonly Regex s_codeBlockStartRegex = new Regex(@"^(\s*)(```|~~~)(\w*)\s*$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// 代码块结束标记的正则表达式
+        /// </summary>
+        private static readonly Regex s_codeBlockEndRegex = new Regex(@"^(\s*)(```|~~~)\s*$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// 查找安全的分割点（不在代码块中间）
+        /// </summary>
+        /// <param name="lines">所有行</param>
+        /// <param name="targetLine">目标行号</param>
+        /// <returns>安全的分割行号</returns>
+        private int FindSafeBreakPoint(string[] lines, int targetLine)
+        {
+            if (targetLine >= lines.Length)
+                return lines.Length;
+
+            // 检查从开始到目标行是否在代码块内
+            bool inCodeBlock = false;
+            string? codeBlockMarker = null; // 记录代码块使用的标记（``` 或 ~~~）
+            int lastSafePoint = 0;
+
+            for (int i = 0; i < targetLine && i < lines.Length; i++)
+            {
+                var line = lines[i];
+
+                if (!inCodeBlock)
+                {
+                    // 检查是否是代码块开始
+                    var startMatch = s_codeBlockStartRegex.Match(line);
+                    if (startMatch.Success)
+                    {
+                        inCodeBlock = true;
+                        codeBlockMarker = startMatch.Groups[2].Value;
+                    }
+                    else
+                    {
+                        // 不在代码块内，这是一个安全点
+                        lastSafePoint = i + 1;
+                    }
+                }
+                else
+                {
+                    // 在代码块内，检查是否是代码块结束
+                    var endMatch = s_codeBlockEndRegex.Match(line);
+                    if (endMatch.Success && endMatch.Groups[2].Value == codeBlockMarker)
+                    {
+                        inCodeBlock = false;
+                        codeBlockMarker = null;
+                        // 代码块结束后是安全点
+                        lastSafePoint = i + 1;
+                    }
+                }
+            }
+
+            // 如果目标行在代码块内，需要找到代码块结束的位置
+            if (inCodeBlock)
+            {
+                // 继续向后查找代码块结束
+                for (int i = targetLine; i < lines.Length; i++)
+                {
+                    var line = lines[i];
+                    var endMatch = s_codeBlockEndRegex.Match(line);
+                    if (endMatch.Success && endMatch.Groups[2].Value == codeBlockMarker)
+                    {
+                        // 找到代码块结束，返回结束行的下一行
+                        return i + 1;
+                    }
+                }
+                // 如果没找到结束标记，返回所有行（整个文档）
+                return lines.Length;
+            }
+
+            // 如果目标行不在代码块内，返回目标行
+            return targetLine;
+        }
+
+        /// <summary>
+        /// 异步继续渐进式渲染（替换模式）
+        /// 每次重新解析从开始到当前位置的所有内容，确保代码块等结构完整
+        /// </summary>
+        private async Task ContinueProgressiveRenderingReplaceAsync(string[] lines, int startLine, string contentHash, string fullContent, CancellationToken ct)
+        {
+            int currentLine = startLine;
+            int batchSize = ProgressiveRenderBatchSize;
+            int delayMs = ProgressiveRenderDelayMs;
+
+            try
+            {
+                while (currentLine < lines.Length && !ct.IsCancellationRequested)
+                {
+                    // 等待一小段时间，让UI有机会响应
+                    await Task.Delay(delayMs, ct);
+
+                    if (ct.IsCancellationRequested)
+                        break;
+
+                    // 计算这一批次要渲染到的行数（使用安全分割点）
+                    int targetEndLine = Math.Min(currentLine + batchSize, lines.Length);
+                    int endLine = FindSafeBreakPoint(lines, targetEndLine);
+
+                    // 如果安全分割点没有前进，强制前进到目标位置或文档末尾
+                    if (endLine <= currentLine)
+                    {
+                        endLine = Math.Min(targetEndLine, lines.Length);
+                    }
+
+                    // 解析从开始到当前位置的所有内容
+                    string contentSoFar = string.Join("\n", lines.Take(endLine));
+
+                    // 在UI线程上更新
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (ct.IsCancellationRequested)
+                            return;
+
+                        try
+                        {
+                            // 重新解析整个内容到当前位置
+                            var newDocument = _engine.TransformElement(contentSoFar);
+                            newDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+                            ReplaceDocument(newDocument);
+
+                            _headerRects = null;
+
+                            // 触发进度事件
+                            ProgressiveRenderingProgress?.Invoke(this, new ProgressiveRenderingProgressEventArgs(endLine, lines.Length));
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"渐进式渲染批次失败: {ex.Message}");
+                        }
+                    }, DispatcherPriority.Background, ct);
+
+                    currentLine = endLine;
+                }
+
+                // 渲染完成
+                if (!ct.IsCancellationRequested)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        _currentContentHash = contentHash;
+                        if (_document != null)
+                        {
+                            AddToCache(contentHash, _document, fullContent);
+                        }
+                        _isProgressiveRendering = false;
+                        ProgressiveRenderingCompleted?.Invoke(this, EventArgs.Empty);
+                    }, DispatcherPriority.Background);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine("渐进式渲染被取消");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"渐进式渲染异常: {ex.Message}");
+            }
+            finally
+            {
+                _isProgressiveRendering = false;
+            }
+        }
+
+
+        /// <summary>
+        /// 替换当前文档
+        /// </summary>
+        private void ReplaceDocument(DocumentElement newDocument)
+        {
+            if (_wrapper.Document?.Control is Control oldContentControl)
+            {
+                oldContentControl.SizeChanged -= OnViewportSizeChanged;
+            }
+
+            _document = newDocument;
+            _wrapper.Document = _document;
+
+            if (_wrapper.Document?.Control is Control newContentControl)
+            {
+                newContentControl.SizeChanged += OnViewportSizeChanged;
+            }
+        }
+
         private void CreateErrorDocument(string errorMessage)
         {
             try
@@ -394,8 +885,11 @@ namespace Markdown.Avalonia
 
                 // 使用 UnBlockElement 包装错误控件，然后创建 DocumentRootElement
                 var errorElement = new UnBlockElement(errorBorder);
-                var errorDocument = new DocumentRootElement(new[] { errorElement });
-                
+                var errorDocument = new DocumentRootElement(new[]
+                {
+                    errorElement
+                });
+
                 var ofst = _viewer.Offset;
 
                 if (_wrapper.Document?.Control is Control oldContentControl)
@@ -465,14 +959,14 @@ namespace Markdown.Avalonia
 
         public bool SaveScrollValueWhenContentUpdated
         {
-            set { SetValue(SaveScrollValueWhenContentUpdatedProperty, value); }
-            get { return GetValue(SaveScrollValueWhenContentUpdatedProperty); }
+            set => SetValue(SaveScrollValueWhenContentUpdatedProperty, value);
+            get => GetValue(SaveScrollValueWhenContentUpdatedProperty);
         }
 
         public Vector ScrollValue
         {
-            set { _viewer.Offset = value; }
-            get { return _viewer.Offset; }
+            set => _viewer.Offset = value;
+            get => _viewer.Offset;
         }
 
         private bool _selectionEnabled;
@@ -488,8 +982,12 @@ namespace Markdown.Avalonia
 
         [Content]
         public string? HereMarkdown
+
         {
-            get { return Markdown; }
+            get
+            {
+                return Markdown;
+            }
             set
             {
                 if (String.IsNullOrEmpty(value))
@@ -551,7 +1049,10 @@ namespace Markdown.Avalonia
 
         public string? Markdown
         {
-            get { return _markdown; }
+            get
+            {
+                return _markdown;
+            }
             set
             {
                 if (SetAndRaise(MarkdownDirectProperty, ref _markdown, value))
@@ -565,7 +1066,10 @@ namespace Markdown.Avalonia
 
         public Uri? Source
         {
-            get { return _source; }
+            get
+            {
+                return _source;
+            }
             set
             {
                 if (!SetAndRaise(SourceDirectProperty, ref _source, value))
@@ -618,7 +1122,10 @@ namespace Markdown.Avalonia
 
         public IStyle MarkdownStyle
         {
-            get { return _markdownStyle; }
+            get
+            {
+                return _markdownStyle;
+            }
             set
             {
                 if (value is null)
@@ -645,7 +1152,10 @@ namespace Markdown.Avalonia
 
         public string? MarkdownStyleName
         {
-            get { return _markdownStyleName; }
+            get
+            {
+                return _markdownStyleName;
+            }
             set
             {
                 _markdownStyleName = value;
@@ -713,9 +1223,9 @@ namespace Markdown.Avalonia
 
         internal IBrush ComputedSelectionBrush => SelectionBrush ?? _selectionBrush ?? Brushes.Cyan;
 
-        
+
         public ScrollViewer ScrollViewer => _viewer;
-        
+
         class HeaderRect
         {
             public Rect BaseBound { get; }

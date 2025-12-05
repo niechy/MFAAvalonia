@@ -2207,7 +2207,7 @@ public class MaaProcessor
             catch (ArgumentException) { } // 进程已退出
         }
     }
-    
+
     /// 强制终止 Agent 进程（用于窗口关闭等紧急情况）
     /// </summary>
     /// <param name="taskerToDispose">原tasker</param>
@@ -2218,8 +2218,6 @@ public class MaaProcessor
         var agentProcess = _agentProcess;
         // 如果传入了 taskerToDispose，使用它；否则使用当前的 MaaTasker
         var maaTasker = taskerToDispose ?? MaaTasker;
-        
-        int i = 0;
 
         // 先清除引用，防止在后续操作中被其他线程访问
         _agentClient = null;
@@ -2621,22 +2619,22 @@ public class MaaProcessor
         try
         {
 
-                        // 获取当前资源的自定义目录
-                        var currentResource = Instances.TaskQueueViewModel.CurrentResources
-                            .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
-                        var originalPaths = currentResource?.ResolvedPath ?? currentResource?.Path;
-            
-                        if (originalPaths == null || originalPaths.Count == 0)
-                        {
-                            LoggerHelper.Info("No resource paths found, skipping custom class loading");
-                            return;
-                        }
-            
-                        // 创建副本，避免修改原始列表
-                        var resourcePaths = new List<string>(originalPaths);
-                        // LoggerHelper.Info(LangKeys.RegisteringCustomRecognizer.ToLocalization());
-                        // LoggerHelper.Info(LangKeys.RegisteringCustomAction.ToLocalization());
-                        resourcePaths.Add(Path.Combine(AppContext.BaseDirectory, "resource"));
+            // 获取当前资源的自定义目录
+            var currentResource = Instances.TaskQueueViewModel.CurrentResources
+                .FirstOrDefault(c => c.Name == Instances.TaskQueueViewModel.CurrentResource);
+            var originalPaths = currentResource?.ResolvedPath ?? currentResource?.Path;
+
+            if (originalPaths == null || originalPaths.Count == 0)
+            {
+                LoggerHelper.Info("No resource paths found, skipping custom class loading");
+                return;
+            }
+
+            // 创建副本，避免修改原始列表
+            var resourcePaths = new List<string>(originalPaths);
+            // LoggerHelper.Info(LangKeys.RegisteringCustomRecognizer.ToLocalization());
+            // LoggerHelper.Info(LangKeys.RegisteringCustomAction.ToLocalization());
+            resourcePaths.Add(Path.Combine(AppContext.BaseDirectory, "resource"));
             // 遍历所有资源路径，查找 custom 目录
             foreach (var resourcePath in resourcePaths)
             {

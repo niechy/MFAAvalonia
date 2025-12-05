@@ -1,7 +1,8 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mdc="clr-namespace:Markdown.Avalonia.Controls;assembly=Markdown.Avalonia"
-        xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia">
+        xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
+        xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit">
 
     <!-- ==================== 基础文本样式 ==================== -->
     <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock">
@@ -74,6 +75,21 @@
     <Style Selector=".Markdown_Avalonia_MarkdownViewer ScrollViewer.CodeBlock">
         <Setter Property="Padding" Value="10,8" />
     </Style>
+    <!-- TextEditor 代码编辑器样式 -->
+    <Style Selector=".Markdown_Avalonia_MarkdownViewer avaloniaEdit|TextEditor.CodeBlockEditor">
+        <Setter Property="FontFamily" Value="Consolas, Microsoft YaHei, monospace" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        <Setter Property="LineNumbersForeground" Value="{DynamicResource SukiLowText}" />
+    </Style>
+
+    <!-- TextEditor 行号边距样式 - 让行号居中对齐 -->
+    <Style
+        Selector=".Markdown_Avalonia_MarkdownViewer avaloniaEdit|TextEditor.CodeBlockEditor /template/ avaloniaEdit|LineNumberMargin">
+        <Setter Property="Margin" Value="8,0,12,0" />
+    </Style>
+
 
     <!-- 代码块 Header 样式 -->
     <Style Selector=".Markdown_Avalonia_MarkdownViewer DockPanel.CodeBlockHeader">

@@ -2079,23 +2079,23 @@ public partial class TaskQueueView : UserControl
         // 先将转义的 \n 转换为实际换行符
         return input;
         // 按行分割
-        var lines = input.Split('\n');
-
-        for (int i = 0; i < lines.Length - 1; i++) // 最后一行不需要处理
-        {
-            var line = lines[i].TrimEnd();
-
-            // 检查是否是表格行（以 | 结尾）或表格分隔行（包含 :---: 或 --- 等模式）
-            bool isTableLine = line.EndsWith("|") || Regex.IsMatch(line, @"^\s*\|[\s\-:|]+\|\s*$");
-
-            // 非表格行添加两个空格以实现 Markdown 换行
-            if (!isTableLine && !lines[i].EndsWith("  "))
-            {
-                lines[i] += "  ";
-            }
-        }
-
-        return string.Join("\n", lines);
+        // var lines = input.Split('\n');
+        //
+        // for (int i = 0; i < lines.Length - 1; i++) // 最后一行不需要处理
+        // {
+        //     var line = lines[i].TrimEnd();
+        //
+        //     // 检查是否是表格行（以 | 结尾）或表格分隔行（包含 :---: 或 --- 等模式）
+        //     bool isTableLine = line.EndsWith("|") || Regex.IsMatch(line, @"^\s*\|[\s\-:|]+\|\s*$");
+        //
+        //     // 非表格行添加两个空格以实现 Markdown 换行
+        //     if (!isTableLine && !lines[i].EndsWith("  "))
+        //     {
+        //         lines[i] += "  ";
+        //     }
+        // }
+        //
+        // return string.Join("\n", lines);
     }
 
 

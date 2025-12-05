@@ -7,17 +7,28 @@ using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Input;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ColorDocument.Avalonia;
 using System.Text;
 
 namespace Markdown.Avalonia.SyntaxHigh
 {
+    /// <summary>
+    /// 代码块元素
+    /// 性能优化：
+    /// 1. 使用SyntaxHighlightProvider.ApplyHighlighting 统一管理高亮
+    /// 2. TextMate Installation 通过静态缓存复用
+    /// 3. 延迟创建控件（Lazy）
+    /// </summary>
     internal class CodeBlockElement : DocumentElement
     {
-        private string _lang;
-        private string _code;
-        private Lazy<Border> _control;
+        private readonly SyntaxHighlightProvider _provider;
+        private readonly string _lang;
+        private readonly string _code;
+        private readonly Lazy<Border> _control;
         private TextEditor? _textEditor;
+        private bool _highlightApplied;
 
         public override Control Control => _control.Value;
 
@@ -25,6 +36,7 @@ namespace Markdown.Avalonia.SyntaxHigh
 
         public CodeBlockElement(SyntaxHighlightProvider provider, string lang, string code)
         {
+            _provider = provider;
             _lang = lang;
             _code = code;
             _control = new Lazy<Border>(() => Create(lang, code));
@@ -37,7 +49,8 @@ namespace Markdown.Avalonia.SyntaxHigh
 
         public override void Select(Point from, Point to)
         {
-            Helper?.Register(Control);}
+            Helper?.Register(Control);
+        }
 
         public override void UnSelect()
         {
@@ -69,7 +82,7 @@ namespace Markdown.Avalonia.SyntaxHigh
             };
             langLabel.Classes.Add("CodeBlockLangLabel");
 
-            // 复制按钮 - GitHub 风格的双方块图标
+            // 复制按钮 - GitHub风格的双方块图标
             var copyIcon = new PathIcon()
             {
                 Data = Geometry.Parse("M 3,0 L 11,0 L 11,8 L 9,8 L 9,2 L 3,2 Z M 0,3 L 8,3 L 8,11 L 0,11 Z M 1,4 L 1,10 L 7,10 L 7,4 Z"),
@@ -83,13 +96,14 @@ namespace Markdown.Avalonia.SyntaxHigh
             {
                 Content = copyIcon,
                 Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),Padding = new Thickness(6),
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(6),
                 Cursor = new Cursor(StandardCursorType.Hand),
                 VerticalAlignment = VerticalAlignment.Center
             };
             copyButton.Classes.Add("CodeBlockCopyButton");
 
-            // Header 左侧部分（展开图标 + 语言名称）
+            // Header左侧部分（展开图标 + 语言名称）
             var headerLeft = new StackPanel()
             {
                 Orientation = Orientation.Horizontal,
@@ -121,22 +135,27 @@ namespace Markdown.Avalonia.SyntaxHigh
             header.Children.Add(headerRight);
             header.Classes.Add("CodeBlockHeader");
 
-            // 代码编辑器
-            _textEditor = new TextEditor();
-            _textEditor.Text = code;
-            _textEditor.HorizontalAlignment = HorizontalAlignment.Stretch;
-            _textEditor.IsReadOnly = true;
-            _textEditor.Margin = new Thickness(0, 0, 0, 8);
-            _textEditor.Classes.Add("CodeBlockEditor");
-            _textEditor.ShowLineNumbers = false;
-            _textEditor.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-            _textEditor.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
-
-            // Apply TextMate syntax highlighting
-            if (!string.IsNullOrEmpty(lang))
+            // 创建新的 TextEditor（不使用池化，避免复杂的生命周期管理）
+            _textEditor = new TextEditor
             {
-                TextMateHighlightProvider.Instance.ApplyHighlighting(_textEditor, lang);
-            }
+                Text = code,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                IsReadOnly = true,
+                ShowLineNumbers = true,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Margin = new Thickness(0, 0, 0, 8),
+                Tag = lang // 保留语言标签用于其他用途
+            };
+
+            // 设置 TextArea 的左边距，让代码和行号之间有更多间距
+            _textEditor.TextArea.TextView.Margin = new Thickness(12, 0, 0, 0);
+
+            _textEditor.Classes.Add("CodeBlockEditor");
+
+            // 使用 TextMate 应用语法高亮（支持更多语言如 jsonc）
+            _provider.ApplyTextMateHighlighting(_textEditor, lang);
+
 
             // 代码内容容器（可折叠）
             var codeContent = new Border()
@@ -151,14 +170,14 @@ namespace Markdown.Avalonia.SyntaxHigh
             copyButton.Click += (s, e) =>
             {
                 var clipboard = TopLevel.GetTopLevel(_textEditor)?.Clipboard;
-                clipboard?.SetTextAsync(_textEditor.Text);
+                clipboard?.SetTextAsync(_textEditor?.Text ?? code);
             };
 
             // Header 点击事件（展开/折叠）
             header.PointerPressed += (s, e) =>
             {
                 codeContent.IsVisible = !codeContent.IsVisible;
-                // 旋转箭头图标
+                //旋转箭头图标
                 if (codeContent.IsVisible)
                 {
                     expandIcon.RenderTransform = new RotateTransform(90); // 向下箭头（展开）

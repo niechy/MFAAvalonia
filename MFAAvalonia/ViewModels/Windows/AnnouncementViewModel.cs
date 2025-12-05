@@ -1,8 +1,6 @@
 ﻿using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Markdown.Avalonia;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
 using MFAAvalonia.Helper;
@@ -12,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,153 +27,50 @@ public partial class AnnouncementViewModel : ViewModelBase
 {
     public static readonly string AnnouncementFolder = "Announcement";
     private static List<AnnouncementItem> _publicAnnouncementItems = new();
+
     [ObservableProperty] private AvaloniaList<AnnouncementItem> _announcementItems = new();
     [ObservableProperty] private AnnouncementItem? _selectedAnnouncement;
-    [ObservableProperty] private string _announcementContent; // 绑定到 MarkdownScrollViewer.Markdown
+    [ObservableProperty] private string _announcementContent = string.Empty;
     [ObservableProperty] private bool _doNotRemindThisAnnouncementAgain = Convert.ToBoolean(
         GlobalConfiguration.GetValue(ConfigurationKeys.DoNotShowAnnouncementAgain, bool.FalseString));
+    [ObservableProperty] private bool _isLoading = true;
 
-    #region 懒加载核心字段（适配 MarkdownScrollViewer 内部 ScrollViewer）
-
-    private List<string> _allBatches = new(); // 缓存所有拆分后的 Markdown 批次
-    private int _currentBatchIndex = 0; // 当前加载到的批次索引
-    private bool _isLoadingNextBatch = false; // 防止重复加载
-    private WeakReference<ScrollViewer>? _innerScrollViewerWeakRef; // 弱引用持有内部 ScrollViewer
-    private const int _loadThreshold = 200; // 触底加载阈值（像素）
-    private const int _initialBatchCount = 2; // 初始加载批次（让用户先看到内容）
-    private const int _batchSize = 120; // 每批行数（可调整）
-    private CancellationTokenSource? _lazyLoadCts; // 懒加载取消令牌
-
-    #endregion
+    private CancellationTokenSource? _loadCts; // 加载取消令牌
 
     partial void OnDoNotRemindThisAnnouncementAgainChanged(bool value)
     {
         GlobalConfiguration.SetValue(ConfigurationKeys.DoNotShowAnnouncementAgain, value.ToString());
     }
 
-    // 选中项变更时：清理之前的懒加载状态，重新初始化
+    // 选中项变更时加载内容
     partial void OnSelectedAnnouncementChanged(AnnouncementItem? oldValue, AnnouncementItem? newValue)
     {
         if (newValue is null || oldValue == newValue) return;
 
         // 取消之前的加载任务
-        if (_lazyLoadCts != null)
-        {
-            _lazyLoadCts.Cancel();
-            _lazyLoadCts.Dispose();
-            _lazyLoadCts = null;
-        }
-        // 清理滚动监听和资源
-        CleanupScrollListener();
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _loadCts = new CancellationTokenSource();
 
-        AnnouncementContent = string.Empty;
-        _view?.Viewer.ScrollViewer.ScrollToHome();
+        // 滚动到顶部
+        _view?.Viewer?.ScrollViewer?.ScrollToHome();
 
-        _ = LoadContentForSelectedItemAsync(newValue);
-        SetMarkdownScrollViewer(_view?.Viewer, false);
-
+        // 加载新内容（Markdown 组件会自动处理缓存）
+        _ = LoadContentAsync(newValue, _loadCts.Token);
     }
 
-    // 核心：加载公告内容（Markdown 格式），拆分批次缓存
-    async private Task LoadContentForSelectedItemAsync(AnnouncementItem item)
+    /// <summary>
+    /// 加载公告内容
+    /// </summary>
+    private async Task LoadContentAsync(AnnouncementItem item, CancellationToken cancellationToken)
     {
         try
         {
-            if (item.Content.Length > 4000)
+            await DispatcherHelper.RunOnMainThreadAsync(() =>
             {
-                // 初始化懒加载（拆分批次 + 初始加载）
-                await InitializeLazyLoadAsync(item.Content);
-            }
-            else
-            {
+                cancellationToken.ThrowIfCancellationRequested();
                 AnnouncementContent = item.Content;
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"加载公告内容失败: {item.FilePath}, 错误: {ex.Message}");
-            await DispatcherHelper.RunOnMainThreadAsync(() =>
-            {
-                AnnouncementContent = $"### 加载失败\n{ex.Message}"; // Markdown 格式提示
-            });
-        }
-    }
-
-    #region 懒加载核心逻辑（适配 MarkdownScrollViewer 内部 ScrollViewer）
-
-    /// <summary>
-    /// 由 View 调用：传递 MarkdownScrollViewer 实例，提取内部 ScrollViewer 监听滚动
-    /// </summary>
-    public void SetMarkdownScrollViewer(MarkdownScrollViewer? markdownScrollViewer, bool clear = true)
-    {
-        // 清理之前的监听
-        if (clear)
-            CleanupScrollListener();
-
-        if (markdownScrollViewer == null) return;
-        try
-        {
-            // 从 MarkdownScrollViewer 的 VisualChildren 提取内部 ScrollViewer（源码唯一子元素）
-
-            // 弱引用持有内部 ScrollViewer，避免内存泄漏
-            _innerScrollViewerWeakRef = new WeakReference<ScrollViewer>(markdownScrollViewer.ScrollViewer);
-            // 监听滚动事件（核心：直接响应内部 ScrollViewer 的滚动变化）
-            markdownScrollViewer.ScrollViewer.ScrollChanged += InnerScrollViewer_ScrollChanged;
-
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"提取 MarkdownScrollViewer 内部 ScrollViewer 失败: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 内部 ScrollViewer 滚动事件回调：判断是否触底，触发下一批加载
-    /// </summary>
-    async private void InnerScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)
-    {
-        if (sender is not ScrollViewer scrollViewer) return;
-        if (_isLoadingNextBatch) return; // 正在加载中，忽略
-
-        // 安全检查：确保批次列表有效且索引在范围内
-        var batches = _allBatches;
-        var currentIndex = _currentBatchIndex;
-        if (batches == null || batches.Count == 0 || currentIndex >= batches.Count) return;
-
-        // 触底判断：当前滚动偏移 + 可视高度 >= 内容总高度 - 阈值（避免空白）
-        bool isNearBottom = scrollViewer.Offset.Y + scrollViewer.Viewport.Height
-            >= scrollViewer.Extent.Height - _loadThreshold;
-
-        if (isNearBottom)
-        {
-            await LoadNextBatchAsync();
-        }
-    }
-
-
-    /// <summary>
-    /// 初始化懒加载：拆分 Markdown 文本为批次 + 加载初始批次
-    /// </summary>
-    async private Task InitializeLazyLoadAsync(string fullMarkdownContent)
-    {
-        _lazyLoadCts = new CancellationTokenSource();
-        var cancellationToken = _lazyLoadCts.Token;
-
-        try
-        {
-            // 1. 拆分 Markdown 文本为批次（按行拆分，不破坏格式）
-            var lines = fullMarkdownContent.Split([Environment.NewLine], StringSplitOptions.None);
-            _allBatches = SplitIntoMarkdownBatches(lines, _batchSize);
-            _currentBatchIndex = 0;
-
-            // 2. UI 线程清空原有内容（低优先级，不阻塞交互）
-            await DispatcherHelper.RunOnMainThreadAsync(() =>
-            {
-                AnnouncementContent = string.Empty;
-            }, DispatcherPriority.Background, cancellationToken);
-
-            // 3. 加载初始批次（1-2批，让用户快速看到内容）
-            await LoadInitialBatchesAsync(cancellationToken);
+            }, DispatcherPriority.Normal, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -184,142 +78,13 @@ public partial class AnnouncementViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggerHelper.Error($"初始化懒加载失败: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 加载初始批次（1-2批）
-    /// </summary>
-    async private Task LoadInitialBatchesAsync(CancellationToken cancellationToken)
-    {
-        var batches = _allBatches;
-        if (batches == null || batches.Count == 0) return;
-
-        int loadCount = Math.Min(_initialBatchCount, batches.Count);
-        for (int i = 0; i < loadCount; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // 安全检查索引有效性
-            if (i >= batches.Count) break;
-
-            await LoadBatchAsync(batches[i]);
-            _currentBatchIndex++;
-        }
-    }
-
-    /// <summary>
-    /// 加载下一批 Markdown 文本
-    /// </summary>
-    async private Task LoadNextBatchAsync()
-    {
-        // 安全检查：确保批次列表有效且索引在范围内
-        var batches = _allBatches;
-        if (_isLoadingNextBatch || batches == null || batches.Count == 0 || _currentBatchIndex >= batches.Count)
-            return;
-
-        _isLoadingNextBatch = true;
-        try
-        {
-            // 再次检查索引有效性（防止竞态条件）
-            var currentIndex = _currentBatchIndex;
-            if (currentIndex < 0 || currentIndex >= batches.Count)
-                return;
-
-            var batchText = batches[currentIndex];
-            await LoadBatchAsync(batchText);
-            _currentBatchIndex++;
-
-            // 所有批次加载完成，移除滚动监听
-            if (_currentBatchIndex >= batches.Count)
+            LoggerHelper.Error($"加载公告内容失败: {item.FilePath}, 错误: {ex.Message}");
+            await DispatcherHelper.RunOnMainThreadAsync(() =>
             {
-                CleanupScrollListener();
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggerHelper.Error($"加载下一批文本失败: {ex.Message}");
-        }
-        finally
-        {
-            _isLoadingNextBatch = false;
+                AnnouncementContent = $"### 加载失败\n{ex.Message}";
+            });
         }
     }
-
-    /// <summary>
-    /// 加载单个批次（UI 线程，低优先级）
-    /// </summary>
-    private async Task LoadBatchAsync(string batchText)
-    {
-        await DispatcherHelper.RunOnMainThreadAsync(() =>
-        {
-            // 追加批次文本（Markdown 格式兼容）
-            AnnouncementContent += batchText;
-        }, DispatcherPriority.Background);
-
-        // 让出 CPU 时间片，确保窗口拖动等交互流畅
-        await Task.Delay(1);
-    }
-
-    /// <summary>
-    /// 将 Markdown 行列表拆分为批次（保持格式完整性）
-    /// </summary>
-    private List<string> SplitIntoMarkdownBatches(string[] lines, int batchSize)
-    {
-        var batches = new List<string>();
-        var sb = new StringBuilder();
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            sb.AppendLine(lines[i]);
-
-            // 每 batchSize 行生成一个批次，或最后一行时强制生成
-            if ((i + 1) % batchSize == 0 || i == lines.Length - 1)
-            {
-                batches.Add(sb.ToString());
-                sb.Clear();
-            }
-        }
-
-        return batches;
-    }
-
-    /// <summary>
-    /// 清理滚动监听（避免内存泄漏）
-    /// </summary>
-    private void CleanupScrollListener()
-    {
-        if (_innerScrollViewerWeakRef?.TryGetTarget(out var innerScrollViewer) == true)
-        {
-            innerScrollViewer.ScrollChanged -= InnerScrollViewer_ScrollChanged;
-        }
-        _innerScrollViewerWeakRef = null;
-        _allBatches.Clear();
-        _currentBatchIndex = 0;
-    }
-
-    /// <summary>
-    /// 清理懒加载所有资源（切换选中项/窗口关闭时调用）
-    /// </summary>
-    private void CleanupLazyLoadResources()
-    {
-        // 取消并释放加载任务
-        if (_lazyLoadCts != null)
-        {
-            _lazyLoadCts.Cancel();
-            _lazyLoadCts.Dispose();
-            _lazyLoadCts = null;
-        }
-
-        // 清理滚动监听（内部已重置 _allBatches 和 _currentBatchIndex）
-        CleanupScrollListener();
-
-        // 重置状态
-        _isLoadingNextBatch = false;
-    }
-
-    #endregion
 
     public static void AddAnnouncement(string announcement)
     {
@@ -337,6 +102,8 @@ public partial class AnnouncementViewModel : ViewModelBase
     {
         try
         {
+            IsLoading = true;
+
             var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
             var announcementDir = Path.Combine(resourcePath, AnnouncementFolder);
 
@@ -346,48 +113,54 @@ public partial class AnnouncementViewModel : ViewModelBase
                 return;
             }
 
-            // 后台线程获取 Markdown 文件列表
-            var mdFiles = await Task.Run(() =>
-                Directory.GetFiles(announcementDir, "*.md")
-                    .OrderBy(Path.GetFileName)
-                    .ToList()
-            ).ConfigureAwait(false);
-
-            var tempItems = new List<AnnouncementItem>();
-            foreach (var mdFile in mdFiles)
+            // 后台线程获取 Markdown 文件列表并读取内容
+            var tempItems = await Task.Run(() =>
             {
-                try
+                var items = new List<AnnouncementItem>();
+                var mdFiles = Directory.GetFiles(announcementDir, "*.md")
+                    .OrderBy(Path.GetFileName)
+                    .ToList();
+
+                foreach (var mdFile in mdFiles)
                 {
-                    // 读取第一行作为标题（Markdown 标题可能以 # 开头，已在 ReadFirstLineAsync 中处理）
-                    var fileContent = await File.ReadAllTextAsync(mdFile);
-                    SplitFirstLine(fileContent, out string firstLine, out var content);
-                    var title = firstLine.TrimStart('#', ' ').Trim();
-                    tempItems.Add(new AnnouncementItem
+                    try
                     {
-                        Title = title,
-                        FilePath = mdFile,
-                        Content = TaskQueueView.ConvertCustomMarkup(content),
-                        LastModified = File.GetLastWriteTime(mdFile)
-                    });
+                        // 读取第一行作为标题（Markdown 标题可能以 # 开头）
+                        var fileContent = File.ReadAllText(mdFile);
+                        SplitFirstLine(fileContent, out string firstLine, out var content);
+                        var title = firstLine.TrimStart('#', ' ').Trim();
+                        items.Add(new AnnouncementItem
+                        {
+                            Title = title,
+                            FilePath = mdFile,
+                            Content = TaskQueueView.ConvertCustomMarkup(content),
+                            LastModified = File.GetLastWriteTime(mdFile)
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Error($"读取公告元数据失败: {mdFile}, 错误: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    LoggerHelper.Error($"读取公告元数据失败: {mdFile}, 错误: {ex.Message}");
-                }
-            }
+                return items;
+            }).ConfigureAwait(false);
+
             // UI 线程更新公告列表
             await DispatcherHelper.RunOnMainThreadAsync(() =>
             {
                 AnnouncementItems.Clear();
                 AnnouncementItems.AddRange(tempItems);
                 AnnouncementItems.AddRange(_publicAnnouncementItems);
-                LoggerHelper.Info($"公告数量：{AnnouncementItems.Count}"); // 注意：不在这里选中第一个公告，由 CheckAnnouncement 在 View 设置完成后选中
+                LoggerHelper.Info($"公告数量：{AnnouncementItems.Count}");
             });
-
         }
         catch (Exception ex)
         {
             LoggerHelper.Error($"加载公告元数据失败: {ex.Message}");
+        }
+        finally
+        {
+            await DispatcherHelper.RunOnMainThreadAsync(() => IsLoading = false);
         }
     }
 
@@ -408,7 +181,7 @@ public partial class AnnouncementViewModel : ViewModelBase
             "\r"
         };
         int firstNewLineIndex = int.MaxValue;
-        string matchedNewLine = null;
+        string? matchedNewLine = null;
 
         foreach (var nl in newLineCandidates)
         {
@@ -445,35 +218,45 @@ public partial class AnnouncementViewModel : ViewModelBase
         try
         {
             var viewModel = new AnnouncementViewModel();
-            await viewModel.LoadAnnouncementMetadataAsync();
-            if (forceShow)
-            {
-                if (!viewModel.AnnouncementItems.Any())
-                {
-                    ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.AnnouncementEmpty.ToLocalization());
-                    return;
-                }
-            }
-            else if (viewModel.DoNotRemindThisAnnouncementAgain || !viewModel.AnnouncementItems.Any())
+
+            // 如果不是强制显示且用户选择了不再提醒，直接返回
+            if (!forceShow && viewModel.DoNotRemindThisAnnouncementAgain)
             {
                 return;
             }
 
+            // 先创建并显示窗口（快速响应用户操作）
             var announcementView = new AnnouncementView
             {
                 DataContext = viewModel
             };
             viewModel.SetView(announcementView);
-            viewModel.SetMarkdownScrollViewer(announcementView.Viewer);
+            announcementView.Show();
 
-            // 在 View 和 ScrollViewer 设置完成后，再选中第一个公告
-            // 这样懒加载的滚动监听才能正确设置
+            // 异步加载公告元数据
+            await viewModel.LoadAnnouncementMetadataAsync();
+
+            // 加载完成后检查是否有公告
+            if (forceShow)
+            {
+                if (!viewModel.AnnouncementItems.Any())
+                {
+                    ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.AnnouncementEmpty.ToLocalization());
+                    announcementView.Close();
+                    return;
+                }
+            }
+            else if (!viewModel.AnnouncementItems.Any())
+            {
+                announcementView.Close();
+                return;
+            }
+
+            // 选中第一个公告
             if (viewModel.AnnouncementItems.Any())
             {
                 viewModel.SelectedAnnouncement = viewModel.AnnouncementItems[0];
             }
-
-            announcementView.Show();
         }
         catch (Exception ex)
         {
@@ -481,10 +264,11 @@ public partial class AnnouncementViewModel : ViewModelBase
         }
     }
 
-
     // 窗口关闭时清理资源
     public void Cleanup()
     {
-        CleanupLazyLoadResources();
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _loadCts = null;
     }
 }

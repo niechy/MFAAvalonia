@@ -4,6 +4,7 @@ using Avalonia.Media;
 using ColorTextBlock.Avalonia;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ColorDocument.Avalonia.DocumentElements
@@ -11,6 +12,9 @@ namespace ColorDocument.Avalonia.DocumentElements
     public class CTextBlockElement : DocumentElement
     {
         private Lazy<CTextBlock> _text;
+        private readonly string _contentString;
+        private readonly string? _appendClass;
+        private readonly TextAlignment? _alignment;
 
         public string Text => _text.Value.Text;
 
@@ -20,20 +24,30 @@ namespace ColorDocument.Avalonia.DocumentElements
 
         public CTextBlockElement(IEnumerable<CInline> inlines)
         {
+            var inlineList = inlines.ToList();
+            _contentString = BuildInlinesString(inlineList);
+            _appendClass = null;
+            _alignment = null;
             _text = new Lazy<CTextBlock>(() =>
             {
                 var text = new CTextBlock();
-                foreach (var inline in inlines)
+                foreach (var inline in inlineList)
                     text.Content.Add(inline);
                 return text;
             });
         }
+
         public CTextBlockElement(IEnumerable<CInline> inlines, string appendClass)
         {
+            var inlineList = inlines.ToList();
+            _contentString = BuildInlinesString(inlineList);
+            _appendClass = appendClass;
+            _alignment = null;
+
             _text = new Lazy<CTextBlock>(() =>
             {
                 var text = new CTextBlock();
-                foreach (var inline in inlines)
+                foreach (var inline in inlineList)
                     text.Content.Add(inline);
 
                 text.Classes.Add(appendClass);
@@ -43,16 +57,51 @@ namespace ColorDocument.Avalonia.DocumentElements
 
         public CTextBlockElement(IEnumerable<CInline> inlines, string appendClass, TextAlignment alignment)
         {
+            var inlineList = inlines.ToList();
+            _contentString = BuildInlinesString(inlineList);
+            _appendClass = appendClass;
+            _alignment = alignment;
+
             _text = new Lazy<CTextBlock>(() =>
             {
                 var text = new CTextBlock();
-                foreach (var inline in inlines)
+                foreach (var inline in inlineList)
                     text.Content.Add(inline);
 
                 text.TextAlignment = alignment;
                 text.Classes.Add(appendClass);
                 return text;
             });
+        }
+
+        private static string BuildInlinesString(IEnumerable<CInline> inlines)
+        {
+            var sb = new StringBuilder();
+            foreach (var inline in inlines)
+            {
+                sb.Append(inline.GetType().Name);
+                sb.Append(':');
+                sb.Append(inline.AsString());
+                sb.Append('|');
+            }
+            return sb.ToString();
+        }
+
+        protected override void BuildContentString(StringBuilder sb)
+        {
+            sb.Append(_contentString);
+            if (_appendClass != null)
+            {
+                sb.Append("[class:");
+                sb.Append(_appendClass);
+                sb.Append(']');
+            }
+            if (_alignment.HasValue)
+            {
+                sb.Append("[align:");
+                sb.Append(_alignment.Value);
+                sb.Append(']');
+            }
         }
 
 
