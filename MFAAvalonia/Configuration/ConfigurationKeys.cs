@@ -139,6 +139,7 @@ public static class ConfigurationKeys
     public const string ProxyAddress = "ProxyAddress";
     public const string ProxyType = "ProxyType";
     public const string CurrentTasks = "CurrentTasks";
+    public const string ResourceUpdateChannelInitialized = "ResourceUpdateChannelInitialized";
 
     #endregion
 
