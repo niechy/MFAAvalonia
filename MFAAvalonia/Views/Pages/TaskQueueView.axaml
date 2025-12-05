@@ -83,14 +83,20 @@
                               VerticalAlignment="Center">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="maa:MaaInterface+MaaInterfaceResource">
-                                <Grid ColumnDefinitions="*,40">
+                                <Grid ColumnDefinitions="Auto,*,40">
+                                    <controls:DisplayIcon Grid.Column="0"
+                                                          IconSource="{Binding ResolvedIcon}"
+                                                          IconSize="16"
+                                                          IsVisible="{Binding HasIcon}"
+                                                          Margin="0,0,6,0"
+                                                          VerticalAlignment="Center" />
                                     <TextBlock Background="Transparent"
                                                Foreground="{DynamicResource SukiText}"
-                                               Grid.Column="0"
+                                               Grid.Column="1"
                                                Text="{Binding DisplayName}"
                                                TextTrimming="CharacterEllipsis"
                                                VerticalAlignment="Center" />
-                                    <controls:TooltipBlock Grid.Column="1"
+                                    <controls:TooltipBlock Grid.Column="2"
                                                            IsVisible="{Binding HasDescription}"
                                                            TooltipText="{Binding DisplayDescription}" />
                                 </Grid>
@@ -98,14 +104,20 @@
                         </ComboBox.ItemTemplate>
                         <ComboBox.SelectionBoxItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="*,40">
+                                <Grid ColumnDefinitions="Auto,*,40">
+                                    <controls:DisplayIcon Grid.Column="0"
+                                                          IconSource="{Binding ResolvedIcon}"
+                                                          IconSize="16"
+                                                          IsVisible="{Binding HasIcon}"
+                                                          Margin="0,0,6,0"
+                                                          VerticalAlignment="Center" />
                                     <TextBlock Background="Transparent"
                                                Foreground="{DynamicResource SukiText}"
-                                               Grid.Column="0"
+                                               Grid.Column="1"
                                                Text="{Binding DisplayName}"
                                                TextTrimming="CharacterEllipsis"
                                                VerticalAlignment="Center" />
-                                    <controls:TooltipBlock Grid.Column="1"
+                                    <controls:TooltipBlock Grid.Column="2"
                                                            IsVisible="{Binding HasDescription}"
                                                            TooltipText="{Binding DisplayDescription}" />
                                 </Grid>
@@ -212,7 +224,7 @@
                                               ContextMenu="{StaticResource TaskMenu}"
                                               x:Name="ListGrid">
                                             <CheckBox IsThreeState="True"
-                                                      Content="{Binding Name}"
+                                                      Content="{Binding }"
                                                       Grid.Column="0"
                                                       MinWidth="150"
                                                       ex:CheckBoxExtensions.EnableRightClickNull="True"
@@ -221,11 +233,18 @@
                                                       IsEnabled="{Binding Idle,Source={x:Static helper:Instances.RootViewModel}}"
                                                       IsChecked="{Binding IsCheckedWithNull}">
                                                 <CheckBox.ContentTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock Text="{Binding}"
-                                                                   TextTrimming="CharacterEllipsis"
-                                                                   TextWrapping="NoWrap"
-                                                                   x:DataType="System:String" />
+                                                    <DataTemplate x:DataType="valueType:DragItemViewModel">
+                                                        <Grid ColumnDefinitions="Auto,*">
+                                                            <controls:DisplayIcon Grid.Column="0"
+                                                                    IconSource="{Binding ResolvedIcon}"
+                                                                    IconSize="16"
+                                                                    IsVisible="{Binding HasIcon}"
+                                                                    Margin="0,0,6,0"
+                                                                    VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       TextWrapping="NoWrap" />
+                                                        </Grid>
                                                     </DataTemplate>
                                                 </CheckBox.ContentTemplate>
                                             </CheckBox>
@@ -538,26 +557,40 @@
                         <!-- 控制器类型选择 -->
                         <RadioButton x:Name="AdbRadioButton"
                                      Classes="GigaChips"
-                                     Content="{Binding Adb}"
                                      FontSize="12"
                                      GroupName="Controller"
                                      IsChecked="{Binding CurrentController, Converter={converters:UniversalEqualityConverter}, ConverterParameter={x:Static maa:MaaControllerTypes.Adb}, Mode=TwoWay}"
                                      IsVisible="{calcBinding:Binding 'ShouldShow != 1'}"
                                      IsEnabled="{calcBinding:Binding '!LockController and Idle',
-&#xA;                                                                                    Source={x:Static helper:Instances.RootViewModel}}"
+                        &#xA;                                                                                    Source={x:Static helper:Instances.RootViewModel}}"
                                      Margin="0,0,8,0"
-                                     MinWidth="110" />
+                                     MinWidth="110">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <controls:DisplayIcon IconSource="{Binding AdbIcon}"
+                                                      IconSize="14"
+                                                      IsVisible="{Binding HasAdbIcon}"
+                                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Adb}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </RadioButton>
                         <RadioButton x:Name="Win32RadioButton"
                                      Classes="GigaChips"
-                                     Content="{Binding Win32}"
                                      FontSize="12"
                                      GroupName="Controller"
                                      IsChecked="{Binding CurrentController, Converter={converters:UniversalEqualityConverter}, ConverterParameter={x:Static maa:MaaControllerTypes.Win32}, Mode=TwoWay}"
                                      IsVisible="{calcBinding:Binding 'ShouldShow != 2'}"
                                      IsEnabled="{calcBinding:Binding '!LockController and Idle',
-&#xA;                                                                                    Source={x:Static helper:Instances.RootViewModel}}"
+                        &#xA;                                                                                    Source={x:Static helper:Instances.RootViewModel}}"
                                      Margin="0,0,8,0"
-                                     MinWidth="110" />
+                                     MinWidth="110">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <controls:DisplayIcon IconSource="{Binding Win32Icon}"
+                                                      IconSize="14"
+                                                      IsVisible="{Binding HasWin32Icon}"
+                                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Win32}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </RadioButton>
                         <!-- 设备选择器 -->
                         <Grid x:Name="DeviceSelectorPanel"
                               HorizontalAlignment="Stretch"

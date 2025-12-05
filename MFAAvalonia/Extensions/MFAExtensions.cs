@@ -42,7 +42,7 @@ public static class MFAExtensions
     /// </summary>
     private static readonly string[] TextFileExtensions = [".md", ".markdown", ".txt", ".text"];
 
-    public async static Task<string> ResolveMarkdownContentAsync(this string? input, string? projectDir = null, bool transform = true)
+    public async static Task<string> ResolveContentAsync(this string? input, string? projectDir = null, bool transform = true)
     {
         if (string.IsNullOrWhiteSpace(input))
             return string.Empty;

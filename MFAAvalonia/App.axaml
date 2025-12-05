@@ -12,6 +12,7 @@
                 <ResourceInclude Source="avares://MFAAvalonia/Assets/Style/Geometry.axaml" />
                 <ResourceInclude Source="avares://MFAAvalonia/Assets/Style/MdXaml.axaml" />
                 <ResourceInclude Source="avares://MFAAvalonia/Views/UserControls/TooltipBlock.axaml" />
+                <ResourceInclude Source="avares://MFAAvalonia/Views/UserControls/DisplayIcon.axaml" />
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceInclude Source="avares://MFAAvalonia/Assets/Theme/LightTheme.axaml" x:Key="Light" />

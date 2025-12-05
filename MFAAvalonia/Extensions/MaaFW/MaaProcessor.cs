@@ -170,7 +170,7 @@ public class MaaProcessor
         // 加载 Description
         if (!string.IsNullOrWhiteSpace(maaInterface.Description))
         {
-            var description = await maaInterface.Description.ResolveMarkdownContentAsync(projectDir);
+            var description = await maaInterface.Description.ResolveContentAsync(projectDir);
             Instances.SettingsViewModel.ResourceDescription = description;
             Instances.SettingsViewModel.HasResourceDescription = !string.IsNullOrWhiteSpace(description);
         }
@@ -183,7 +183,7 @@ public class MaaProcessor
         // 加载 Contact
         if (!string.IsNullOrWhiteSpace(maaInterface.Contact))
         {
-            var contact = await maaInterface.Contact.ResolveMarkdownContentAsync(projectDir);
+            var contact = await maaInterface.Contact.ResolveContentAsync(projectDir);
             Instances.SettingsViewModel.ResourceContact = contact;
             Instances.SettingsViewModel.HasResourceContact = !string.IsNullOrWhiteSpace(contact);
         }
@@ -196,7 +196,7 @@ public class MaaProcessor
         // 加载 License
         if (!string.IsNullOrWhiteSpace(maaInterface.License))
         {
-            var license = await maaInterface.License.ResolveMarkdownContentAsync(projectDir);
+            var license = await maaInterface.License.ResolveContentAsync(projectDir);
             Instances.SettingsViewModel.ResourceLicense = license;
             Instances.SettingsViewModel.HasResourceLicense = !string.IsNullOrWhiteSpace(license);
         }

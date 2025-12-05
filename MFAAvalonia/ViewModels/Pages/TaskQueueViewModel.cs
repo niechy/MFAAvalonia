@@ -32,11 +32,43 @@ public partial class TaskQueueViewModel : ViewModelBase
     private string win32Key = LangKeys.TabWin32;
     private string adbFallback = "";
     private string win32Fallback = "";
+    private string? adbIconKey = null;
+    private string? win32IconKey = null;
 
     private void UpdateControllerName()
     {
         Adb = adbKey == LangKeys.TabADB ? adbKey.ToLocalization() : LanguageHelper.GetLocalizedDisplayName(adbKey, adbFallback);
         Win32 = win32Key == LangKeys.TabWin32 ? win32Key.ToLocalization() : LanguageHelper.GetLocalizedDisplayName(win32Key, win32Fallback);
+        UpdateControllerIcon();
+    }
+
+    private void UpdateControllerIcon()
+    {
+        // 处理 Adb 图标
+        if (!string.IsNullOrWhiteSpace(adbIconKey))
+        {
+            var iconValue = LanguageHelper.GetLocalizedString(adbIconKey);
+            AdbIcon = MaaInterface.ReplacePlaceholder(iconValue, MaaProcessor.ResourceBase, true);
+            HasAdbIcon = !string.IsNullOrWhiteSpace(AdbIcon);
+        }
+        else
+        {
+            AdbIcon = null;
+            HasAdbIcon = false;
+        }
+
+        // 处理 Win32 图标
+        if (!string.IsNullOrWhiteSpace(win32IconKey))
+        {
+            var iconValue = LanguageHelper.GetLocalizedString(win32IconKey);
+            Win32Icon = MaaInterface.ReplacePlaceholder(iconValue, MaaProcessor.ResourceBase, true);
+            HasWin32Icon = !string.IsNullOrWhiteSpace(Win32Icon);
+        }
+        else
+        {
+            Win32Icon = null;
+            HasWin32Icon = false;
+        }
     }
 
     public void InitializeControllerName()
@@ -56,6 +88,11 @@ public partial class TaskQueueViewModel : ViewModelBase
                 win32Key = win32.Label ?? string.Empty;
                 win32Fallback = win32.Name ?? string.Empty;
             }
+
+            // 获取图标
+            adbIconKey = adb?.Icon;
+            win32IconKey = win32?.Icon;
+
             LanguageHelper.LanguageChanged += (_, _) =>
             {
                 UpdateControllerName();
@@ -67,6 +104,7 @@ public partial class TaskQueueViewModel : ViewModelBase
             LoggerHelper.Error(e);
         }
     }
+
 
     protected override void Initialize()
     {
@@ -464,6 +502,10 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     [ObservableProperty] private string _adb = string.Empty;
     [ObservableProperty] private string _win32 = string.Empty;
+    [ObservableProperty] private string? _adbIcon;
+    [ObservableProperty] private string? _win32Icon;
+    [ObservableProperty] private bool _hasAdbIcon;
+    [ObservableProperty] private bool _hasWin32Icon;
 
     [ObservableProperty] private int _shouldShow = 0;
     [ObservableProperty] private ObservableCollection<object> _devices = [];

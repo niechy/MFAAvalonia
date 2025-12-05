@@ -1,7 +1,5 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Documents;
-using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
@@ -876,22 +874,25 @@ public partial class TaskQueueView : UserControl
 
     /// <summary>
     /// 创建 input 类型的控件
-    /// </summary>
-    private Control CreateInputControl(
-        MaaInterface.MaaInterfaceSelectOption option,
-        MaaInterface.MaaInterfaceOption interfaceOption,
-        DragItemViewModel source)
-    {
-        var container = new StackPanel()
+        /// </summary>
+        private Control CreateInputControl(
+            MaaInterface.MaaInterfaceSelectOption option,
+            MaaInterface.MaaInterfaceOption interfaceOption,
+            DragItemViewModel source)
         {
-            Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(0, 0, 0, 0) : new Thickness(10, 3, 10, 3)
-        };
-
-        // 确保 Data 字典已初始化
-        option.Data ??= new Dictionary<string, string?>();
-
-        if (interfaceOption.Inputs == null || interfaceOption.Inputs.Count == 0)
-            return container;
+            var container = new StackPanel()
+            {
+                Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(0, 0, 0, 0) : new Thickness(10, 3, 10, 3)
+            };
+    
+            // 确保 Data 字典已初始化
+            option.Data ??= new Dictionary<string, string?>();
+    
+            if (interfaceOption.Inputs == null || interfaceOption.Inputs.Count == 0)
+                return container;
+    
+            // 初始化图标
+            interfaceOption.InitializeIcon();
 
         foreach (var input in interfaceOption.Inputs)
         {
@@ -1045,6 +1046,27 @@ public partial class TaskQueueView : UserControl
                 };
 
                 Grid.SetColumn(stackPanel, 0);
+
+                // 添加图标（仅当只有一个输入字段时显示，多个输入字段时图标在 header 中显示）
+                if (interfaceOption.Inputs.Count == 1)
+                {
+                    var iconDisplay = new DisplayIcon
+                    {
+                        IconSize = 14,
+                        Margin = new Thickness(10, 0, 0, 0),
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    iconDisplay.Bind(DisplayIcon.IconSourceProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.ResolvedIcon))
+                    {
+                        Source = interfaceOption
+                    });
+                    iconDisplay.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.HasIcon))
+                    {
+                        Source = interfaceOption
+                    });
+                    stackPanel.Children.Add(iconDisplay);
+                }
+
                 stackPanel.Children.Add(textBlock);
                 var tooltipText = GetTooltipText(input.Description, null);
                 if (!string.IsNullOrWhiteSpace(tooltipText))
@@ -1107,15 +1129,39 @@ public partial class TaskQueueView : UserControl
         // 添加主标签（option 名称）- 只有在多个输入字段时才显示
         if (interfaceOption.Inputs.Count > 1)
         {
+            var headerPanel = new StackPanel
+            {Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(-2, 4, 5, 4)
+            };
+
+            // 添加图标（使用数据绑定支持动态更新）
+            var iconDisplay = new DisplayIcon
+            {
+                IconSize = 14,
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            iconDisplay.Bind(DisplayIcon.IconSourceProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.ResolvedIcon))
+            {
+                Source = interfaceOption
+            });
+            iconDisplay.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.HasIcon))
+            {
+                Source = interfaceOption
+            });
+            headerPanel.Children.Add(iconDisplay);
+
             var headerText = new TextBlock
             {
                 FontSize = 14,
                 FontWeight = FontWeight.SemiBold,
-                Margin = new Thickness(-2, 4, 5, 4)
             };
             headerText.Bind(TextBlock.TextProperty, new ResourceBindingWithFallback(interfaceOption.DisplayName, interfaceOption.Name));
             headerText.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
-            container.Children.Insert(0, headerText);
+            headerPanel.Children.Add(headerText);
+
+            container.Children.Insert(0, headerPanel);
         }
 
         return container;
@@ -1232,7 +1278,7 @@ public partial class TaskQueueView : UserControl
         // 优先使用 Description
         if (!string.IsNullOrWhiteSpace(description))
         {
-            var result = description.ResolveMarkdownContentAsync(transform: false).GetAwaiter().GetResult();
+            var result = description.ResolveContentAsync(transform: false).GetAwaiter().GetResult();
             return result;
         }
 
@@ -1333,6 +1379,9 @@ public partial class TaskQueueView : UserControl
         // 初始化时显示子配置项
         UpdateSubOptions(option.Index ?? 0);
 
+        // 初始化图标
+        interfaceOption.InitializeIcon();
+
         // 使用 ResourceBinding 支持语言动态切换
         button.Bind(ToolTip.TipProperty, new ResourceBindingWithFallback(option.DisplayName, option.Name));
         var textBlock = new TextBlock
@@ -1370,6 +1419,24 @@ public partial class TaskQueueView : UserControl
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
+
+        // 添加图标（使用数据绑定支持动态更新）
+        var iconDisplay = new DisplayIcon
+        {
+            IconSize = 14,
+            Margin = new Thickness(10, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        iconDisplay.Bind(DisplayIcon.IconSourceProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.ResolvedIcon))
+        {
+            Source = interfaceOption
+        });
+        iconDisplay.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.HasIcon))
+        {
+            Source = interfaceOption
+        });
+        stackPanel.Children.Add(iconDisplay);
+
         stackPanel.Children.Add(textBlock);
 
         // 优先使用 Description，没有则使用 Document
@@ -1469,6 +1536,10 @@ public partial class TaskQueueView : UserControl
                     {
                         new ColumnDefinition
                         {
+                            Width = GridLength.Auto
+                        },
+                        new ColumnDefinition
+                        {
                             Width = GridLength.Star
                         },
                         new ColumnDefinition
@@ -1477,6 +1548,17 @@ public partial class TaskQueueView : UserControl
                         }
                     }
                 };
+
+                // 图标显示控件
+                var iconDisplay = new DisplayIcon
+                {
+                    IconSize = 16,
+                    Margin = new Thickness(0, 0, 6, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                iconDisplay.Bind(DisplayIcon.IconSourceProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.ResolvedIcon)));
+                iconDisplay.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.HasIcon)));
+                Grid.SetColumn(iconDisplay, 0);
 
                 var textBlock = new TextBlock
                 {
@@ -1488,13 +1570,14 @@ public partial class TaskQueueView : UserControl
                 textBlock.Bind(TextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 textBlock.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 ToolTip.SetShowDelay(textBlock, 100);
-                Grid.SetColumn(textBlock, 0);
+                Grid.SetColumn(textBlock, 1);
 
                 var tooltipBlock = new TooltipBlock();
                 tooltipBlock.Bind(TooltipBlock.TooltipTextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayDescription)));
                 tooltipBlock.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.HasDescription)));
-                Grid.SetColumn(tooltipBlock, 1);
+                Grid.SetColumn(tooltipBlock, 2);
 
+                itemGrid.Children.Add(iconDisplay);
                 itemGrid.Children.Add(textBlock);
                 itemGrid.Children.Add(tooltipBlock);
                 return itemGrid;
@@ -1507,6 +1590,10 @@ public partial class TaskQueueView : UserControl
                     {
                         new ColumnDefinition
                         {
+                            Width = GridLength.Auto
+                        },
+                        new ColumnDefinition
+                        {
                             Width = GridLength.Star
                         },
                         new ColumnDefinition
@@ -1515,6 +1602,17 @@ public partial class TaskQueueView : UserControl
                         }
                     }
                 };
+
+                // 图标显示控件
+                var iconDisplay = new DisplayIcon()
+                {
+                    IconSize = 16,
+                    Margin = new Thickness(0, 0, 6, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                iconDisplay.Bind(DisplayIcon.IconSourceProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.ResolvedIcon)));
+                iconDisplay.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.HasIcon)));
+                Grid.SetColumn(iconDisplay, 0);
 
                 var textBlock = new TextBlock
                 {
@@ -1526,17 +1624,19 @@ public partial class TaskQueueView : UserControl
                 textBlock.Bind(TextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 textBlock.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
                 ToolTip.SetShowDelay(textBlock, 100);
-                Grid.SetColumn(textBlock, 0);
+                Grid.SetColumn(textBlock, 1);
 
                 var tooltipBlock = new TooltipBlock();
                 tooltipBlock.Bind(TooltipBlock.TooltipTextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayDescription)));
                 tooltipBlock.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.HasDescription)));
-                Grid.SetColumn(tooltipBlock, 1);
+                Grid.SetColumn(tooltipBlock, 2);
 
+                itemGrid.Children.Add(iconDisplay);
                 itemGrid.Children.Add(textBlock);
                 itemGrid.Children.Add(tooltipBlock);
                 return itemGrid;
             }),
+
             SelectedIndex = option.Index ?? 0,
         };
 
@@ -1588,11 +1688,14 @@ public partial class TaskQueueView : UserControl
             SaveConfiguration();
         };
 
-        // 初始化时显示子配置项
+// 初始化时显示子配置项
         UpdateSubOptions(option.Index ?? 0);
 
         ComboBoxExtensions.SetDisableNavigationOnLostFocus(combo, true);
         Grid.SetColumn(combo, 1);
+
+        // 初始化图标
+        interfaceOption.InitializeIcon();
 
         // 使用 ResourceBinding 支持语言动态切换
         var textBlock = new TextBlock
@@ -1612,9 +1715,27 @@ public partial class TaskQueueView : UserControl
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         Grid.SetColumn(stackPanel, 0);
+
+        // 添加图标（使用数据绑定支持动态更新）
+        var iconDisplay = new DisplayIcon
+        {
+            IconSize = 14,
+            Margin = new Thickness(0, 0, 6, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        iconDisplay.Bind(DisplayIcon.IconSourceProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.ResolvedIcon))
+        {
+            Source = interfaceOption
+        });
+        iconDisplay.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOption.HasIcon))
+        {
+            Source = interfaceOption
+        });
+        stackPanel.Children.Add(iconDisplay);
+
         stackPanel.Children.Add(textBlock);
 
-        // 优先使用 Description，没有则使用 Document
+// 优先使用 Description，没有则使用 Document
         var tooltipText = GetTooltipText(interfaceOption.Description, interfaceOption.Document);
         if (!string.IsNullOrWhiteSpace(tooltipText))
         {
@@ -1673,10 +1794,10 @@ public partial class TaskQueueView : UserControl
             }
         };
 
-        // 将主 grid 和子配置项容器添加到外层容器
+// 将主 grid 和子配置项容器添加到外层容器
         outerContainer.Children.Add(grid);
 
-        // 用 Border 包装子选项容器，添加左边框线以增强视觉层次
+// 用 Border 包装子选项容器，添加左边框线以增强视觉层次
         var primaryColor2 = SukiTheme.GetInstance()?.ActiveColorTheme?.Primary;
         var subOptionsBorder = new Border
         {
@@ -1694,10 +1815,11 @@ public partial class TaskQueueView : UserControl
         });
         outerContainer.Children.Add(subOptionsBorder);
 
-        // 返回包装后的 Grid
+// 返回包装后的 Grid
         var wrapperGrid = new Grid();
         wrapperGrid.Children.Add(outerContainer);
         return wrapperGrid;
+
     }
 
     /// <summary>
@@ -1947,6 +2069,7 @@ public partial class TaskQueueView : UserControl
         };
         return input;
     }
+
     /// <summary>
     /// 智能转换换行符，为非表格行添加 Markdown 换行所需的两个空格
     /// 表格行（以 | 结尾）不添加空格，以保持表格格式正确
@@ -1976,150 +2099,150 @@ public partial class TaskQueueView : UserControl
     }
 
 
-    // private static List<TextStyleMetadata> _currentStyles = new();
-    //
-    // private class RichTextLineTransformer : DocumentColorizingTransformer
-    // {
-    //     protected override void ColorizeLine(DocumentLine line)
-    //     {
-    //         _currentStyles = _currentStyles.OrderByDescending(s => s.EndOffset).ToList();
-    //         int lineStart = line.Offset;
-    //         int lineEnd = line.Offset + line.Length;
-    //
-    //         foreach (var style in _currentStyles)
-    //         {
-    //             if (style.EndOffset <= lineStart || style.StartOffset >= lineEnd)
-    //                 continue;
-    //
-    //             int start = Math.Max(style.StartOffset, lineStart);
-    //             int end = Math.Min(style.EndOffset, lineEnd);
-    //             ApplyStyle(start, end, style.Tag, style.Value);
-    //         }
-    //     }
-    //
-    //
-    //     /// <summary>
-    //     /// 应用样式到指定范围的文本
-    //     /// </summary>
-    //     /// <param name="startOffset">起始偏移量</param>
-    //     /// <param name="endOffset">结束偏移量</param>
-    //     /// <param name="tag">标记名称</param>
-    //     /// <param name="value">标记值</param>
-    //     private void ApplyStyle(int startOffset, int endOffset, string tag, string value)
-    //     {
-    //         switch (tag)
-    //         {
-    //             case "color":
-    //                 ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.Parse(value))));
-    //                 break;
-    //             case "size":
-    //                 if (double.TryParse(value, out var size))
-    //                 {
-    //                     ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetFontRenderingEmSize(size));
-    //                 }
-    //                 break;
-    //             case "b":
-    //                 ChangeLinePart(startOffset, endOffset, element =>
-    //                 {
-    //                     var typeface = new Typeface(
-    //                         element.TextRunProperties.Typeface.FontFamily,
-    //                         element.TextRunProperties.Typeface.Style, FontWeight.Bold, // 设置粗体
-    //                         element.TextRunProperties.Typeface.Stretch
-    //                     );
-    //                     element.TextRunProperties.SetTypeface(typeface);
-    //                 });
-    //                 break;
-    //             case "i":
-    //                 ChangeLinePart(startOffset, endOffset, element =>
-    //                 {
-    //                     var typeface = new Typeface(
-    //                         element.TextRunProperties.Typeface.FontFamily,
-    //                         FontStyle.Italic, // 设置斜体
-    //                         element.TextRunProperties.Typeface.Weight,
-    //                         element.TextRunProperties.Typeface.Stretch
-    //                     );
-    //                     element.TextRunProperties.SetTypeface(typeface);
-    //                 });
-    //                 break;
-    //             case "u":
-    //                 ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetTextDecorations(TextDecorations.Underline));
-    //                 break;
-    //             case "s":
-    //                 ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough));
-    //                 break;
-    //         }
-    //     }
-    // }
-    //
-    // public class TextStyleMetadata
-    // {
-    //     public int StartOffset { get; set; }
-    //     public int EndOffset { get; set; }
-    //     public string Tag { get; set; }
-    //     public string Value { get; set; }
-    //
-    //     // 新增字段存储标签部分的长度
-    //     public int OriginalLength { get; set; }
-    // }
-    //
-    // private (string CleanText, List<TextStyleMetadata> Styles) ProcessRichTextTags(string input)
-    // {
-    //     var styles = new List<TextStyleMetadata>();
-    //     var cleanText = new StringBuilder();
-    //     ProcessNestedContent(input, cleanText, styles, new Stack<(string Tag, string Value, int CleanStart)>());
-    //     return (cleanText.ToString(), styles);
-    // }
-    //
-    // private void ProcessNestedContent(string input, StringBuilder cleanText, List<TextStyleMetadata> styles, Stack<(string Tag, string Value, int CleanStart)> stack)
-    // {
-    //     var matches = Regex.Matches(input, @"\[(?<tag>[^\]]+):?(?<value>[^\]]*)\](?<content>.*?)\[/\k<tag>\]");
-    //     int lastPos = 0;
-    //
-    //     foreach (Match match in matches.Cast<Match>())
-    //     {
-    //         // 添加非标签内容
-    //         if (match.Index > lastPos)
-    //         {
-    //             cleanText.Append(input.Substring(lastPos, match.Index - lastPos));
-    //         }
-    //
-    //         string tag = match.Groups["tag"].Value.ToLower();
-    //         string value = match.Groups["value"].Value;
-    //         string content = match.Groups["content"].Value;
-    //
-    //         // 记录开始位置
-    //         int contentStart = cleanText.Length;
-    //         stack.Push((tag, value, contentStart));
-    //
-    //         // 递归解析嵌套内容
-    //         var nestedCleanText = new StringBuilder();
-    //         ProcessNestedContent(content, nestedCleanText, styles, new Stack<(string Tag, string Value, int CleanStart)>(stack));
-    //         cleanText.Append(nestedCleanText);
-    //
-    //         // 记录样式元数据
-    //         if (stack.Count > 0 && stack.Peek().Tag == tag)
-    //         {
-    //             var (openTag, openValue, cleanStart) = stack.Pop();
-    //             styles.Add(new TextStyleMetadata
-    //             {
-    //                 StartOffset = cleanStart,
-    //                 EndOffset = cleanText.Length,
-    //                 Tag = openTag,
-    //                 Value = openValue
-    //             });
-    //         }
-    //         lastPos = match.Index + match.Length;
-    //     }
-    //
-    //     // 添加剩余文本
-    //     if (lastPos < input.Length)
-    //     {
-    //         cleanText.Append(input.Substring(lastPos));
-    //     }
-    // }
-    //
-    // // 使用 MatchEvaluator 的独立方法
-    //
+// private static List<TextStyleMetadata> _currentStyles = new();
+//
+// private class RichTextLineTransformer : DocumentColorizingTransformer
+// {
+//     protected override void ColorizeLine(DocumentLine line)
+//     {
+//         _currentStyles = _currentStyles.OrderByDescending(s => s.EndOffset).ToList();
+//         int lineStart = line.Offset;
+//         int lineEnd = line.Offset + line.Length;
+//
+//         foreach (var style in _currentStyles)
+//         {
+//             if (style.EndOffset <= lineStart || style.StartOffset >= lineEnd)
+//                 continue;
+//
+//             int start = Math.Max(style.StartOffset, lineStart);
+//             int end = Math.Min(style.EndOffset, lineEnd);
+//             ApplyStyle(start, end, style.Tag, style.Value);
+//         }
+//     }
+//
+//
+//     /// <summary>
+//     /// 应用样式到指定范围的文本
+//     /// </summary>
+//     /// <param name="startOffset">起始偏移量</param>
+//     /// <param name="endOffset">结束偏移量</param>
+//     /// <param name="tag">标记名称</param>
+//     /// <param name="value">标记值</param>
+//     private void ApplyStyle(int startOffset, int endOffset, string tag, string value)
+//     {
+//         switch (tag)
+//         {
+//             case "color":
+//                 ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.Parse(value))));
+//                 break;
+//             case "size":
+//                 if (double.TryParse(value, out var size))
+//                 {
+//                     ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetFontRenderingEmSize(size));
+//                 }
+//                 break;
+//             case "b":
+//                 ChangeLinePart(startOffset, endOffset, element =>
+//                 {
+//                     var typeface = new Typeface(
+//                         element.TextRunProperties.Typeface.FontFamily,
+//                         element.TextRunProperties.Typeface.Style, FontWeight.Bold, // 设置粗体
+//                         element.TextRunProperties.Typeface.Stretch
+//                     );
+//                     element.TextRunProperties.SetTypeface(typeface);
+//                 });
+//                 break;
+//             case "i":
+//                 ChangeLinePart(startOffset, endOffset, element =>
+//                 {
+//                     var typeface = new Typeface(
+//                         element.TextRunProperties.Typeface.FontFamily,
+//                         FontStyle.Italic, // 设置斜体
+//                         element.TextRunProperties.Typeface.Weight,
+//                         element.TextRunProperties.Typeface.Stretch
+//                     );
+//                     element.TextRunProperties.SetTypeface(typeface);
+//                 });
+//                 break;
+//             case "u":
+//                 ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetTextDecorations(TextDecorations.Underline));
+//                 break;
+//             case "s":
+//                 ChangeLinePart(startOffset, endOffset, element => element.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough));
+//                 break;
+//         }
+//     }
+// }
+//
+// public class TextStyleMetadata
+// {
+//     public int StartOffset { get; set; }
+//     public int EndOffset { get; set; }
+//     public string Tag { get; set; }
+//     public string Value { get; set; }
+//
+//     // 新增字段存储标签部分的长度
+//     public int OriginalLength { get; set; }
+// }
+//
+// private (string CleanText, List<TextStyleMetadata> Styles) ProcessRichTextTags(string input)
+// {
+//     var styles = new List<TextStyleMetadata>();
+//     var cleanText = new StringBuilder();
+//     ProcessNestedContent(input, cleanText, styles, new Stack<(string Tag, string Value, int CleanStart)>());
+//     return (cleanText.ToString(), styles);
+// }
+//
+// private void ProcessNestedContent(string input, StringBuilder cleanText, List<TextStyleMetadata> styles, Stack<(string Tag, string Value, int CleanStart)> stack)
+// {
+//     var matches = Regex.Matches(input, @"\[(?<tag>[^\]]+):?(?<value>[^\]]*)\](?<content>.*?)\[/\k<tag>\]");
+//     int lastPos = 0;
+//
+//     foreach (Match match in matches.Cast<Match>())
+//     {
+//         // 添加非标签内容
+//         if (match.Index > lastPos)
+//         {
+//             cleanText.Append(input.Substring(lastPos, match.Index - lastPos));
+//         }
+//
+//         string tag = match.Groups["tag"].Value.ToLower();
+//         string value = match.Groups["value"].Value;
+//         string content = match.Groups["content"].Value;
+//
+//         // 记录开始位置
+//         int contentStart = cleanText.Length;
+//         stack.Push((tag, value, contentStart));
+//
+//         // 递归解析嵌套内容
+//         var nestedCleanText = new StringBuilder();
+//         ProcessNestedContent(content, nestedCleanText, styles, new Stack<(string Tag, string Value, int CleanStart)>(stack));
+//         cleanText.Append(nestedCleanText);
+//
+//         // 记录样式元数据
+//         if (stack.Count > 0 && stack.Peek().Tag == tag)
+//         {
+//             var (openTag, openValue, cleanStart) = stack.Pop();
+//             styles.Add(new TextStyleMetadata
+//             {
+//                 StartOffset = cleanStart,
+//                 EndOffset = cleanText.Length,
+//                 Tag = openTag,
+//                 Value = openValue
+//             });
+//         }
+//         lastPos = match.Index + match.Length;
+//     }
+//
+//     // 添加剩余文本
+//     if (lastPos < input.Length)
+//     {
+//         cleanText.Append(input.Substring(lastPos));
+//     }
+// }
+//
+// // 使用 MatchEvaluator 的独立方法
+//
 
     #endregion
 }

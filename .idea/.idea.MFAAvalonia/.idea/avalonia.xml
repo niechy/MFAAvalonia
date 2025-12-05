@@ -22,7 +22,9 @@
         <entry key="MFAAvalonia/Views/UserControls/AdbEditorDialogView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/UserControls/AddTaskDialogView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/UserControls/CustomThemeDialogView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="MFAAvalonia/Views/UserControls/DisplayIcon.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/UserControls/HotKeyEditor.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="MFAAvalonia/Views/UserControls/IconDisplay.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/UserControls/MultiInstanceEditorDialogView.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/UserControls/PasswordBox.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="MFAAvalonia/Views/UserControls/Settings/AboutUserControl.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />

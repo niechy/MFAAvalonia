@@ -177,13 +177,21 @@ public class TaskLoader(MaaInterface? maaInterface)
         oldItem.InterfaceItem.Label = newItem.Label;
         oldItem.InterfaceItem.PipelineOverride = newItem.PipelineOverride;
         oldItem.InterfaceItem.Description = newItem.Description;
+        oldItem.InterfaceItem.Description = newItem.Description;
         oldItem.InterfaceItem.Document = newItem.Document;
         oldItem.InterfaceItem.Repeatable = newItem.Repeatable;
         oldItem.InterfaceItem.Resource = newItem.Resource;
+        oldItem.InterfaceItem.Icon = newItem.Icon;
+
+        // 更新图标
+        oldItem.InterfaceItem.InitializeIcon();
+        oldItem.ResolvedIcon = oldItem.InterfaceItem.ResolvedIcon;
+        oldItem.HasIcon = oldItem.InterfaceItem.HasIcon;
 
         UpdateAdvancedOptions(oldItem, newItem);
         UpdateOptions(oldItem, newItem);
     }
+    
 
 
     private void UpdateAdvancedOptions(DragItemViewModel oldItem, MaaInterface.MaaInterfaceTask newItem)

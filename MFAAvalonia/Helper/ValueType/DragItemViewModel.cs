@@ -13,10 +13,18 @@ public partial class DragItemViewModel : ObservableObject
     {
         InterfaceItem = interfaceItem;
         Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName, InterfaceItem.Name ?? LangKeys.Unnamed);
+        InterfaceItem?.InitializeIcon();
+        UpdateIconFromInterfaceItem();
         LanguageHelper.LanguageChanged += OnLanguageChanged;
     }
 
     [ObservableProperty] private string _name = string.Empty;
+
+    /// <summary>解析后的图标路径（用于 UI 绑定）</summary>
+    [ObservableProperty] private string? _resolvedIcon;
+
+    /// <summary>是否有图标</summary>
+    [ObservableProperty] private bool _hasIcon;
 
 
     private bool? _isCheckedWithNull = false;
@@ -136,6 +144,21 @@ public partial class DragItemViewModel : ObservableObject
         {
             Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName, InterfaceItem.Name ?? LangKeys.Unnamed);
         }
+        UpdateIconFromInterfaceItem();
+    }
+
+    private void UpdateIconFromInterfaceItem()
+    {
+        if (InterfaceItem != null)
+        {
+            ResolvedIcon = InterfaceItem.ResolvedIcon;
+            HasIcon = InterfaceItem.HasIcon;
+        }
+        else
+        {
+            ResolvedIcon = null;
+            HasIcon = false;
+        }
     }
 
     private void OnLanguageChanged(object sender, EventArgs e)
@@ -161,6 +184,8 @@ public partial class DragItemViewModel : ObservableObject
         clone.EnableSetting = this.EnableSetting;
         clone.IsVisible = this.IsVisible;
         clone.IsResourceSupported = this.IsResourceSupported;
+        clone.ResolvedIcon = this.ResolvedIcon;
+        clone.HasIcon = this.HasIcon;
 
         return clone;
     }
