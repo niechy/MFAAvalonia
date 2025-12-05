@@ -1052,7 +1052,7 @@ public partial class TaskQueueView : UserControl
                 {
                     var iconDisplay = new DisplayIcon
                     {
-                        IconSize = 14,
+                        IconSize = 20,
                         Margin = new Thickness(10, 0, 0, 0),
                         VerticalAlignment = VerticalAlignment.Center
                     };
@@ -1138,7 +1138,7 @@ public partial class TaskQueueView : UserControl
             // 添加图标（使用数据绑定支持动态更新）
             var iconDisplay = new DisplayIcon
             {
-                IconSize = 14,
+                IconSize = 20,
                 Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -1423,7 +1423,7 @@ public partial class TaskQueueView : UserControl
         // 添加图标（使用数据绑定支持动态更新）
         var iconDisplay = new DisplayIcon
         {
-            IconSize = 14,
+            IconSize = 20,
             Margin = new Thickness(10, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -1552,7 +1552,7 @@ public partial class TaskQueueView : UserControl
                 // 图标显示控件
                 var iconDisplay = new DisplayIcon
                 {
-                    IconSize = 16,
+                    IconSize = 20,
                     Margin = new Thickness(0, 0, 6, 0),
                     VerticalAlignment = VerticalAlignment.Center
                 };
@@ -1606,7 +1606,7 @@ public partial class TaskQueueView : UserControl
                 // 图标显示控件
                 var iconDisplay = new DisplayIcon()
                 {
-                    IconSize = 16,
+                    IconSize = 20,
                     Margin = new Thickness(0, 0, 6, 0),
                     VerticalAlignment = VerticalAlignment.Center
                 };
@@ -1719,7 +1719,7 @@ public partial class TaskQueueView : UserControl
         // 添加图标（使用数据绑定支持动态更新）
         var iconDisplay = new DisplayIcon
         {
-            IconSize = 14,
+            IconSize = 20,
             Margin = new Thickness(0, 0, 6, 0),
             VerticalAlignment = VerticalAlignment.Center
         };

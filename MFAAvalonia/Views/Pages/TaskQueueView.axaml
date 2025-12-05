@@ -86,7 +86,7 @@
                                 <Grid ColumnDefinitions="Auto,*,40">
                                     <controls:DisplayIcon Grid.Column="0"
                                                           IconSource="{Binding ResolvedIcon}"
-                                                          IconSize="16"
+                                                          IconSize="20"
                                                           IsVisible="{Binding HasIcon}"
                                                           Margin="0,0,6,0"
                                                           VerticalAlignment="Center" />
@@ -107,7 +107,7 @@
                                 <Grid ColumnDefinitions="Auto,*,40">
                                     <controls:DisplayIcon Grid.Column="0"
                                                           IconSource="{Binding ResolvedIcon}"
-                                                          IconSize="16"
+                                                          IconSize="20"
                                                           IsVisible="{Binding HasIcon}"
                                                           Margin="0,0,6,0"
                                                           VerticalAlignment="Center" />
@@ -237,7 +237,7 @@
                                                         <Grid ColumnDefinitions="Auto,*">
                                                             <controls:DisplayIcon Grid.Column="0"
                                                                     IconSource="{Binding ResolvedIcon}"
-                                                                    IconSize="16"
+                                                                    IconSize="20"
                                                                     IsVisible="{Binding HasIcon}"
                                                                     Margin="0,0,6,0"
                                                                     VerticalAlignment="Center" />
@@ -567,7 +567,7 @@
                                      MinWidth="110">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <controls:DisplayIcon IconSource="{Binding AdbIcon}"
-                                                      IconSize="14"
+                                                      IconSize="24"
                                                       IsVisible="{Binding HasAdbIcon}"
                                                       VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding Adb}" VerticalAlignment="Center" />
@@ -585,7 +585,7 @@
                                      MinWidth="110">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <controls:DisplayIcon IconSource="{Binding Win32Icon}"
-                                                      IconSize="14"
+                                                      IconSize="24"
                                                       IsVisible="{Binding HasWin32Icon}"
                                                       VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding Win32}" VerticalAlignment="Center" />
