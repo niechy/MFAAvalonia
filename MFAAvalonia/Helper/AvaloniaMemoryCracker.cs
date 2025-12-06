@@ -1,88 +1,158 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace MFAAvalonia.Helper;
 
+/// <summary>
+/// 高性能内存清理器，针对 Avalonia 应用优化
+/// </summary>
 public class AvaloniaMemoryCracker : IDisposable
 {
     #region 平台相关API
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetProcessWorkingSetSize(IntPtr proc, IntPtr min, IntPtr max);
+
     [DllImport("kernel32.dll")]
-    private static extern bool SetProcessWorkingSetSize(IntPtr proc, int min, int max);
+    private static extern IntPtr GetCurrentProcess();
 
-    private const int VM_PURGE_ALL = 0x00000001;
+    [DllImport("psapi.dll", SetLastError = true)]
+    private static extern bool EmptyWorkingSet(IntPtr hProcess);
 
-    // 内存优化阈值（可配置，示例：256MB）
-    private const long MEMORY_THRESHOLD = 256 * 1024 * 1024;
+    #endregion
+
+    #region 配置常量
+
+    // 内存优化阈值（可配置）
+    private const long MemoryThresholdBytes = 256 * 1024 * 1024; // 256MB
+    private const long HighMemoryPressureThreshold = 512 * 1024 * 1024; // 512MB - 高内存压力阈值
+    private const long CriticalMemoryPressureThreshold = 1024 * 1024 * 1024; // 1GB - 临界内存压力阈值
+    // 内存历史记录配置
+    private const int MaxHistoryCount = 10;
+
+    // LOH 压缩间隔（每N次清理执行一次LOH压缩）
+    private const int LohCompactionInterval = 5;
+
+    #endregion
+
+    #region 字段
 
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
     private Task? _monitorTask;
-    // 缓存当前进程句柄，避免重复创建 Process 对象导致句柄泄漏
-    private readonly IntPtr _currentProcessHandle;
 
     // 内存历史记录（用于诊断泄漏趋势）
     private readonly Queue<(DateTime Time, long Memory)> _memoryHistory = new();
-    private const int MaxHistoryCount = 10;
+    private readonly object _historyLock = new();
+
+    // 清理计数器（用于控制LOH压缩频率）
+    private int _cleanupCount;
+    // 上次清理时间（用于自适应清理间隔）
+    private DateTime _lastCleanupTime = DateTime.MinValue;
+
+    // 上次内存使用量（用于判断是否需要清理）
+    private long _lastMemoryUsage;
 
     #endregion
-    public AvaloniaMemoryCracker()
-    {
-        // 在构造函数中获取并缓存进程句柄
-        // 注意：这里使用 GetCurrentProcess() 返回的是伪句柄，不需要关闭
-        _currentProcessHandle = Process.GetCurrentProcess().Handle;
-    }
 
     #region 核心逻辑
 
     /// <summary>启动内存优化守护进程</summary>
-    /// <param name="intervalSeconds">清理间隔秒数（默认30秒）</param>
+    /// <param name="intervalSeconds">基础清理间隔秒数（默认30秒），实际间隔会根据内存压力自适应调整</param>
     public void Cracker(int intervalSeconds = 30)
     {
-        // 修复：使用 Task.Run 而不是 Task.Factory.StartNew + async
         _monitorTask = Task.Run(async () =>
         {
             while (!_cts.IsCancellationRequested)
             {
                 try
                 {
-                    var beforeMemory = GetCurrentMemoryUsage();
-                    PerformMemoryCleanup();
-                    var afterMemory = GetCurrentMemoryUsage();
+                    var currentMemory = GetCurrentMemoryUsage();
+                    var memoryInfo = GetMemoryPressureInfo();
 
-                    // 记录内存变化用于诊断
-                    RecordMemorySnapshot(afterMemory);
-                    
-                    // 检测内存泄漏趋势
-                    CheckMemoryLeakTrend(beforeMemory, afterMemory);
+                    // 根据内存压力决定是否需要清理
+                    var shouldCleanup = ShouldPerformCleanup(currentMemory, memoryInfo);
 
-                    // 修复：使用 Task.Delay 而不是 Thread.Sleep
-                    await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), _cts.Token);
+                    if (shouldCleanup)
+                    {
+                        var beforeMemory = currentMemory;
+                        PerformMemoryCleanup(memoryInfo);
+                        var afterMemory = GetCurrentMemoryUsage();
+
+                        // 记录内存变化用于诊断
+                        RecordMemorySnapshot(afterMemory);
+
+                        // 检测内存泄漏趋势
+                        CheckMemoryLeakTrend(beforeMemory, afterMemory);
+
+                        _lastCleanupTime = DateTime.UtcNow;
+                        _lastMemoryUsage = afterMemory;
+                    }
+
+                    // 自适应清理间隔：内存压力越大，间隔越短
+                    var adaptiveInterval = CalculateAdaptiveInterval(intervalSeconds, memoryInfo);
+                    await Task.Delay(TimeSpan.FromSeconds(adaptiveInterval), _cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
-                    // 正常取消，退出循环
                     break;
                 }
                 catch (Exception ex)
                 {
-                    LoggerHelper.Warning($"内存清理异常: {ex.Message}");
+                    LoggerHelper.Warning($"[内存管理]内存清理异常: {ex.Message}");
+                    // 发生异常时使用默认间隔
+                    await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), _cts.Token).ConfigureAwait(false);
                 }
             }
         }, _cts.Token);
     }
 
+    /// <summary>判断是否需要执行清理</summary>
+    private bool ShouldPerformCleanup(long currentMemory, MemoryPressureInfo memoryInfo)
+    {
+        // 如果内存超过阈值，需要清理
+        if (currentMemory > MemoryThresholdBytes)
+            return true;
+
+        // 如果内存压力高，需要清理
+        if (memoryInfo.MemoryLoadPercentage > 70)
+            return true;
+
+        // 如果距离上次清理时间过长（超过5分钟），执行一次清理
+        if ((DateTime.UtcNow - _lastCleanupTime).TotalMinutes > 5)
+            return true;
+
+        // 如果内存增长超过上次的50%，需要清理
+        if (_lastMemoryUsage > 0 && currentMemory > _lastMemoryUsage * 1.5)
+            return true;
+
+        return false;
+    }
+
+    /// <summary>计算自适应清理间隔</summary>
+    private int CalculateAdaptiveInterval(int baseInterval, MemoryPressureInfo memoryInfo)
+    {
+        // 根据内存压力调整间隔
+        if (memoryInfo.MemoryLoadPercentage > 90)
+            return Math.Max(5, baseInterval / 4); // 高压力：间隔缩短到1/4，最少5秒
+        if (memoryInfo.MemoryLoadPercentage > 70)
+            return Math.Max(10, baseInterval / 2); // 中等压力：间隔缩短到1/2
+        if (memoryInfo.MemoryLoadPercentage < 30)
+            return baseInterval * 2; // 低压力：间隔延长到2倍
+
+        return baseInterval;
+    }
+
     /// <summary>记录内存快照用于趋势分析</summary>
     private void RecordMemorySnapshot(long memory)
     {
-        lock (_memoryHistory)
+        lock (_historyLock)
         {
-            _memoryHistory.Enqueue((DateTime.Now, memory));
+            _memoryHistory.Enqueue((DateTime.UtcNow, memory));
             while (_memoryHistory.Count > MaxHistoryCount)
             {
                 _memoryHistory.Dequeue();
@@ -93,145 +163,148 @@ public class AvaloniaMemoryCracker : IDisposable
     /// <summary>检测内存泄漏趋势</summary>
     private void CheckMemoryLeakTrend(long beforeCleanup, long afterCleanup)
     {
-        // 如果清理后内存没有明显下降，可能存在泄漏
         var freedMemory = beforeCleanup - afterCleanup;
         var freedMB = freedMemory / (1024.0 * 1024.0);
 
-        if (freedMemory > 0)
+        if (freedMemory > 1024 * 1024) // 只记录释放超过1MB的情况
         {
-            LoggerHelper.Debug($"内存清理: 释放了 {freedMB:F2} MB");
+            LoggerHelper.Info($"[内存管理]释放了 {freedMB:F2} MB");
         }
 
         // 检查内存是否持续增长（泄漏预警）
-        lock (_memoryHistory)
+        lock (_historyLock)
         {
             if (_memoryHistory.Count >= 5)
             {
                 var snapshots = _memoryHistory.ToArray();
                 var firstMemory = snapshots[0].Memory;
                 var lastMemory = snapshots[^1].Memory;
-                var growthRate = (lastMemory - firstMemory) / (double)firstMemory;
 
-                // 如果在多次清理后内存仍持续增长超过 50%，发出警告
-                if (growthRate > 0.5)
+                if (firstMemory > 0)
                 {
-                    LoggerHelper.Debug($"检测到潜在内存泄漏: 内存从 {firstMemory / (1024 * 1024)} MB 增长到 {lastMemory / (1024 * 1024)} MB (增长 {growthRate * 100:F1}%)");
+                    var growthRate = (lastMemory - firstMemory) / (double)firstMemory;
+
+                    // 如果在多次清理后内存仍持续增长超过 50%，发出警告
+                    if (growthRate > 0.5)
+                    {
+                        LoggerHelper.Info($"[内存管理]检测到潜在内存泄漏: 内存从 {firstMemory / (1024 * 1024)} MB 增长到 {lastMemory / (1024 * 1024)} MB (增长 {growthRate * 100:F1}%)");
+                    }
                 }
             }
         }
     }
 
-
-    /// <summary>执行内存清理三步策略</summary>
-    private void PerformMemoryCleanup()
+    /// <summary>执行内存清理策略</summary>
+    private void PerformMemoryCleanup(MemoryPressureInfo memoryInfo)
     {
-        // 第一步：触发托管堆GC回收[1](@ref)
-        if (GetCurrentMemoryUsage() > MEMORY_THRESHOLD) // 256MB
-        {
-            // 优先使用Optimized模式，减少强制回收的性能影响
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized);
-            GC.WaitForPendingFinalizers();
-        }
+        _cleanupCount++;
 
-        // 第二步：针对Windows平台优化工作集[1](@ref)
+        // 第一步：根据内存压力选择合适的GC策略
+        PerformGarbageCollection(memoryInfo);
+
+        // 第二步：平台特定优化
+        PerformPlatformSpecificOptimization();
+
+        // 第三步：定期执行LOH压缩（每N次清理执行一次）
+        if (_cleanupCount % LohCompactionInterval == 0)
+        {
+            PerformLohCompaction();
+        }
+    }
+
+    /// <summary>执行垃圾回收</summary>
+    private void PerformGarbageCollection(MemoryPressureInfo memoryInfo)
+    {
+        try
+        {
+            if (memoryInfo.TotalMemory > CriticalMemoryPressureThreshold)
+            {
+                // 临界压力：强制完整GC
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+            }
+            else if (memoryInfo.TotalMemory > HighMemoryPressureThreshold)
+            {
+                // 高压力：强制GC
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+            }
+            else if (memoryInfo.TotalMemory > MemoryThresholdBytes)
+            {
+                // 中等压力：优化模式GC
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, false, true);
+                GC.WaitForPendingFinalizers();
+            }
+            else
+            {
+                // 低压力：仅回收Gen0和Gen1
+                GC.Collect(1, GCCollectionMode.Optimized, false);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Info($"[内存管理]GC执行异常: {ex.Message}");
+        }
+    }
+
+    /// <summary>执行LOH（大对象堆）压缩</summary>
+    private void PerformLohCompaction()
+    {
+        try
+        {
+            // 设置下次GC时压缩LOH
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
+            LoggerHelper.Info("[内存管理]已执行LOH压缩");
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Info($"[内存管理]LOH压缩异常: {ex.Message}");
+        }
+    }
+
+    /// <summary>执行平台特定优化</summary>
+    private void PerformPlatformSpecificOptimization()
+    {
         if (OperatingSystem.IsWindows())
         {
             WindowsMemoryOptimization();
         }
-        else if (OperatingSystem.IsLinux())
-        {
-            LinuxMemoryOptimization();
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-            MacOSMemoryOptimization();
-        }
-
-        // 第三步：可选扩展点（如内存池管理）
-        // 可在此处集成引用计数或内存碎片整理逻辑[1](@ref)
+        // Linux和 macOS 的优化通过GC 已经处理
     }
 
     #endregion
+
     #region 平台特定实现
 
     /// <summary>Windows平台优化（工作集调整）</summary>
-    private void WindowsMemoryOptimization()
+    private static void WindowsMemoryOptimization()
     {
-        // 使用缓存的进程句柄，避免每次调用都创建新的 Process 对象
-        // 这可以防止句柄泄漏，避免长时间运行后可能导致的堆损坏
         try
         {
-            SetProcessWorkingSetSize(_currentProcessHandle, -1, -1);
+            var processHandle = GetCurrentProcess();
+
+            // 首先尝试清空工作集
+            EmptyWorkingSet(processHandle);
+
+            // 然后重置工作集大小限制
+            SetProcessWorkingSetSize(processHandle, (IntPtr)(-1), (IntPtr)(-1));
         }
         catch (Exception ex)
         {
-            LoggerHelper.Debug($"Windows内存优化失败: {ex.Message}");
+            LoggerHelper.Info($"[内存管理]Windows内存优化失败: {ex.Message}");
         }
-    }
-
-    /// <summary>Linux平台优化（释放不常用内存页）</summary>
-    private void LinuxMemoryOptimization()
-    {
-        // try
-        // {
-        //     // 读取进程内存映射（简化版：对整个堆内存建议释放）
-        //     // 更精确的实现可解析/proc/self/maps获取堆地址范围
-        //     var process = Process.GetCurrentProcess();
-        //     foreach (var module in process.Modules)
-        //     {
-        //         if (module is ProcessModule pm)
-        //         {
-        //             // 对每个模块的内存页建议释放（谨慎使用，避免频繁调用）
-        //             madvise(pm.BaseAddress, (UIntPtr)pm.ModuleMemorySize, MADV_DONTNEED);
-        //         }
-        //     }
-        //
-        //     // 可选：降低OOM Killer优先级（值越小越不容易被杀死）
-        //     File.WriteAllText("/proc/self/oom_score_adj", "-500");
-        // }
-        // catch (Exception ex)
-        // {
-        //     LoggerHelper.Warn($"Linux内存优化失败: {ex.Message}");
-        // }
-    }
-
-    /// <summary>macOS平台优化（释放物理内存）</summary>
-    private void MacOSMemoryOptimization()
-    {
-        // try
-        // {
-        //     // 释放进程中未使用的物理内存（需确保地址范围有效）
-        //     var process = Process.GetCurrentProcess();
-        //     foreach (var module in process.Modules)
-        //     {
-        //         if (module is ProcessModule pm)
-        //         {
-        //             vm_purge(pm.BaseAddress, (nuint)pm.ModuleMemorySize, VM_PURGE_ALL);
-        //         }
-        //     }
-        //
-        //     // 可选：启用内存压缩（仅当系统支持时）
-        //     int[] name =
-        //     {
-        //         1 /* CTL_VM */,
-        //         48 /* VM_COMPRESSION */
-        //     }; // sysctl参数：vm.compressor_mode
-        //     int enableCompression = 1; // 1=启用，0=禁用
-        //     sysctl(name, (uint)name.Length, IntPtr.Zero, IntPtr.Zero, Marshal.AllocHGlobal(Marshal.SizeOf(enableCompression)), (uint)Marshal.SizeOf(enableCompression));
-        // }
-        // catch (Exception ex)
-        // {
-        //     LoggerHelper.Warn($"macOS内存优化失败: {ex.Message}");
-        // }
     }
 
     #endregion
 
+    #region 内存信息获取
+
     /// <summary>获取当前进程内存占用（字节）</summary>
-    private long GetCurrentMemoryUsage()
+    private static long GetCurrentMemoryUsage()
     {
-        // 使用 GC 获取托管内存，避免频繁创建 Process 对象
-        // 这比 Process.GetCurrentProcess().WorkingSet64 更安全，不会导致句柄泄漏
         try
         {
             return GC.GetTotalMemory(false);
@@ -241,6 +314,60 @@ public class AvaloniaMemoryCracker : IDisposable
             return 0;
         }
     }
+
+    /// <summary>获取内存压力信息</summary>
+    private static MemoryPressureInfo GetMemoryPressureInfo()
+    {
+        try
+        {
+            var gcMemoryInfo = GC.GetGCMemoryInfo();
+            var totalMemory = GC.GetTotalMemory(false);
+
+            // 计算内存负载百分比
+            var memoryLoadPercentage = gcMemoryInfo.HighMemoryLoadThresholdBytes > 0
+                ? (int)((double)gcMemoryInfo.MemoryLoadBytes / gcMemoryInfo.HighMemoryLoadThresholdBytes * 100)
+                : 0;
+
+            return new MemoryPressureInfo
+            {
+                TotalMemory = totalMemory,
+                HeapSize = gcMemoryInfo.HeapSizeBytes,
+                FragmentedBytes = gcMemoryInfo.FragmentedBytes,
+                MemoryLoadBytes = gcMemoryInfo.MemoryLoadBytes,
+                HighMemoryLoadThreshold = gcMemoryInfo.HighMemoryLoadThresholdBytes,
+                MemoryLoadPercentage = Math.Min(100, Math.Max(0, memoryLoadPercentage)),
+                PinnedObjectsCount = gcMemoryInfo.PinnedObjectsCount,
+                Generation0Count = GC.CollectionCount(0),
+                Generation1Count = GC.CollectionCount(1),
+                Generation2Count = GC.CollectionCount(2)
+            };
+        }
+        catch
+        {
+            return new MemoryPressureInfo
+            {
+                TotalMemory = GC.GetTotalMemory(false),
+                MemoryLoadPercentage = 50 // 默认中等压力
+            };
+        }
+    }
+
+    /// <summary>内存压力信息</summary>
+    private readonly struct MemoryPressureInfo
+    {
+        public long TotalMemory { get; init; }
+        public long HeapSize { get; init; }
+        public long FragmentedBytes { get; init; }
+        public long MemoryLoadBytes { get; init; }
+        public long HighMemoryLoadThreshold { get; init; }
+        public int MemoryLoadPercentage { get; init; }
+        public long PinnedObjectsCount { get; init; }
+        public int Generation0Count { get; init; }
+        public int Generation1Count { get; init; }
+        public int Generation2Count { get; init; }
+    }
+
+    #endregion
 
     #region 资源释放
 
@@ -253,11 +380,24 @@ public class AvaloniaMemoryCracker : IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
+
         if (disposing)
         {
             _cts.Cancel();
+
+            // 等待监控任务完成
+            try
+            {
+                _monitorTask?.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch
+            {
+                // 忽略等待异常
+            }
+
             _cts.Dispose();
         }
+
         _disposed = true;
     }
 
