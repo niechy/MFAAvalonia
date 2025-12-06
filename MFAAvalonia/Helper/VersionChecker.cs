@@ -1600,7 +1600,7 @@ public static class VersionChecker
 
         var releaseUrl = $"https://api.github.com/repos/{owner}/{repo}/releases";
         int page = 1;
-        const int perPage = 5;
+        const int perPage = 30;
         using var httpClient = CreateHttpClientWithProxy();
 
         if (!string.IsNullOrWhiteSpace(Instances.VersionUpdateSettingsUserControlModel.GitHubToken))
@@ -1612,6 +1612,10 @@ public static class VersionChecker
 
         httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd("request");
         httpClient.DefaultRequestHeaders.Accept.TryParseAdd("application/json");
+
+        // 用于存储找到的最佳版本
+        JToken? bestRelease = null;
+        string bestVersion = string.Empty;
 
         while (page < 101)
         {
@@ -1631,20 +1635,34 @@ public static class VersionChecker
                     }
                     foreach (var tag in tags)
                     {
+                        // 检查是否为预发布版本
                         if ((bool)tag["prerelease"] && versionType == VersionType.Stable)
                         {
                             continue;
                         }
-                        var isAlpha = latestVersion.Contains("alpha", StringComparison.OrdinalIgnoreCase);
-                        var isBeta = latestVersion.Contains("beta", StringComparison.OrdinalIgnoreCase);
 
-                        if (isAlpha && versionType != VersionType.Alpha || isBeta && versionType != VersionType.Beta && versionType != VersionType.Alpha)
+                        var tagVersion = tag["tag_name"]?.ToString() ?? string.Empty;
+                        if (string.IsNullOrEmpty(tagVersion)) continue;
+                        // 检查版本类型是否符合更新渠道
+                        var isAlpha = tagVersion.Contains("alpha", StringComparison.OrdinalIgnoreCase);
+                        var isBeta = tagVersion.Contains("beta", StringComparison.OrdinalIgnoreCase);
+
+                        // Alpha渠道：接受所有版本（alpha、beta、stable）
+                        // Beta渠道：接受beta和stable版本，不接受alpha
+                        // Stable渠道：只接受stable版本，不接受alpha和beta
+                        if (isAlpha && versionType != VersionType.Alpha)
                         {
                             continue;
                         }
-                        latestVersion = tag["tag_name"]?.ToString() ?? string.Empty;
-                        if (!string.IsNullOrEmpty(targetVersion) && latestVersion.Trim().Equals(targetVersion.Trim(), StringComparison.OrdinalIgnoreCase))
+                        if (isBeta && versionType == VersionType.Stable)
                         {
+                            continue;
+                        }
+
+                        // 如果指定了目标版本，直接查找该版本
+                        if (!string.IsNullOrEmpty(targetVersion) && tagVersion.Trim().Equals(targetVersion.Trim(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            latestVersion = tagVersion;
                             if (IsNewVersionAvailable(latestVersion, currentVersion))
                             {
                                 if (onlyCheck && repo != "MFAAvalonia")
@@ -1655,17 +1673,15 @@ public static class VersionChecker
                             GetDownloadUrlFromGitHubRelease(latestVersion, owner, repo, out url, out sha256);
                             return;
                         }
-                        if (string.IsNullOrEmpty(targetVersion) && !string.IsNullOrEmpty(latestVersion))
+
+                        // 比较版本，找到符合条件的最新版本
+                        if (string.IsNullOrEmpty(targetVersion))
                         {
-                            if (IsNewVersionAvailable(latestVersion, currentVersion))
+                            if (string.IsNullOrEmpty(bestVersion) || IsNewVersionAvailable(tagVersion, bestVersion))
                             {
-                                if (onlyCheck && repo != "MFAAvalonia")
-                                    SaveRelease(tag, "body");
-                                if (!onlyCheck && repo != "MFAAvalonia")
-                                    SaveChangelog(tag, "body");
+                                bestVersion = tagVersion;
+                                bestRelease = tag;
                             }
-                            GetDownloadUrlFromGitHubRelease(latestVersion, owner, repo, out url, out sha256);
-                            return;
                         }
                     }
                 }
@@ -1687,7 +1703,22 @@ public static class VersionChecker
             }
             page++;
         }
+
+        // 如果找到了最佳版本，返回它
+        if (!string.IsNullOrEmpty(bestVersion) && bestRelease != null)
+        {
+            latestVersion = bestVersion;
+            if (IsNewVersionAvailable(latestVersion, currentVersion))
+            {
+                if (onlyCheck && repo != "MFAAvalonia")
+                    SaveRelease(bestRelease, "body");
+                if (!onlyCheck && repo != "MFAAvalonia")
+                    SaveChangelog(bestRelease, "body");
+            }
+            GetDownloadUrlFromGitHubRelease(latestVersion, owner, repo, out url, out sha256);
+        }
     }
+    
     private static string ExtractSha256FromDigest(string? digest)
     {
         if (string.IsNullOrEmpty(digest))
