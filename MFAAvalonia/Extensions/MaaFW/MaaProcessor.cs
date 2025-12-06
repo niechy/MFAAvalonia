@@ -2177,7 +2177,7 @@ public class MaaProcessor
                         return;
                     }
 
-                    CancelOperations(status == MFATask.MFATaskStatus.STOPPED && !_agentStarted);
+                    CancelOperations(status == MFATask.MFATaskStatus.STOPPED && !_agentStarted && (_agentClient != null || _agentProcess != null));
 
                     TaskQueue.Clear();
 
@@ -2187,7 +2187,7 @@ public class MaaProcessor
                     {
                         var stopResult = MaaJobStatus.Succeeded;
 
-                        if (status != MFATask.MFATaskStatus.FAILED && status != MFATask.MFATaskStatus.SUCCEEDED)
+                        if (MaaTasker is { IsRunning: true, IsStopping: false } && status != MFATask.MFATaskStatus.FAILED && status != MFATask.MFATaskStatus.SUCCEEDED)
                         {
 
                             // 持续尝试停止直到返回 Succeeded
@@ -2388,7 +2388,7 @@ public class MaaProcessor
                     LoggerHelper.Warning($"MaaTasker Stop failed: {e.Message}");
                 }
             }
-            
+
             LoggerHelper.Info($"Disposing MaaTasker");
             try
             {
