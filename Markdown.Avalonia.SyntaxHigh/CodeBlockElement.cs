@@ -28,7 +28,7 @@ namespace Markdown.Avalonia.SyntaxHigh
         private readonly string _code;
         private readonly Lazy<Border> _control;
         private TextEditor? _textEditor;
-        private bool _highlightApplied;
+        // private bool _highlightApplied;
 
         public override Control Control => _control.Value;
 
