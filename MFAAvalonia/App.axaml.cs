@@ -284,18 +284,51 @@ public partial class App : Application
             errorMessage = "代理设置的SSL验证错误";
             return true;
         }
-        if (ex is Tmds.DBus.Protocol.DBusException dbusEx && dbusEx.ErrorName == "org.freedesktop.DBus.Error.ServiceUnknown" && dbusEx.Message.Contains("com.canonical.AppMenu.Registrar"))
+
+        // 检查 DBus 异常（仅在 Linux 上可用）
+        if (TryHandleDBusException(ex, out errorMessage))
         {
-            errorMessage = "检测到DBus服务(com.canonical.AppMenu.Registrar)不可用，这在非Unity桌面环境中是正常现象";
             return true;
         }
 
-// 忽略 SEHException，这通常是由于外部组件（如 MaaFramework）的问题导致的
+//忽略 SEHException，这通常是由于外部组件（如 MaaFramework）的问题导致的
 // 这些异常已经在业务逻辑中处理了（如显示连接失败消息），不应该再次显示给用户
         if (ex is SEHException)
         {
             errorMessage = "已忽略外部组件异常(SEHException): " + ex.Message;
             return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 尝试处理 DBus 异常（仅在 Linux 上可用）
+    /// 使用反射来避免在 Windows 上加载 Tmds.DBus.Protocol 程序集
+    /// </summary>
+    private static bool TryHandleDBusException(Exception ex, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+        try
+        {
+            // 检查异常类型名称，避免直接引用 Tmds.DBus.Protocol 类型
+            var exType = ex.GetType();
+            if (exType.FullName == "Tmds.DBus.Protocol.DBusException")
+            {
+                // 使用反射获取 ErrorName 和 Message 属性
+                var errorNameProp = exType.GetProperty("ErrorName");
+                var errorName = errorNameProp?.GetValue(ex) as string;
+
+                if (errorName == "org.freedesktop.DBus.Error.ServiceUnknown" && ex.Message.Contains("com.canonical.AppMenu.Registrar"))
+                {
+                    errorMessage = "检测到DBus服务(com.canonical.AppMenu.Registrar)不可用，这在非Unity桌面环境中是正常现象";
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+            // 如果反射失败，忽略错误
         }
 
         return false;
