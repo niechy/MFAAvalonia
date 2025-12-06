@@ -48,9 +48,9 @@ public static class VersionChecker
 
     public enum VersionType
     {
-        Alpha,
-        Beta,
-        Stable
+        Alpha = 0,
+        Beta = 1,
+        Stable = 2
     }
 
     private static readonly ConcurrentQueue<ValueType.MFATask> Queue = new();
@@ -396,7 +396,7 @@ public static class VersionChecker
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
         }
-
+        Instances.RootView.BeforeClosed();
         var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_res");
         Directory.CreateDirectory(tempPath);
         string fileExtension = GetFileExtensionFromUrl(downloadUrl);
@@ -470,21 +470,10 @@ public static class VersionChecker
 
         if (file.Exists)
         {
-            var jsonContent = await File.ReadAllTextAsync(interfacePath);
-
-            var @interface = JObject.Parse(jsonContent);
-            // if (@interface != null && @interface["interface_version"] != null && @interface["interface_version"].ToString().Trim().Equals("2"))
-            // {
-            //     Dismiss(sukiToast);
-            //     ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization());
-            //     RootView.AddLog(LangKeys.UiDoesNotSupportResourceUpdateCancelled.ToLocalization(), Brushes.Orange, changeColor: false);
-            //     Instances.RootViewModel.SetUpdating(false);
-            //     return;
-            // }
-
             var targetPath = Path.Combine(wpfDir, "interface.json");
             file.CopyTo(targetPath, true);
         }
+
         var changesPath = Path.Combine(tempExtractDir, "changes.json");
         if (File.Exists(changesPath))
             isFull = false;
@@ -609,7 +598,6 @@ public static class VersionChecker
         if (di.Exists)
         {
             await CopyAndDelete(originPath, wpfDir, progress, true);
-
         }
 
         // File.Delete(tempZipFilePath);
@@ -655,7 +643,7 @@ public static class VersionChecker
         Program.ReleaseMutex();
         var tasks = Instances.TaskQueueViewModel.TaskItemViewModels;
         Instances.RootView.ClearTasks(() => MaaProcessor.Instance.InitializeData(dragItem: tasks));
-        
+
         if (closeDialog)
             Dismiss(sukiToast);
         shouldShowToast = true;
@@ -859,14 +847,27 @@ public static class VersionChecker
             }
 
             // 11. 异步复制文件（包装同步方法为异步，避免阻塞调用线程）
-            await Task.Run(() =>
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                File.Copy(sourceFile, targetFile, overwrite: true);
-            }, cancellationToken);
+                await Task.Run(() =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    File.Copy(sourceFile, targetFile, overwrite: true);
+                }, cancellationToken);
 
-            // 12. 设置目标文件为普通属性（清除只读/隐藏等限制）
-            File.SetAttributes(targetFile, FileAttributes.Normal);
+                // 12. 设置目标文件为普通属性（清除只读/隐藏等限制）
+                File.SetAttributes(targetFile, FileAttributes.Normal);
+            }
+            catch (IOException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                // 文件被锁定时，记录警告但继续处理其他文件
+                LoggerHelper.Warning($"Failed to copy file (may be locked): {sourceFile} -> {targetFile}, error: {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // 权限不足时，记录警告但继续处理其他文件
+                LoggerHelper.Warning($"Access denied when copying file: {sourceFile} -> {targetFile}, error: {ex.Message}");
+            }
 
             // 13. 更新进度条（线程安全）
             progressCounter.Current++;
@@ -938,22 +939,23 @@ public static class VersionChecker
             LoggerHelper.Error($"delete file error, filePath: {filePath}, error: {e.Message}, try to backup.");
             int index = 0;
             string currentDate = DateTime.Now.ToString("yyyyMMddHHmm");
-            string backupFilePath = Path.Combine($"{filePath}.{index}.backupMFA");
+            string backupFilePath = $"{filePath}.{currentDate}.{index}.backupMFA";
 
             while (File.Exists(backupFilePath))
             {
                 index++;
-                backupFilePath = $"{filePath}.{currentDate}.{index}";
+                backupFilePath = $"{filePath}.{currentDate}.{index}.backupMFA";
             }
 
             try
             {
                 File.Move(filePath, backupFilePath);
+                LoggerHelper.Info($"File backed up successfully: {filePath} -> {backupFilePath}");
             }
             catch (Exception e1)
             {
-                LoggerHelper.Error($"move file error, path: {filePath}, moveTo: {backupFilePath}, error: {e1.Message}");
-                throw;
+                // 文件被锁定时，记录错误但不抛出异常，让更新流程继续
+                LoggerHelper.Warning($"move file error, path: {filePath}, moveTo: {backupFilePath}, error: {e1.Message}. File will be skipped.");
             }
         }
     }
