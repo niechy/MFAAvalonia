@@ -531,9 +531,8 @@ public class MaaProcessor
                                 LoggerHelper.Info("Agent process exited!");
                                 LoggerHelper.Info("MaaTasker exited!");
                                 _agentProcess = null;
-                                LoggerHelper.Info("Agent process  = null!");
                             };
-                            _agentProcess.OutputDataReceived += (sender, args) =>
+                            _agentProcess?.OutputDataReceived += (sender, args) =>
                             {
                                 if (!string.IsNullOrEmpty(args.Data))
                                 {
@@ -560,7 +559,7 @@ public class MaaProcessor
                                 }
                             };
 
-                            _agentProcess.ErrorDataReceived += (sender, args) =>
+                            _agentProcess?.ErrorDataReceived += (sender, args) =>
                             {
                                 if (!string.IsNullOrEmpty(args.Data))
                                 {
@@ -586,15 +585,14 @@ public class MaaProcessor
                                     });
                                 }
                             };
-                            _agentProcess.BeginOutputReadLine();
-                            _agentProcess.BeginErrorReadLine();
-
-                            TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token: token, name: "Agent程序启动");
+                            _agentProcess?.BeginOutputReadLine();
+                            _agentProcess?.BeginErrorReadLine();
+                            if (_agentProcess != null)
+                                TaskManager.RunTaskAsync(async () => await _agentProcess.WaitForExitAsync(token), token: token, name: "Agent程序启动");
 
                         }
                         return _agentProcess;
                     };
-                    // 添加重连逻辑，最多重试3次
                     // 添加重连逻辑，最多重试3次
                     const int maxRetries = 3;
                     bool linkStartSuccess = false;

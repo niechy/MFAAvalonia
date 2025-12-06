@@ -30,11 +30,11 @@ public static class EmulatorHelper
         {
             string emulatorMode = "None";
             var windowName = MaaProcessor.Config.AdbDevice.Name;
-            if (windowName.Contains("MuMuPlayer12"))
+            if (windowName.Contains("MuMuPlayer12") || windowName.Contains("MuMu"))
                 emulatorMode = "MuMuEmulator12";
             else if (windowName.Contains("Nox"))
                 emulatorMode = "Nox";
-            else if (windowName.Contains("LDPlayer"))
+            else if (windowName.Contains("LDPlayer") || windowName.Contains("雷电"))
                 emulatorMode = "LDPlayer";
             else if (windowName.Contains("XYAZ"))
                 emulatorMode = "XYAZ";

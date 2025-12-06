@@ -697,21 +697,15 @@ public partial class TaskQueueViewModel : ViewModelBase
     {
         if (CurrentDevice is AdbDeviceInfo info)
         {
-            LoggerHelper.Info(JsonConvert.SerializeObject(info));
-            bool isCurrentPortValid = TryExtractPortFromAdbSerial(info.AdbSerial, out int currentPort);
-            int currentDeviceIndex = DeviceDisplayConverter.GetFirstEmulatorIndex(info.Config);
+            LoggerHelper.Info($"Current device: {JsonConvert.SerializeObject(info)}");
 
+            // 使用指纹匹配设备
             var matchedDevices = devices
-                .Where(device =>
-                    // 第一步：提取当前设备端口号（必须有效）
-                    TryExtractPortFromAdbSerial(device.AdbSerial, out int devicePort)
-                    &&
-                    // 第二步：按规则匹配端口
-                    (currentDeviceIndex != -1
-                        ? DeviceDisplayConverter.GetFirstEmulatorIndex(device.Config) == currentDeviceIndex && devicePort == currentPort // 原index有效：端口号 == index
-                        : isCurrentPortValid && devicePort == currentPort)
-                )
+                .Where(device => device.MatchesFingerprint(info))
                 .ToList();
+
+            LoggerHelper.Info($"Found {matchedDevices.Count} devices matching fingerprint");
+
             // 多匹配时排序：先比AdbSerial前缀（冒号前），再比设备名称
             if (matchedDevices.Any())
             {
@@ -734,6 +728,7 @@ public partial class TaskQueueViewModel : ViewModelBase
                 TryGetIndexFromConfig(d.Config, out var index) && index == targetNumber ? i : -1)
             .FirstOrDefault(i => i >= 0);
     }
+
 
     public static int ExtractNumberFromEmulatorConfig(string emulatorConfig)
     {
@@ -982,7 +977,7 @@ public partial class TaskQueueViewModel : ViewModelBase
             || CurrentController != MaaControllerTypes.Adb
             || !ConfigurationManager.Current.GetValue(ConfigurationKeys.RememberAdb, true)
             || MaaProcessor.Config.AdbDevice.AdbPath != "adb"
-            || !ConfigurationManager.Current.TryGetValue(ConfigurationKeys.AdbDevice, out AdbDeviceInfo device,
+            || !ConfigurationManager.Current.TryGetValue(ConfigurationKeys.AdbDevice, out AdbDeviceInfo savedDevice,
                 new UniversalEnumConverter<AdbInputMethods>(), new UniversalEnumConverter<AdbScreencapMethods>()))
         {
             _refreshCancellationTokenSource?.Cancel();
@@ -993,13 +988,48 @@ public partial class TaskQueueViewModel : ViewModelBase
                 AutoDetectDevice(_refreshCancellationTokenSource.Token);
             return;
         }
-        LoggerHelper.Info("Reading saved ADB device from configuration.");
-        DispatcherHelper.PostOnMainThread(() =>
+        // 使用指纹匹配设备，而不是直接使用保存的设备信息
+        // 因为雷电模拟器等的AdbSerial每次启动都会变化
+        LoggerHelper.Info("Reading saved ADB device from configuration, using fingerprint matching.");
+        LoggerHelper.Info($"Saved device fingerprint: {savedDevice.GenerateDeviceFingerprint()}");
+
+        // 搜索当前可用的设备
+        var currentDevices = MaaProcessor.Toolkit.AdbDevice.Find();
+
+        // 尝试通过指纹匹配找到对应的设备（当任一方index为-1时不比较index）
+        AdbDeviceInfo? matchedDevice = null;
+        foreach (var device in currentDevices)
         {
-            Devices = [device];
-            CurrentDevice = device;
-        });
-        ChangedDevice(device);
+            if (device.MatchesFingerprint(savedDevice))
+            {
+                matchedDevice = device;
+                LoggerHelper.Info($"Found matching device by fingerprint: {device.Name} ({device.AdbSerial})");
+                break;
+            }
+        }
+
+
+        if (matchedDevice != null)
+        {
+            // 使用新搜索到的设备信息（AdbSerial等可能已更新）
+            DispatcherHelper.PostOnMainThread(() =>
+            {
+                Devices = new ObservableCollection<object>(currentDevices);
+                CurrentDevice = matchedDevice;
+            });
+            ChangedDevice(matchedDevice);
+        }
+        else
+        {
+            // 没有找到匹配的设备，执行自动检测
+            LoggerHelper.Info("No matching device found by fingerprint, performing auto detection.");
+            _refreshCancellationTokenSource?.Cancel();
+            _refreshCancellationTokenSource = new CancellationTokenSource();
+            if (InTask)
+                TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token), name: "刷新设备");
+            else
+                AutoDetectDevice(_refreshCancellationTokenSource.Token);
+        }
     }
 
     #endregion

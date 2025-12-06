@@ -71,6 +71,7 @@ public partial class MultiInstanceEditorDialogViewModel : ViewModelBase
         }
         Dialog.Dismiss();
     }
+   
     /// <summary>
     /// 静态方法：自动匹配所有模拟器前缀规则，从 EmulatorConfig 字符串中反向提取 Index
     /// 格式不匹配、提取失败或无有效数字时返回 -1
@@ -94,7 +95,7 @@ public partial class MultiInstanceEditorDialogViewModel : ViewModelBase
             {
                 // 截取前缀后的内容（去除首尾空白，避免空格干扰）
                 var indexPart = emulatorConfig.Substring(targetPrefix.Length).Trim();
-            
+
                 // 尝试转换为非负整数 → 有效则直接返回（找到唯一匹配）
                 if (int.TryParse(indexPart, out int index) && index >= 0)
                 {
@@ -106,5 +107,4 @@ public partial class MultiInstanceEditorDialogViewModel : ViewModelBase
         // 3. 无任何前缀匹配 或 匹配后不是有效数字 → 返回 -1
         return -1;
     }
-    // public string? Output { get; set; }
 }

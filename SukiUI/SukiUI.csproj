@@ -39,7 +39,7 @@
         <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
         <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.9" />
         <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.9" />
-        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.0" />
+        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.1" />
         <PackageReference Update="Packaging.Targets">
           <Version>0.1.232</Version>
         </PackageReference>

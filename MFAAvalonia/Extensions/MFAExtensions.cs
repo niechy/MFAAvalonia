@@ -6,6 +6,7 @@ using Lang.Avalonia;
 using MaaFramework.Binding.Buffers;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
+using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.ViewModels.Other;
 using Newtonsoft.Json.Linq;
 using SukiUI;
@@ -771,4 +772,59 @@ public static class MFAExtensions
         // 未找到文件
         return string.Empty;
     }
-}
+
+    /// <summary>
+        /// 生成ADB设备的指纹字符串，用于设备匹配
+        /// 指纹由 Name + AdbPath + Index 组成，可以稳定识别同一个模拟器实例
+        /// </summary>
+        /// <param name="device">ADB设备信息</param>
+        /// <returns>设备指纹字符串</returns>
+        public static string GenerateDeviceFingerprint(this MaaFramework.Binding.AdbDeviceInfo device)
+        {
+            var index = DeviceDisplayConverter.GetFirstEmulatorIndex(device.Config);
+            return GenerateDeviceFingerprint(device.Name, device.AdbPath, index);
+        }
+    
+        /// <summary>
+        /// 生成ADB设备的指纹字符串
+        /// </summary>
+        /// <param name="name">设备名称</param>
+        /// <param name="adbPath">ADB路径</param>
+        /// <param name="index">模拟器索引（-1表示无索引）</param>
+        /// <returns>设备指纹字符串</returns>
+        public static string GenerateDeviceFingerprint(string name, string adbPath, int index)
+        {
+            // 规范化AdbPath：只保留文件名部分，忽略路径差异
+            var normalizedAdbPath = adbPath;
+    
+            // 指纹格式：Name|AdbPath|Index
+            return $"{name}|{normalizedAdbPath}|{index}";
+        }
+    
+        /// <summary>
+        /// 比较两个设备是否匹配（基于指纹）
+        /// 当任一方 index 为 -1 时，只比较 Name 和 AdbPath
+        /// </summary>
+        /// <param name="device">当前设备</param>
+        /// <param name="savedDevice">保存的设备</param>
+        /// <returns>是否匹配</returns>
+        public static bool MatchesFingerprint(this MaaFramework.Binding.AdbDeviceInfo device, MaaFramework.Binding.AdbDeviceInfo savedDevice)
+        {
+            var deviceIndex = DeviceDisplayConverter.GetFirstEmulatorIndex(device.Config);
+            var savedIndex = DeviceDisplayConverter.GetFirstEmulatorIndex(savedDevice.Config);
+            
+            // 比较 Name 和 AdbPath
+            bool nameMatches = device.Name == savedDevice.Name;
+            bool adbPathMatches = device.AdbPath == savedDevice.AdbPath;
+            
+            // 如果 Name 或 AdbPath 不匹配，直接返回 false
+            if (!nameMatches || !adbPathMatches)return false;
+            
+            // 如果任一方 index 为 -1，则不比较 index，只要 Name 和 AdbPath 匹配即可
+            if (deviceIndex == -1 || savedIndex == -1)
+                return true;
+            
+            // 两方 index 都有效时，需要 index 也匹配
+            return deviceIndex == savedIndex;
+        }
+    }
