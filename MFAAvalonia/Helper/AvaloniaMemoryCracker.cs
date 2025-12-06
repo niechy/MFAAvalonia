@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -9,7 +10,7 @@ namespace MFAAvalonia.Helper;
 
 /// <summary>
 /// 高性能内存清理器，针对 Avalonia 应用优化
-/// 使用非阻塞 GC 策略，避免 UI卡顿
+/// 使用非阻塞 GC 策略和渐进式清理，避免 UI 卡顿
 /// </summary>
 public class AvaloniaMemoryCracker : IDisposable
 {
@@ -24,6 +25,16 @@ public class AvaloniaMemoryCracker : IDisposable
     [DllImport("psapi.dll", SetLastError = true)]
     private static extern bool EmptyWorkingSet(IntPtr hProcess);
 
+    [DllImport("user32.dll")]
+    private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LASTINPUTINFO
+    {
+        public uint cbSize;
+        public uint dwTime;
+    }
+
     #endregion
 
     #region 配置常量
@@ -32,12 +43,19 @@ public class AvaloniaMemoryCracker : IDisposable
     private const long MemoryThresholdBytes = 256 * 1024 * 1024; // 256MB
     private const long HighMemoryPressureThreshold = 512 * 1024 * 1024; // 512MB - 高内存压力阈值
     private const long CriticalMemoryPressureThreshold = 1024 * 1024 * 1024; // 1GB - 临界内存压力阈值
+    private const long EmergencyMemoryThreshold = 1536 * 1024 * 1024; // 1.5GB - 紧急内存阈值
 
     // 内存历史记录配置
     private const int MaxHistoryCount = 10;
 
     // LOH 压缩间隔（每N次清理执行一次LOH压缩，仅在空闲时）
     private const int LohCompactionInterval = 10;
+
+    // 用户空闲时间阈值（毫秒）- 超过此时间认为用户空闲
+    private const int UserIdleThresholdMs = 3000; // 3秒
+
+    // 渐进式 GC 的分批次数
+    private const int ProgressiveGcSteps = 3;
 
     #endregion
 
@@ -58,6 +76,9 @@ public class AvaloniaMemoryCracker : IDisposable
 
     // 上次内存使用量（用于判断是否需要清理）
     private long _lastMemoryUsage;
+
+    // 上次激进 GC 时间（避免频繁执行）
+    private DateTime _lastAggressiveGcTime = DateTime.MinValue;
 
     #endregion
 
@@ -201,54 +222,221 @@ public class AvaloniaMemoryCracker : IDisposable
     {
         _cleanupCount++;
 
-        // 第一步：使用非阻塞 GC 策略
-        PerformNonBlockingGarbageCollection(memoryInfo);
+        var isUserIdle = IsUserIdle();
+        var timeSinceLastAggressiveGc = DateTime.UtcNow - _lastAggressiveGcTime;
 
-        // 第二步：等待一小段时间让 GC 在后台完成
+        // 根据用户活动状态和内存压力选择清理策略
+        if (memoryInfo.TotalMemory / 1.2 > EmergencyMemoryThreshold)
+        {
+            // 紧急情况：内存超过 1.5GB，必须清理，但使用渐进式方式
+            await PerformProgressiveAggressiveGcAsync(memoryInfo);
+        }
+        else if (isUserIdle && memoryInfo.TotalMemory / 1.2 > CriticalMemoryPressureThreshold)
+        {
+            // 用户空闲且内存超过 1GB：执行较激进的清理
+            await PerformIdleAggressiveGcAsync();
+        }
+        else if (isUserIdle && timeSinceLastAggressiveGc.TotalMinutes > 2 && memoryInfo.TotalMemory > HighMemoryPressureThreshold)
+        {
+            // 用户空闲、距离上次激进 GC 超过 2 分钟、内存超过 512MB：执行中等强度清理
+            await PerformIdleMediumGcAsync();
+        }
+        else
+        {
+            // 正常情况：使用非阻塞 GC 策略
+            PerformNonBlockingGarbageCollection(memoryInfo);
+        }
+
+        // 等待一小段时间让 GC 在后台完成
         await Task.Delay(50, _cts.Token).ConfigureAwait(false);
 
-        // 第三步：平台特定优化（在后台线程执行）
+        // 平台特定优化（在后台线程执行）
         await Task.Run(PerformPlatformSpecificOptimization, _cts.Token).ConfigureAwait(false);
 
-        // 第四步：定期执行LOH压缩（每N次清理执行一次，且仅在低压力时）
-        if (_cleanupCount % LohCompactionInterval == 0 && memoryInfo.MemoryLoadPercentage < 50)
+        // 定期执行LOH压缩（每N次清理执行一次，且仅在空闲时）
+        if (_cleanupCount % LohCompactionInterval == 0 && isUserIdle && memoryInfo.MemoryLoadPercentage < 50)
         {
-            // LOH 压缩会导致暂停，仅在内存压力较低时执行
             ScheduleLohCompaction();
         }
     }
 
-    /// <summary>执行非阻塞垃圾回收</summary>
+    /// <summary>检测用户是否空闲</summary>
+    private static bool IsUserIdle()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            // 非Windows 平台，假设用户不空闲，使用保守策略
+            return false;
+        }
+
+        try
+        {
+            var lastInputInfo = new LASTINPUTINFO
+            {
+                cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>()
+            };
+            if (GetLastInputInfo(ref lastInputInfo))
+            {
+                var idleTime = (uint)Environment.TickCount - lastInputInfo.dwTime;
+                return idleTime > UserIdleThresholdMs;
+            }
+        }
+        catch
+        {
+            // 忽略异常
+        }
+
+        return false;
+    }
+
+    /// <summary>渐进式激进 GC（用于紧急情况，分批执行避免长时间卡顿）</summary>
+    private async Task PerformProgressiveAggressiveGcAsync(MemoryPressureInfo memoryInfo)
+    {
+        LoggerHelper.Info($"[内存管理]内存紧急({memoryInfo.TotalMemory / (1024 * 1024)} MB)，执行渐进式清理");
+
+        // 保存当前延迟模式
+        var originalLatencyMode = GCSettings.LatencyMode;
+
+        try
+        {
+            for (var step = 0; step < ProgressiveGcSteps; step++)
+            {
+                if (_cts.IsCancellationRequested) break;
+
+                // 每一步清理一个代
+                var generation = Math.Min(step, GC.MaxGeneration);
+
+                // 使用 Interactive 模式，允许 GC 被中断
+                GC.Collect(generation, GCCollectionMode.Forced, blocking: false, compacting: false);
+
+                // 短暂等待，让 UI 有机会响应
+                await Task.Delay(30, _cts.Token).ConfigureAwait(false);
+
+                // 检查是否已经释放足够内存
+                var currentMemory = GC.GetTotalMemory(false);
+                if (currentMemory < HighMemoryPressureThreshold)
+                {
+                    LoggerHelper.Info($"[内存管理]渐进式清理提前完成，当前内存: {currentMemory / (1024 * 1024)} MB");
+                    break;
+                }
+            }
+
+            // 最后处理终结器队列（非阻塞）
+            if (IsUserIdle())
+            {
+                GC.WaitForPendingFinalizers();
+                GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
+            }
+
+            _lastAggressiveGcTime = DateTime.UtcNow;
+        }
+        finally
+        {
+            // 恢复延迟模式
+            try
+            {
+                GCSettings.LatencyMode = originalLatencyMode;
+            }
+            catch
+            {
+                // 忽略
+            }
+        }
+    }
+
+    /// <summary>空闲时执行激进 GC</summary>
+    private async Task PerformIdleAggressiveGcAsync()
+    {
+        LoggerHelper.Info("[内存管理]用户空闲，执行深度清理");
+
+        // 设置低延迟模式，减少 GC 暂停时间
+        var originalLatencyMode = GCSettings.LatencyMode;
+
+        try
+        {
+            // 分两步执行，中间给 UI 响应机会
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false, compacting: true);
+
+            await Task.Delay(100, _cts.Token).ConfigureAwait(false);
+
+            // 如果用户仍然空闲，处理终结器
+            if (IsUserIdle())
+            {
+                GC.WaitForPendingFinalizers();
+
+                await Task.Delay(50, _cts.Token).ConfigureAwait(false);
+
+                // 最后一次清理
+                if (IsUserIdle())
+                {
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false, compacting: false);
+                }
+            }
+
+            _lastAggressiveGcTime = DateTime.UtcNow;
+        }
+        finally
+        {
+            try
+            {
+                GCSettings.LatencyMode = originalLatencyMode;
+            }
+            catch
+            {
+                // 忽略
+            }
+        }
+    }
+
+    /// <summary>空闲时执行中等强度 GC</summary>
+    private async Task PerformIdleMediumGcAsync()
+    {
+        try
+        {
+            // 先清理 Gen0 和 Gen1
+            GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
+
+            await Task.Delay(50, _cts.Token).ConfigureAwait(false);
+
+            // 如果用户仍然空闲，清理 Gen2
+            if (IsUserIdle())
+            {
+                GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: false);
+                _lastAggressiveGcTime = DateTime.UtcNow;
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Info($"[内存管理]中等强度GC异常: {ex.Message}");
+        }
+    }
+
+    /// <summary>执行非阻塞垃圾回收（用于用户活动时）</summary>
     private static void PerformNonBlockingGarbageCollection(MemoryPressureInfo memoryInfo)
     {
         try
         {
-            // 关键改进：使用 blocking: false 避免阻塞 UI 线程
-            // compacting: false 避免内存压缩导致的长时间暂停
+            // 关键：始终使用 blocking: false，避免阻塞 UI 线程
 
             if (memoryInfo.TotalMemory > CriticalMemoryPressureThreshold)
             {
-                // 临界压力：执行完整 GC，但不阻塞
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, false, true);
-                GC.WaitForPendingFinalizers();
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, false, true);
+                // 高压力但用户活动中：仅执行非阻塞 GC，不压缩
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false, compacting: false);
             }
             else if (memoryInfo.TotalMemory > HighMemoryPressureThreshold)
             {
-                // 高压力：强制GC
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false, compacting: true);
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
+                // 中高压力：优化模式 GC
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false, compacting: false);
             }
             else if (memoryInfo.TotalMemory > MemoryThresholdBytes)
             {
-                // 中等压力：优化模式GC
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false, true);
+                // 中等压力：仅清理 Gen0 和 Gen1
+                GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
             }
             else
             {
-                // 低压力：仅回收Gen0和Gen1
-                GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
+                // 低压力：仅清理 Gen0
+                GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
             }
         }
         catch (Exception ex)
@@ -257,7 +445,7 @@ public class AvaloniaMemoryCracker : IDisposable
         }
     }
 
-    /// <summary>调度LOH压缩（在下次GC 时执行）</summary>
+    /// <summary>调度LOH压缩（在下次GC时执行）</summary>
     private static void ScheduleLohCompaction()
     {
         try
