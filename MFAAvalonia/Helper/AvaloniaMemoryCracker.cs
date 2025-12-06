@@ -229,22 +229,26 @@ public class AvaloniaMemoryCracker : IDisposable
             if (memoryInfo.TotalMemory > CriticalMemoryPressureThreshold)
             {
                 // 临界压力：执行完整 GC，但不阻塞
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false, compacting: false);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, false, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, false, true);
             }
             else if (memoryInfo.TotalMemory > HighMemoryPressureThreshold)
             {
-                // 高压力：执行 Gen2 GC，不阻塞
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false, compacting: false);
+                // 高压力：强制GC
+                GC.Collect(GC.MaxGeneration,  GCCollectionMode.Forced, blocking: false, compacting:  true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
             }
             else if (memoryInfo.TotalMemory > MemoryThresholdBytes)
             {
-                // 中等压力：执行 Gen1 GC
-                GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
+                // 中等压力：优化模式GC
+                GC.Collect(GC.MaxGeneration,  GCCollectionMode.Optimized, blocking: false, true);
             }
             else
             {
-                // 低压力：仅执行 Gen0 GC（最快）
-                GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
+                // 低压力：仅回收Gen0和Gen1
+                GC.Collect(1,GCCollectionMode.Optimized, blocking: false);
             }
         }
         catch (Exception ex)

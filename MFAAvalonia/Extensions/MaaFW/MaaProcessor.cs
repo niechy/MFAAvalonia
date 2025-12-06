@@ -789,70 +789,96 @@ public class MaaProcessor
             {
                 var jObject = JObject.Parse(args.Details);
 
-                var name = jObject["name"]?.ToString() ?? string.Empty;
-                if (args.Message.StartsWith(MaaMsg.Node.Recognition.Succeeded) || args.Message.StartsWith(MaaMsg.Node.Action.Succeeded))
+                tasker.Callback += (o, args) =>
                 {
-                    if (jObject["reco_id"] != null)
+                    var jObject = JObject.Parse(args.Details);
+
+                    var name = jObject["name"]?.ToString() ?? string.Empty;
+                    if (args.Message.StartsWith(MaaMsg.Node.Recognition.Succeeded) || args.Message.StartsWith(MaaMsg.Node.Action.Succeeded))
                     {
-                        var recoId = Convert.ToInt64(jObject["reco_id"]?.ToString() ?? string.Empty);
-                        if (recoId > 0)
+                        if (jObject["reco_id"] != null)
                         {
-                            //     tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out var actionId, out _);
-                            var rect = new MaaRectBuffer();
-                            var imageBuffer = new MaaImageBuffer();
-                            tasker.GetRecognitionDetail(recoId, out string node,
-                                out var algorithm,
-                                out var hit,
-                                rect,
-                                out var detailJson,
-                                imageBuffer, new MaaImageListBuffer());
-                            var bitmap = imageBuffer.ToBitmap();
-                            if (hit && bitmap != null)
+                            var recoId = Convert.ToInt64(jObject["reco_id"]?.ToString() ?? string.Empty);
+                            if (recoId > 0)
                             {
-                                bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                                //使用 using 确保资源正确释放
+                                using var rect = new MaaRectBuffer();
+                                using var imageBuffer = new MaaImageBuffer();
+                                using var imageListBuffer = new MaaImageListBuffer();
+                                tasker.GetRecognitionDetail(recoId, out string node,
+                                    out var algorithm,
+                                    out var hit,
+                                    rect,
+                                    out var detailJson,
+                                    imageBuffer, imageListBuffer);
+                                var bitmap = imageBuffer.ToBitmap();
+                                if (hit && bitmap != null)
+                                {
+                                    var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                                    // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
+                                    if (!ReferenceEquals(newBitmap, bitmap))
+                                    {
+                                        bitmap.Dispose();
+                                    }
+                                    bitmap = newBitmap;
+                                }
+
+                                var bitmapToSet = bitmap;
+                                DispatcherHelper.PostOnMainThread(() =>
+                                {
+                                    // 释放旧的截图
+                                    var oldImage = Instances.ScreenshotViewModel.ScreenshotImage;
+                                    Instances.ScreenshotViewModel.ScreenshotImage = bitmapToSet;
+                                    Instances.ScreenshotViewModel.TaskName = name;
+                                    oldImage?.Dispose();
+                                });
                             }
 
-                            DispatcherHelper.PostOnMainThread(() =>
+                        }
+                        if (jObject["action_id"] != null)
+                        {
+                            var actionId = Convert.ToInt64(jObject["action_id"]?.ToString() ?? string.Empty);
+                            if (actionId > 0)
                             {
-                                Instances.ScreenshotViewModel.ScreenshotImage = bitmap;
-                                Instances.ScreenshotViewModel.TaskName = name;
-                            });
+                                // 使用 using 确保资源正确释放
+                                using var rect = new MaaRectBuffer();
+                                using var imageBuffer = new MaaImageBuffer();
+                                tasker.GetCachedImage(imageBuffer);
+                                var bitmap = imageBuffer.ToBitmap();
+                                tasker.GetActionDetail(actionId, out _, out _, rect, out var isSucceeded, out _);
+                                if (isSucceeded && bitmap != null)
+                                {
+                                    var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                                    // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
+                                    if (!ReferenceEquals(newBitmap, bitmap))
+                                    {
+                                        bitmap.Dispose();
+                                    }
+                                    bitmap = newBitmap;
+                                }
+
+                                var bitmapToSet = bitmap;
+                                DispatcherHelper.PostOnMainThread(() =>
+                                {
+                                    // 释放旧的截图
+                                    var oldImage = Instances.ScreenshotViewModel.ScreenshotImage;
+                                    Instances.ScreenshotViewModel.ScreenshotImage = bitmapToSet;
+                                    Instances.ScreenshotViewModel.TaskName = name;
+                                    oldImage?.Dispose();
+                                });
+                            }
+
                         }
 
                     }
-                    if (jObject["action_id"] != null)
+
+                    if (jObject.ContainsKey("focus"))
                     {
-                        var actionId = Convert.ToInt64(jObject["action_id"]?.ToString() ?? string.Empty);
-                        if (actionId > 0)
-                        {
-                            //     tasker.GetNodeDetail(nodeId, out _, out var recognitionId, out var actionId, out _);
-                            var rect = new MaaRectBuffer();
-                            var imageBuffer = new MaaImageBuffer();
-                            tasker.GetCachedImage(imageBuffer);
-                            var bitmap = imageBuffer.ToBitmap();
-                            tasker.GetActionDetail(actionId, out _, out _, rect, out var isSucceeded, out _);
-                            if (isSucceeded && bitmap != null)
-                            {
-                                bitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
-                            }
-
-                            DispatcherHelper.PostOnMainThread(() =>
-                            {
-                                Instances.ScreenshotViewModel.ScreenshotImage = bitmap;
-                                Instances.ScreenshotViewModel.TaskName = name;
-                            });
-                        }
-
+                        _focusHandler ??= new FocusHandler(AutoInitDictionary);
+                        _focusHandler.UpdateDictionary(AutoInitDictionary);
+                        _focusHandler.DisplayFocus(jObject, args.Message, args.Details);
                     }
-
-                }
-
-                if (jObject.ContainsKey("focus"))
-                {
-                    _focusHandler ??= new FocusHandler(AutoInitDictionary);
-                    _focusHandler.UpdateDictionary(AutoInitDictionary);
-                    _focusHandler.DisplayFocus(jObject, args.Message, args.Details);
-                }
+                };
             };
 
             return (tasker, InvalidResource, ShouldRetry);
