@@ -106,8 +106,8 @@ public partial class RootView : SukiWindow
         BeforeClosed();
         base.OnClosed(e);
     }
-
-    public void BeforeClosed()
+    
+    public void BeforeClosed(bool noLog)
     {
         if (!GlobalHotkeyService.IsStopped)
         {
@@ -119,15 +119,21 @@ public partial class RootView : SukiWindow
 
             // 确保窗口大小和位置被保存
             SaveWindowSizeAndPosition();
+            if (!noLog)
+                LoggerHelper.Info("MFA Closed!");
 
-            LoggerHelper.Info("MFA Closed!");
-            
             MaaProcessor.Instance.SetTasker();
             CustomClassLoader.Dispose();
-            LoggerHelper.DisposeLogger();
+            if (!noLog)
+                LoggerHelper.DisposeLogger();
             GlobalHotkeyService.Shutdown();
             Program.ReleaseMutex();
         }
+    }
+
+    public void BeforeClosed()
+    {
+        BeforeClosed(false);
     }
 
     public async Task<bool> ConfirmExit(Action? action = null)

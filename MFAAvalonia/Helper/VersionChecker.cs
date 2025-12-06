@@ -396,7 +396,7 @@ public static class VersionChecker
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
         }
-        Instances.RootView.BeforeClosed();
+        DispatcherHelper.PostOnMainThread(() => Instances.RootView.BeforeClosed(true));
         var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_res");
         Directory.CreateDirectory(tempPath);
         string fileExtension = GetFileExtensionFromUrl(downloadUrl);
@@ -464,7 +464,25 @@ public static class VersionChecker
             interfacePath = Path.Combine(tempExtractDir, "assets", "interface.json");
             resourceDirPath = Path.Combine(tempExtractDir, "assets", "resource");
         }
+        // 获取当前运行的可执行文件路径（最可靠的方式，即使用户重命名了文件也能正确获取）
         var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+        LoggerHelper.Info($"Current process executable: {exeName}");
+        // 如果路径为空或文件不存在，尝试其他方式
+        if (string.IsNullOrEmpty(exeName) || !File.Exists(exeName))
+        {
+            // 尝试使用 Environment.ProcessPath (.NET 6+)
+            exeName = Environment.ProcessPath ?? string.Empty;
+            LoggerHelper.Info($"Environment.ProcessPath: {exeName}");
+        }
+
+        // 如果仍然为空或不存在，使用 AppContext.BaseDirectory + 当前进程名
+        if (string.IsNullOrEmpty(exeName) || !File.Exists(exeName))
+        {
+            var processName = Process.GetCurrentProcess().ProcessName;
+            var extension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "";
+            exeName = Path.Combine(AppContext.BaseDirectory, processName + extension);
+            LoggerHelper.Info($"Fallback to process name: {exeName}");
+        }
         var file = new FileInfo(interfacePath);
 
 
@@ -640,22 +658,36 @@ public static class VersionChecker
         //         shouldShowToast = false;
         //     }
         // });
-        Program.ReleaseMutex();
-        var tasks = Instances.TaskQueueViewModel.TaskItemViewModels;
-        Instances.RootView.ClearTasks(() => MaaProcessor.Instance.InitializeData(dragItem: tasks));
+        // var tasks = Instances.TaskQueueViewModel.TaskItemViewModels;
+        // Instances.RootView.ClearTasks(() => MaaProcessor.Instance.InitializeData(dragItem: tasks));
 
         if (closeDialog)
             Dismiss(sukiToast);
         shouldShowToast = true;
         action?.Invoke();
+        // 如果当前进程的可执行文件不存在（可能被更新覆盖），则在目标目录中查找
+        if (string.IsNullOrEmpty(exeName) || !File.Exists(exeName))
+        {
+            var foundExe = FindMFAExecutableInDirectory(wpfDir);
+            if (!string.IsNullOrEmpty(foundExe))
+            {
+                exeName = foundExe;
+                LoggerHelper.Info($"Using found executable from target directory: {exeName}");
+            }
+        }
+
         await RestartApplicationAsync(exeName);
     }
+
     /// <summary>
     /// 跨平台重启应用（仅 macOS 处理权限和启动逻辑，Windows/Linux 保留原有逻辑）
     /// </summary>
     /// <param name="exeName">应用可执行文件路径</param>
     public async static Task RestartApplicationAsync(string exeName)
     {
+        LoggerHelper.Info("Starting application: " + exeName);
+        LoggerHelper.Info("MFA Closed!");
+        LoggerHelper.DisposeLogger();
         if (OperatingSystem.IsMacOS())
         {
             // ==== 仅 macOS 执行专属逻辑 ====
@@ -666,7 +698,6 @@ public static class VersionChecker
 
                 // 2. macOS 专属启动方式
                 StartMacOSApplication(exeName);
-                DispatcherHelper.PostOnMainThread(Instances.RootView.BeforeClosed);
                 // 3. 短暂延迟确保新进程启动，再关闭当前应用
                 await Task.Delay(1000);
                 Instances.ShutdownApplication();
@@ -681,7 +712,6 @@ public static class VersionChecker
         {
             // ==== Windows/Linux 完全保留原有逻辑 ====
             Process.Start(exeName);
-            DispatcherHelper.PostOnMainThread(Instances.RootView.BeforeClosed);
             Instances.ShutdownApplication();
         }
     }
@@ -2529,7 +2559,6 @@ public static class VersionChecker
             return string.Empty;
         }
     }
-
     /// <summary>
     /// 从Content-Disposition头解析文件名（可选增强）
     /// </summary>
@@ -2549,5 +2578,172 @@ public static class VersionChecker
             return filename;
         }
         return null;
+    }
+
+    /// <summary>
+    /// 从目录中查找 MFAAvalonia 的可执行文件
+    ///通过查找 MFAAvalonia.dll 或 MFAAvalonia.deps.json 来定位，因为这些文件名是固定的
+    /// </summary>
+    /// <param name="directory">要搜索的目录</param>
+    /// <returns>找到的可执行文件路径，如果未找到则返回空字符串</returns>
+    private static string FindMFAExecutableInDirectory(string directory)
+    {
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return string.Empty;
+
+        try
+        {
+            // 方法1: 查找 MFAAvalonia.dll 所在目录，然后找同目录下的可执行文件
+            var dllFiles = Directory.GetFiles(directory, "MFAAvalonia.dll", SearchOption.AllDirectories);
+            if (dllFiles.Length > 0)
+            {
+                var dllDir = Path.GetDirectoryName(dllFiles[0]);
+                if (!string.IsNullOrEmpty(dllDir))
+                {
+                    var exeFile = FindExecutableInSameDirectory(dllDir);
+                    if (!string.IsNullOrEmpty(exeFile))
+                    {
+                        LoggerHelper.Info($"Found MFA executable via DLL: {exeFile}");
+                        return exeFile;
+                    }
+                }
+            }
+
+            // 方法2: 查找 MFAAvalonia.deps.json 所在目录
+            var depsFiles = Directory.GetFiles(directory, "MFAAvalonia.deps.json", SearchOption.AllDirectories);
+            if (depsFiles.Length > 0)
+            {
+                var depsDir = Path.GetDirectoryName(depsFiles[0]);
+                if (!string.IsNullOrEmpty(depsDir))
+                {
+                    var exeFile = FindExecutableInSameDirectory(depsDir);
+                    if (!string.IsNullOrEmpty(exeFile))
+                    {
+                        LoggerHelper.Info($"Found MFA executable via deps.json: {exeFile}");
+                        return exeFile;
+                    }
+                }
+            }
+
+            // 方法3: 查找 MFAAvalonia.runtimeconfig.json 所在目录
+            var runtimeConfigFiles = Directory.GetFiles(directory, "MFAAvalonia.runtimeconfig.json", SearchOption.AllDirectories);
+            if (runtimeConfigFiles.Length > 0)
+            {
+                var configDir = Path.GetDirectoryName(runtimeConfigFiles[0]);
+                if (!string.IsNullOrEmpty(configDir))
+                {
+                    var exeFile = FindExecutableInSameDirectory(configDir);
+                    if (!string.IsNullOrEmpty(exeFile))
+                    {
+                        LoggerHelper.Info($"Found MFA executable via runtimeconfig.json: {exeFile}");
+                        return exeFile;
+                    }
+                }
+            }
+
+            LoggerHelper.Warning($"Could not find MFAAvalonia executable in directory: {directory}");
+            return string.Empty;
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"Error finding MFA executable: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 在指定目录中查找可执行文件（排除 MFAUpdater）
+    /// </summary>
+    private static string FindExecutableInSameDirectory(string directory)
+    {
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return string.Empty;
+
+        // 获取目录中的所有可执行文件
+        IEnumerable<string> exeFiles;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            exeFiles = Directory.GetFiles(directory, "*.exe", SearchOption.TopDirectoryOnly);
+        }
+        else
+        {
+            exeFiles = Directory.GetFiles(directory, "*", SearchOption.TopDirectoryOnly)
+                .Where(f => !Path.HasExtension(f) && IsExecutable(f));
+        }
+
+        // 排除 MFAUpdater 和其他已知的非主程序可执行文件
+        var excludeNames = new[]
+        {
+            "MFAUpdater",
+            "createdump"
+        };
+
+        foreach (var exeFile in exeFiles)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(exeFile);
+            if (excludeNames.Any(e => fileName.Equals(e, StringComparison.OrdinalIgnoreCase))) continue;
+
+            // 检查是否有对应的 .dll 文件（.NET 应用的特征）
+            var correspondingDll = Path.Combine(directory, fileName + ".dll");
+            if (File.Exists(correspondingDll))
+            {
+                return exeFile;
+            }
+        }
+
+        // 如果没有找到有对应 DLL 的可执行文件，返回第一个非排除的可执行文件
+        foreach (var exeFile in exeFiles)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(exeFile);
+            if (!excludeNames.Any(e => fileName.Equals(e, StringComparison.OrdinalIgnoreCase)))
+            {
+                return exeFile;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// 检查文件是否为可执行文件（用于非 Windows 系统）
+    /// </summary>
+    private static bool IsExecutable(string filePath)
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return filePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+
+            // 在 Unix 系统上，检查文件是否有执行权限或是 ELF/Mach-O 格式
+            var fileInfo = new FileInfo(filePath);
+            if (!fileInfo.Exists || fileInfo.Length < 4)
+                return false;
+
+            // 读取文件头来判断是否为可执行文件
+            using var stream = File.OpenRead(filePath);
+            var header = new byte[4];
+            if (stream.Read(header, 0, 4) < 4)
+                return false;
+
+            // ELF 格式 (Linux)
+            if (header[0] == 0x7F && header[1] == 'E' && header[2] == 'L' && header[3] == 'F')
+                return true;
+
+            // Mach-O 格式 (macOS)
+            if ((header[0] == 0xCF && header[1] == 0xFA && header[2] == 0xED && header[3] == 0xFE)
+                || // 64-bit
+                (header[0] == 0xCE && header[1] == 0xFA && header[2] == 0xED && header[3] == 0xFE)
+                || // 32-bit
+                (header[0] == 0xFE && header[1] == 0xED && header[2] == 0xFA && header[3] == 0xCF)
+                || // 64-bit reverse
+                (header[0] == 0xFE && header[1] == 0xED && header[2] == 0xFA && header[3] == 0xCE)) // 32-bit reverse
+                return true;
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
