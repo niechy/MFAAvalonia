@@ -2366,10 +2366,29 @@ public class MaaProcessor
                 }
             }
         }
-
-        // 步骤 3: 释放 MaaTasker（由于已经解除了 AgentClient 的绑定，不会触发 AgentClient 释放）
+        // 步骤 3: 停止并释放 MaaTasker（由于已经解除了 AgentClient 的绑定，不会触发 AgentClient 释放）
         if (maaTasker != null)
         {
+            // 先停止 MaaTasker，等待内部任务完成，避免在任务执行过程中直接 Dispose 导致 handle is null 错误
+            if (maaTasker.IsRunning && !maaTasker.IsStopping)
+            {
+                LoggerHelper.Info($"Stopping MaaTasker before dispose");
+                try
+                {
+
+                    var stopResult = maaTasker.Stop().Wait();
+                    LoggerHelper.Info($"MaaTasker Stop result: {stopResult}");
+                }
+                catch (ObjectDisposedException)
+                {
+                    LoggerHelper.Info("MaaTasker was already disposed during Stop");
+                }
+                catch (Exception e)
+                {
+                    LoggerHelper.Warning($"MaaTasker Stop failed: {e.Message}");
+                }
+            }
+            
             LoggerHelper.Info($"Disposing MaaTasker");
             try
             {
