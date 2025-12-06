@@ -182,7 +182,7 @@ public class AvaloniaMemoryCracker : IDisposable
                 var firstMemory = snapshots[0].Memory;
                 var lastMemory = snapshots[^1].Memory;
 
-                if (firstMemory > 0)
+                if (firstMemory > 200)
                 {
                     var growthRate = (lastMemory - firstMemory) / (double)firstMemory;
 
@@ -236,19 +236,19 @@ public class AvaloniaMemoryCracker : IDisposable
             else if (memoryInfo.TotalMemory > HighMemoryPressureThreshold)
             {
                 // 高压力：强制GC
-                GC.Collect(GC.MaxGeneration,  GCCollectionMode.Forced, blocking: false, compacting:  true);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false, compacting: true);
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
             }
             else if (memoryInfo.TotalMemory > MemoryThresholdBytes)
             {
                 // 中等压力：优化模式GC
-                GC.Collect(GC.MaxGeneration,  GCCollectionMode.Optimized, blocking: false, true);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false, true);
             }
             else
             {
                 // 低压力：仅回收Gen0和Gen1
-                GC.Collect(1,GCCollectionMode.Optimized, blocking: false);
+                GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
             }
         }
         catch (Exception ex)
