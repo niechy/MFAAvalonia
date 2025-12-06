@@ -19,49 +19,58 @@ public class MaaInterfaceSelectOptionConverter(bool serializeAsStringArray) : Js
         object existingValue,
         JsonSerializer serializer)
     {
-        JToken token = JToken.Load(reader);
-        switch (token.Type)
-        {
-            case JTokenType.Array:
-                var firstElement = token.First;
-
-                if (firstElement?.Type == JTokenType.String)
+                JToken token = JToken.Load(reader);
+                switch (token.Type)
                 {
-                    var list = new List<MaaInterface.MaaInterfaceSelectOption>();
-                    foreach (var item in token)
-                    {
-                        list.Add(new MaaInterface.MaaInterfaceSelectOption
+                    case JTokenType.Array:
+                        var firstElement = token.First;
+        
+                        // 处理空数组的情况
+                        if (firstElement == null)
                         {
-                            Name = item.ToString(),
-                            Index = 0
-                        });
-                    }
-
-                    return list;
+                            return new List<MaaInterface.MaaInterfaceSelectOption>();
+                        }
+        
+                        if (firstElement.Type == JTokenType.String)
+                        {
+                            var list = new List<MaaInterface.MaaInterfaceSelectOption>();
+                            foreach (var item in token)
+                            {
+                                list.Add(new MaaInterface.MaaInterfaceSelectOption
+                                {
+                                    Name = item.ToString(),
+                                    Index = 0
+                                });
+                            }
+        
+                            return list;
+                        }
+        
+                        if (firstElement.Type == JTokenType.Object)
+                        {
+                            return token.ToObject<List<MaaInterface.MaaInterfaceSelectOption>>(serializer);
+                        }
+        
+                        // 处理其他数组元素类型（如 null 元素）
+                        LoggerHelper.Warning($"MaaInterfaceSelectOptionConverter: Unexpected array element type {firstElement.Type}, returning empty list.");
+                        return new List<MaaInterface.MaaInterfaceSelectOption>();
+                    case JTokenType.String:
+                        var oName = token.ToObject<string>(serializer);
+                        return new List<MaaInterface.MaaInterfaceSelectOption>
+                        {
+                            new()
+                            {
+                                Name = oName ?? "",
+                                Index = 0
+                            }
+                        };
+                    case JTokenType.None:
+                    case JTokenType.Null:
+                        return new List<MaaInterface.MaaInterfaceSelectOption>();
                 }
-
-                if (firstElement?.Type == JTokenType.Object)
-                {
-                    return token.ToObject<List<MaaInterface.MaaInterfaceSelectOption>>(serializer);
-                }
-
-                break;
-            case JTokenType.String:
-                var oName = token.ToObject<string>(serializer);
-                return new List<MaaInterface.MaaInterfaceSelectOption>
-                {
-                    new()
-                    {
-                        Name = oName ?? "",
-                        Index = 0
-                    }
-                };
-            case JTokenType.None:
-                return null;
-        }
-
-        LoggerHelper.Error($"Invalid JSON format for MaaInterfaceSelectOptionConverter. Unexpected type {objectType}.");
-        return null;
+        
+                LoggerHelper.Warning($"MaaInterfaceSelectOptionConverter: Unexpected token type {token.Type}, returning empty list.");
+                return new List<MaaInterface.MaaInterfaceSelectOption>();
     }
 
     public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
