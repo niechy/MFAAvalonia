@@ -246,18 +246,26 @@ public static class CustomClassLoader
     /// </summary>
     public static void Dispose()
     {
-        if (_watcher != null)
+        try
         {
-            _watcher.EnableRaisingEvents = false;
-            _watcher.Changed -= OnFileChanged;
-            _watcher.Created -= OnFileChanged;
-            _watcher.Deleted -= OnFileChanged;
-            _watcher.Renamed -= OnFileChanged;
-            _watcher.Dispose();
-            _watcher = null;
-            LoggerHelper.Info("File watcher disposed");
+            if (_watcher != null)
+            {
+                _watcher.EnableRaisingEvents = false;
+                _watcher.Changed -= OnFileChanged;
+                _watcher.Created -= OnFileChanged;
+                _watcher.Deleted -= OnFileChanged;
+                _watcher.Renamed -= OnFileChanged;
+                _watcher.Dispose();
+                _watcher = null;
+                LoggerHelper.Info("File watcher disposed");
+            }
+            _customClasses = null;
+            _metadataReferences = null;
         }
-        _customClasses = null;
-        _metadataReferences = null;
+        catch (Exception ex)
+        {
+            //忽略清理过程中的异常，这可能是由于 Microsoft.CodeAnalysis 程序集未加载导致的
+            LoggerHelper.Warning($"CustomClassLoader.Dispose() encountered an error: {ex.Message}");
+        }
     }
 }
