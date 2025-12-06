@@ -425,7 +425,12 @@ public class MaaProcessor
                 Global = MaaProcessor.Global,
                 DisposeOptions = DisposeOptions.All,
             };
-
+            
+            tasker.Releasing += (_, _) =>
+            {
+                tasker.Callback -= HandleCallBack;
+            };
+            
             try
             {
                 var tempMFADir = Path.Combine(AppContext.BaseDirectory, "temp_mfa");
@@ -785,101 +790,8 @@ public class MaaProcessor
             tasker.Global.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
             // tasker.Global.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
 
-            tasker.Callback += (o, args) =>
-            {
-                var jObject = JObject.Parse(args.Details);
-
-                tasker.Callback += (o, args) =>
-                {
-                    var jObject = JObject.Parse(args.Details);
-
-                    var name = jObject["name"]?.ToString() ?? string.Empty;
-                    if (args.Message.StartsWith(MaaMsg.Node.Recognition.Succeeded) || args.Message.StartsWith(MaaMsg.Node.Action.Succeeded))
-                    {
-                        if (jObject["reco_id"] != null)
-                        {
-                            var recoId = Convert.ToInt64(jObject["reco_id"]?.ToString() ?? string.Empty);
-                            if (recoId > 0)
-                            {
-                                //使用 using 确保资源正确释放
-                                using var rect = new MaaRectBuffer();
-                                using var imageBuffer = new MaaImageBuffer();
-                                using var imageListBuffer = new MaaImageListBuffer();
-                                tasker.GetRecognitionDetail(recoId, out string node,
-                                    out var algorithm,
-                                    out var hit,
-                                    rect,
-                                    out var detailJson,
-                                    imageBuffer, imageListBuffer);
-                                var bitmap = imageBuffer.ToBitmap();
-                                if (hit && bitmap != null)
-                                {
-                                    var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
-                                    // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
-                                    if (!ReferenceEquals(newBitmap, bitmap))
-                                    {
-                                        bitmap.Dispose();
-                                    }
-                                    bitmap = newBitmap;
-                                }
-
-                                var bitmapToSet = bitmap;
-                                DispatcherHelper.PostOnMainThread(() =>
-                                {
-                                    // 释放旧的截图
-                                    var oldImage = Instances.ScreenshotViewModel.ScreenshotImage;
-                                    Instances.ScreenshotViewModel.ScreenshotImage = bitmapToSet;
-                                    Instances.ScreenshotViewModel.TaskName = name;
-                                    oldImage?.Dispose();
-                                });
-                            }
-
-                        }
-                        if (jObject["action_id"] != null)
-                        {
-                            var actionId = Convert.ToInt64(jObject["action_id"]?.ToString() ?? string.Empty);
-                            if (actionId > 0)
-                            {
-                                // 使用 using 确保资源正确释放
-                                using var rect = new MaaRectBuffer();
-                                using var imageBuffer = new MaaImageBuffer();
-                                tasker.GetCachedImage(imageBuffer);
-                                var bitmap = imageBuffer.ToBitmap();
-                                tasker.GetActionDetail(actionId, out _, out _, rect, out var isSucceeded, out _);
-                                if (isSucceeded && bitmap != null)
-                                {
-                                    var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
-                                    // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
-                                    if (!ReferenceEquals(newBitmap, bitmap))
-                                    {
-                                        bitmap.Dispose();
-                                    }
-                                    bitmap = newBitmap;
-                                }
-
-                                var bitmapToSet = bitmap;
-                                DispatcherHelper.PostOnMainThread(() =>
-                                {
-                                    // 释放旧的截图
-                                    var oldImage = Instances.ScreenshotViewModel.ScreenshotImage;
-                                    Instances.ScreenshotViewModel.ScreenshotImage = bitmapToSet;
-                                    Instances.ScreenshotViewModel.TaskName = name;
-                                    oldImage?.Dispose();
-                                });
-                            }
-
-                        }
-
-                    }
-
-                    if (jObject.ContainsKey("focus"))
-                    {
-                        _focusHandler ??= new FocusHandler(AutoInitDictionary);
-                        _focusHandler.UpdateDictionary(AutoInitDictionary);
-                        _focusHandler.DisplayFocus(jObject, args.Message, args.Details);
-                    }
-                };
-            };
+            // 注意：只订阅一次回调，避免嵌套订阅导致内存泄漏
+            tasker.Callback += HandleCallBack;
 
             return (tasker, InvalidResource, ShouldRetry);
         }
@@ -899,6 +811,97 @@ public class MaaProcessor
         }
     }
 
+    public void HandleCallBack(object? sender, MaaCallbackEventArgs args)
+    {
+        if (sender is not MaaTasker tasker) return;
+        var jObject = JObject.Parse(args.Details);
+
+        var name = jObject["name"]?.ToString() ?? string.Empty;
+        if (args.Message.StartsWith(MaaMsg.Node.Recognition.Succeeded) || args.Message.StartsWith(MaaMsg.Node.Action.Succeeded))
+        {
+            if (jObject["reco_id"] != null)
+            {
+                var recoId = Convert.ToInt64(jObject["reco_id"]?.ToString() ?? string.Empty);
+                if (recoId > 0)
+                {
+                    //使用 using 确保资源正确释放
+                    using var rect = new MaaRectBuffer();
+                    using var imageBuffer = new MaaImageBuffer();
+                    using var imageListBuffer = new MaaImageListBuffer();
+                    tasker.GetRecognitionDetail(recoId, out string node,
+                        out var algorithm,
+                        out var hit,
+                        rect,
+                        out var detailJson,
+                        imageBuffer, imageListBuffer);
+                    var bitmap = imageBuffer.ToBitmap();
+                    if (hit && bitmap != null)
+                    {
+                        var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                        // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
+                        if (!ReferenceEquals(newBitmap, bitmap))
+                        {
+                            bitmap.Dispose();
+                        }
+                        bitmap = newBitmap;
+                    }
+
+                    var bitmapToSet = bitmap;
+                    DispatcherHelper.PostOnMainThread(() =>
+                    {
+                        // 释放旧的截图
+                        var oldImage = Instances.ScreenshotViewModel.ScreenshotImage;
+                        Instances.ScreenshotViewModel.ScreenshotImage = bitmapToSet;
+                        Instances.ScreenshotViewModel.TaskName = name;
+                        oldImage?.Dispose();
+                    });
+                }
+
+            }
+            if (jObject["action_id"] != null)
+            {
+                var actionId = Convert.ToInt64(jObject["action_id"]?.ToString() ?? string.Empty);
+                if (actionId > 0)
+                {
+                    // 使用 using 确保资源正确释放
+                    using var rect = new MaaRectBuffer();
+                    using var imageBuffer = new MaaImageBuffer();
+                    tasker.GetCachedImage(imageBuffer);
+                    var bitmap = imageBuffer.ToBitmap();
+                    tasker.GetActionDetail(actionId, out _, out _, rect, out var isSucceeded, out _);
+                    if (isSucceeded && bitmap != null)
+                    {
+                        var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                        // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
+                        if (!ReferenceEquals(newBitmap, bitmap))
+                        {
+                            bitmap.Dispose();
+                        }
+                        bitmap = newBitmap;
+                    }
+
+                    var bitmapToSet = bitmap;
+                    DispatcherHelper.PostOnMainThread(() =>
+                    {
+                        // 释放旧的截图
+                        var oldImage = Instances.ScreenshotViewModel.ScreenshotImage;
+                        Instances.ScreenshotViewModel.ScreenshotImage = bitmapToSet;
+                        Instances.ScreenshotViewModel.TaskName = name;
+                        oldImage?.Dispose();
+                    });
+                }
+
+            }
+
+        }
+
+        if (jObject.ContainsKey("focus"))
+        {
+            _focusHandler ??= new FocusHandler(AutoInitDictionary);
+            _focusHandler.UpdateDictionary(AutoInitDictionary);
+            _focusHandler.DisplayFocus(jObject, args.Message, args.Details);
+        }
+    }
     private void HandleInitializationError(Exception e,
         string message,
         bool hasWarning = false,
