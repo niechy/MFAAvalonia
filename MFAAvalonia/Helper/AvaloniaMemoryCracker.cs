@@ -9,6 +9,7 @@ namespace MFAAvalonia.Helper;
 
 /// <summary>
 /// 高性能内存清理器，针对 Avalonia 应用优化
+/// 使用非阻塞 GC 策略，避免 UI卡顿
 /// </summary>
 public class AvaloniaMemoryCracker : IDisposable
 {
@@ -31,11 +32,12 @@ public class AvaloniaMemoryCracker : IDisposable
     private const long MemoryThresholdBytes = 256 * 1024 * 1024; // 256MB
     private const long HighMemoryPressureThreshold = 512 * 1024 * 1024; // 512MB - 高内存压力阈值
     private const long CriticalMemoryPressureThreshold = 1024 * 1024 * 1024; // 1GB - 临界内存压力阈值
+
     // 内存历史记录配置
     private const int MaxHistoryCount = 10;
 
-    // LOH 压缩间隔（每N次清理执行一次LOH压缩）
-    private const int LohCompactionInterval = 5;
+    // LOH 压缩间隔（每N次清理执行一次LOH压缩，仅在空闲时）
+    private const int LohCompactionInterval = 10;
 
     #endregion
 
@@ -80,7 +82,7 @@ public class AvaloniaMemoryCracker : IDisposable
                     if (shouldCleanup)
                     {
                         var beforeMemory = currentMemory;
-                        PerformMemoryCleanup(memoryInfo);
+                        await PerformMemoryCleanupAsync(memoryInfo);
                         var afterMemory = GetCurrentMemoryUsage();
 
                         // 记录内存变化用于诊断
@@ -134,13 +136,13 @@ public class AvaloniaMemoryCracker : IDisposable
     }
 
     /// <summary>计算自适应清理间隔</summary>
-    private int CalculateAdaptiveInterval(int baseInterval, MemoryPressureInfo memoryInfo)
+    private static int CalculateAdaptiveInterval(int baseInterval, MemoryPressureInfo memoryInfo)
     {
         // 根据内存压力调整间隔
         if (memoryInfo.MemoryLoadPercentage > 90)
-            return Math.Max(5, baseInterval / 4); // 高压力：间隔缩短到1/4，最少5秒
+            return Math.Max(10, baseInterval / 2); // 高压力：间隔缩短到1/2，最少10秒
         if (memoryInfo.MemoryLoadPercentage > 70)
-            return Math.Max(10, baseInterval / 2); // 中等压力：间隔缩短到1/2
+            return Math.Max(15, baseInterval * 2 / 3); // 中等压力：间隔缩短到2/3
         if (memoryInfo.MemoryLoadPercentage < 30)
             return baseInterval * 2; // 低压力：间隔延长到2倍
 
@@ -194,53 +196,55 @@ public class AvaloniaMemoryCracker : IDisposable
         }
     }
 
-    /// <summary>执行内存清理策略</summary>
-    private void PerformMemoryCleanup(MemoryPressureInfo memoryInfo)
+    /// <summary>执行内存清理策略（异步，避免阻塞UI）</summary>
+    private async Task PerformMemoryCleanupAsync(MemoryPressureInfo memoryInfo)
     {
         _cleanupCount++;
 
-        // 第一步：根据内存压力选择合适的GC策略
-        PerformGarbageCollection(memoryInfo);
+        // 第一步：使用非阻塞 GC 策略
+        PerformNonBlockingGarbageCollection(memoryInfo);
 
-        // 第二步：平台特定优化
-        PerformPlatformSpecificOptimization();
+        // 第二步：等待一小段时间让 GC 在后台完成
+        await Task.Delay(50, _cts.Token).ConfigureAwait(false);
 
-        // 第三步：定期执行LOH压缩（每N次清理执行一次）
-        if (_cleanupCount % LohCompactionInterval == 0)
+        // 第三步：平台特定优化（在后台线程执行）
+        await Task.Run(PerformPlatformSpecificOptimization, _cts.Token).ConfigureAwait(false);
+
+        // 第四步：定期执行LOH压缩（每N次清理执行一次，且仅在低压力时）
+        if (_cleanupCount % LohCompactionInterval == 0 && memoryInfo.MemoryLoadPercentage < 50)
         {
-            PerformLohCompaction();
+            // LOH 压缩会导致暂停，仅在内存压力较低时执行
+            ScheduleLohCompaction();
         }
     }
 
-    /// <summary>执行垃圾回收</summary>
-    private void PerformGarbageCollection(MemoryPressureInfo memoryInfo)
+    /// <summary>执行非阻塞垃圾回收</summary>
+    private static void PerformNonBlockingGarbageCollection(MemoryPressureInfo memoryInfo)
     {
         try
         {
+            // 关键改进：使用 blocking: false 避免阻塞 UI 线程
+            // compacting: false 避免内存压缩导致的长时间暂停
+
             if (memoryInfo.TotalMemory > CriticalMemoryPressureThreshold)
             {
-                // 临界压力：强制完整GC
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
-                GC.WaitForPendingFinalizers();
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+                // 临界压力：执行完整 GC，但不阻塞
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false, compacting: false);
             }
             else if (memoryInfo.TotalMemory > HighMemoryPressureThreshold)
             {
-                // 高压力：强制GC
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
+                // 高压力：执行 Gen2 GC，不阻塞
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false, compacting: false);
             }
             else if (memoryInfo.TotalMemory > MemoryThresholdBytes)
             {
-                // 中等压力：优化模式GC
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, false, true);
-                GC.WaitForPendingFinalizers();
+                // 中等压力：执行 Gen1 GC
+                GC.Collect(1, GCCollectionMode.Optimized, blocking: false);
             }
             else
             {
-                // 低压力：仅回收Gen0和Gen1
-                GC.Collect(1, GCCollectionMode.Optimized, false);
+                // 低压力：仅执行 Gen0 GC（最快）
+                GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
             }
         }
         catch (Exception ex)
@@ -249,30 +253,30 @@ public class AvaloniaMemoryCracker : IDisposable
         }
     }
 
-    /// <summary>执行LOH（大对象堆）压缩</summary>
-    private void PerformLohCompaction()
+    /// <summary>调度LOH压缩（在下次GC 时执行）</summary>
+    private static void ScheduleLohCompaction()
     {
         try
         {
-            // 设置下次GC时压缩LOH
+            // 仅设置标志，让 GC 在合适的时机自动执行压缩
+            // 不立即触发 GC，避免阻塞
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
-            LoggerHelper.Info("[内存管理]已执行LOH压缩");
+            LoggerHelper.Info("[内存管理]已调度LOH压缩（将在下次GC时执行）");
         }
         catch (Exception ex)
         {
-            LoggerHelper.Info($"[内存管理]LOH压缩异常: {ex.Message}");
+            LoggerHelper.Info($"[内存管理]LOH压缩调度异常: {ex.Message}");
         }
     }
 
     /// <summary>执行平台特定优化</summary>
-    private void PerformPlatformSpecificOptimization()
+    private static void PerformPlatformSpecificOptimization()
     {
         if (OperatingSystem.IsWindows())
         {
             WindowsMemoryOptimization();
         }
-        // Linux和 macOS 的优化通过GC 已经处理
+        // Linux 和 macOS 的优化通过 GC 已经处理
     }
 
     #endregion
@@ -286,10 +290,9 @@ public class AvaloniaMemoryCracker : IDisposable
         {
             var processHandle = GetCurrentProcess();
 
-            // 首先尝试清空工作集
-            EmptyWorkingSet(processHandle);
-
-            // 然后重置工作集大小限制
+            // 重置工作集大小限制，让系统自动管理
+            // 注意：EmptyWorkingSet 可能导致页面错误增加，影响性能
+            //仅使用 SetProcessWorkingSetSize 来提示系统可以回收内存
             SetProcessWorkingSetSize(processHandle, (IntPtr)(-1), (IntPtr)(-1));
         }
         catch (Exception ex)
