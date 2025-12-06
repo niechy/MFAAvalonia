@@ -652,9 +652,10 @@ public static class VersionChecker
         //         shouldShowToast = false;
         //     }
         // });
+        Program.ReleaseMutex();
         var tasks = Instances.TaskQueueViewModel.TaskItemViewModels;
         Instances.RootView.ClearTasks(() => MaaProcessor.Instance.InitializeData(dragItem: tasks));
-
+        
         if (closeDialog)
             Dismiss(sukiToast);
         shouldShowToast = true;
