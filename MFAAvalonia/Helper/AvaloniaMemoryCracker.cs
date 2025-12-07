@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -91,6 +92,9 @@ public class AvaloniaMemoryCracker : IDisposable
 
     // 连续无效清理计数
     private int _ineffectiveCleanupCount;
+
+    // 已注册的可释放资源（用于管理非托管资源）
+    private readonly ConcurrentDictionary<string, WeakReference<IDisposable>> _registeredDisposables = new();
 
     #endregion
 
@@ -529,6 +533,12 @@ public class AvaloniaMemoryCracker : IDisposable
         {
             await Task.Delay(100, _cts.Token).ConfigureAwait(false);
         }
+
+        // 在高内存压力时，清理已失效的弱引用
+        if (intensity >= GcIntensity.Heavy)
+        {
+            CleanupDeadReferences();
+        }
     }
 
     /// <summary>检测用户是否空闲</summary>
@@ -558,6 +568,124 @@ public class AvaloniaMemoryCracker : IDisposable
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 注册一个可释放的资源，在内存清理时会检查并清理已失效的引用
+    /// 使用弱引用避免阻止对象被 GC 回收
+    /// </summary>
+    /// <param name="key">资源的唯一标识符</param>
+    /// <param name="disposable">要注册的可释放资源</param>
+    public void RegisterDisposable(string key, IDisposable disposable)
+    {
+        if (string.IsNullOrEmpty(key) || disposable == null)
+            return;
+
+        _registeredDisposables[key] = new WeakReference<IDisposable>(disposable);
+    }
+
+    /// <summary>
+    /// 取消注册一个可释放的资源
+    /// </summary>
+    /// <param name="key">资源的唯一标识符</param>
+    public void UnregisterDisposable(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return;
+
+        _registeredDisposables.TryRemove(key, out _);
+    }
+
+    /// <summary>
+    /// 强制释放指定的已注册资源
+    /// </summary>
+    /// <param name="key">资源的唯一标识符</param>
+    /// <returns>是否成功释放</returns>
+    public bool ForceDisposeResource(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return false;
+
+        if (_registeredDisposables.TryRemove(key, out var weakRef))
+        {
+            if (weakRef.TryGetTarget(out var disposable))
+            {
+                try
+                {
+                    disposable.Dispose();
+                    LoggerHelper.Info($"[内存管理]已强制释放资源: {key}");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Warning($"[内存管理]释放资源 {key} 时发生异常: {ex.Message}");
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 强制释放所有已注册的资源
+    /// 适用于应用程序退出或需要紧急释放内存的场景
+    /// </summary>
+    public void ForceDisposeAllResources()
+    {
+        var keys = _registeredDisposables.Keys.ToArray();
+        var disposedCount = 0;
+        var failedCount = 0;
+
+        foreach (var key in keys)
+        {
+            if (_registeredDisposables.TryRemove(key, out var weakRef))
+            {
+                if (weakRef.TryGetTarget(out var disposable))
+                {
+                    try
+                    {
+                        disposable.Dispose();
+                        disposedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failedCount++;
+                        LoggerHelper.Warning($"[内存管理]释放资源 {key} 时发生异常: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        if (disposedCount > 0 || failedCount > 0)
+        {
+            LoggerHelper.Info($"[内存管理]强制释放资源完成: 成功 {disposedCount} 个, 失败 {failedCount} 个");
+        }
+    }
+
+    /// <summary>
+    /// 清理已失效的弱引用（对象已被 GC 回收）
+    /// </summary>
+    private void CleanupDeadReferences()
+    {
+        var deadKeys = new List<string>();
+
+        foreach (var kvp in _registeredDisposables)
+        {
+            if (!kvp.Value.TryGetTarget(out _))
+            {
+                deadKeys.Add(kvp.Key);
+            }
+        }
+
+        foreach (var key in deadKeys)
+        {
+            _registeredDisposables.TryRemove(key, out _);
+        }
+
+        if (deadKeys.Count > 0)
+        {
+            LoggerHelper.Info($"[内存管理]清理了 {deadKeys.Count} 个已失效的资源引用");
+        }
     }
 
     /// <summary>执行平台特定优化</summary>
@@ -681,6 +809,9 @@ public class AvaloniaMemoryCracker : IDisposable
         if (disposing)
         {
             _cts.Cancel();
+
+            // 释放所有已注册的可释放资源
+            ForceDisposeAllResources();
 
             // 唤醒 GC 线程让它退出
             _gcTrigger.Set();

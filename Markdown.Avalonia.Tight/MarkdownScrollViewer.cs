@@ -1665,8 +1665,10 @@ namespace Markdown.Avalonia
                         if (_useVirtualization && _document is DocumentRootElement rootElement)
                         {
                             // 虚拟化模式：使用 VirtualizingMarkdownPanel
-                            _virtualizingPanel = new VirtualizingMarkdownPanel();
-                            _virtualizingPanel.SelectionHelper = this;
+                            _virtualizingPanel = new VirtualizingMarkdownPanel
+                            {
+                                SelectionHelper = this
+                            };
                             _virtualizingPanel.SetElements(rootElement.Children);
                             _virtualizingPanel.Classes.Add("Markdown_Avalonia_MarkdownViewer");
 
