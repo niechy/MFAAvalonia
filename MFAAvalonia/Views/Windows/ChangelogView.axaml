@@ -46,26 +46,22 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ScrollViewer
-            Grid.Row="0"
-            HorizontalScrollBarVisibility="Disabled"
-            VerticalScrollBarVisibility="Auto">
-            <full:MarkdownScrollViewer
-                Focusable="True"
-                Margin="10,0,10,0"
-                Markdown="{Binding AnnouncementInfo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-                <full:MarkdownScrollViewer.Engine>
-                    <extensions:MarkdownExtension />
-                </full:MarkdownScrollViewer.Engine>
-                <full:MarkdownScrollViewer.Plugins>
-                    <StaticResource ResourceKey="MdXamlPlugin" />
-                </full:MarkdownScrollViewer.Plugins>
-                <full:MarkdownScrollViewer.Styles>
-                    <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
-                    <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
-                </full:MarkdownScrollViewer.Styles>
-            </full:MarkdownScrollViewer>
-        </ScrollViewer>
+
+        <full:MarkdownScrollViewer Grid.Row="0" x:Name="Viewer"
+                                   Focusable="True"
+                                   Margin="10,0,10,0"
+                                   Markdown="{Binding AnnouncementInfo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+            <full:MarkdownScrollViewer.Engine>
+                <extensions:MarkdownExtension />
+            </full:MarkdownScrollViewer.Engine>
+            <full:MarkdownScrollViewer.Plugins>
+                <StaticResource ResourceKey="MdXamlPlugin" />
+            </full:MarkdownScrollViewer.Plugins>
+            <full:MarkdownScrollViewer.Styles>
+                <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
+                <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
+            </full:MarkdownScrollViewer.Styles>
+        </full:MarkdownScrollViewer>
 
 
         <Grid Grid.Row="1">

@@ -287,6 +287,13 @@ public partial class AnnouncementViewModel : ViewModelBase
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
+        // 清理视图引用
+        _view = null;
+        
+        // 清理公告内容
+        AnnouncementContent = string.Empty;
+        SelectedAnnouncement = null;
+        AnnouncementItems.Clear();
         _loadCts = null;
     }
 }

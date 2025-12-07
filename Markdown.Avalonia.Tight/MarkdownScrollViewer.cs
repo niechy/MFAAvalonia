@@ -110,15 +110,10 @@ namespace Markdown.Avalonia
         /// </summary>
         private static readonly Regex s_newlineSplitter = new(@"\r\n|\r|\n", RegexOptions.Compiled);
 
-        #region 文档缓存
+        #region 内容哈希（用于检测内容变化）
 
         /// <summary>
-        /// 获取文档缓存管理器实例
-        /// </summary>
-        public static MarkdownDocumentCache DocumentCache => MarkdownDocumentCache.Instance;
-
-        /// <summary>
-        /// 计算 Markdown 内容的哈希值
+        /// 计算 Markdown 内容的哈希值（用于检测内容是否变化）
         /// </summary>
         private static string ComputeContentHash(string content)
         {
@@ -126,43 +121,29 @@ namespace Markdown.Avalonia
         }
 
         /// <summary>
-        /// 尝试从缓存获取已解析的文档
+        /// 清除文档缓存（已弃用：缓存 Avalonia 控件会导致内存泄漏）
         /// </summary>
-        private static DocumentElement? TryGetFromCache(string contentHash)
-        {
-            DocumentCache.TryGet(contentHash, out var document);
-            return document;
-        }
-
-        /// <summary>
-        /// 将解析后的文档添加到缓存
-        /// </summary>
-        private static void AddToCache(string contentHash, DocumentElement document, string markdownContent)
-        {
-            DocumentCache.Add(contentHash, document, markdownContent);
-        }
-
-        /// <summary>
-        /// 清除文档缓存
-        /// </summary>
+        [Obsolete("文档缓存已禁用，因为缓存 Avalonia 控件会导致内存泄漏")]
         public static void ClearDocumentCache()
         {
-            DocumentCache.Clear();
+            // 不再使用缓存
         }
 
         /// <summary>
-        /// 获取当前缓存大小
+        /// 获取当前缓存大小（已弃用）
         /// </summary>
-        public static int CacheSize => DocumentCache.Count;
+        [Obsolete("文档缓存已禁用，因为缓存 Avalonia 控件会导致内存泄漏")]
+        public static int CacheSize => 0;
 
         /// <summary>
-        /// 获取缓存统计信息
+        /// 获取缓存统计信息（已弃用）
         /// </summary>
+        [Obsolete("文档缓存已禁用，因为缓存 Avalonia 控件会导致内存泄漏")]
         public static CacheStatistics GetCacheStatistics()
         {
-            return DocumentCache.GetStatistics();
+            return new CacheStatistics();
         }
-
+        
         #endregion
 
         #region 渐进式渲染
@@ -251,15 +232,58 @@ namespace Markdown.Avalonia
 
             static bool nvl(bool? vl) => vl.HasValue && vl.Value;
 
-            // 使用命名方法而非匿名 lambda，便于取消订阅
-            _viewer.ScrollChanged += Viewer_ScrollChanged;
-            _viewer.PointerPressed += _viewer_PointerPressed;
-            _viewer.PointerMoved += _viewer_PointerMoved;
-            _viewer.PointerReleased += _viewer_PointerReleased;
-
-            _wrapper = new Wrapper(this);
-            _viewer.Content = _wrapper;
-        }
+                                    // 使用命名方法而非匿名 lambda，便于取消订阅
+                                    _viewer.ScrollChanged += Viewer_ScrollChanged;
+                                    _viewer.PointerPressed += _viewer_PointerPressed;
+                                    _viewer.PointerMoved += _viewer_PointerMoved;
+                                    _viewer.PointerReleased += _viewer_PointerReleased;
+                        
+                                    _wrapper = new Wrapper(this);
+                                    _viewer.Content = _wrapper;
+                        
+                                    // 订阅卸载事件以清理资源
+                                    DetachedFromVisualTree += OnDetachedFromVisualTree;
+                                }
+                        
+                                /// <summary>
+                                /// 当控件从视觉树中移除时清理资源
+                                /// </summary>
+                                private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+                                {
+                                    Cleanup();
+                                }
+                        
+                                /// <summary>
+                                /// 清理所有资源，取消事件订阅
+                                /// </summary>
+                                public void Cleanup()
+                                {
+                                    // 取消渐进式渲染
+                                    CancelProgressiveRendering();
+                        
+                                    // 取消事件订阅
+                                    DetachedFromVisualTree -= OnDetachedFromVisualTree;
+                                    _viewer.ScrollChanged -= Viewer_ScrollChanged;
+                                    _viewer.PointerPressed -= _viewer_PointerPressed;
+                                    _viewer.PointerMoved -= _viewer_PointerMoved;
+                                    _viewer.PointerReleased -= _viewer_PointerReleased;
+                        
+                                    // 清理文档内容
+                                    if (_wrapper.Document?.Control is Control contentControl)
+                                    {
+                                        contentControl.SizeChanged -= OnViewportSizeChanged;
+                                    }
+                                    _wrapper.Document = null;
+                                    _document = null;
+                                    _headerRects = null;
+                                    _currentContentHash = null;
+                        
+                                    // 清理样式引用
+                                    if (_markdownStyle != null)
+                                    {
+                                        Styles.Remove(_markdownStyle);
+                                    }
+                                }
 
         #region text selection
 
@@ -499,12 +523,10 @@ namespace Markdown.Avalonia
                 }
 
                 var ofst = _viewer.Offset;
-                DocumentElement? newDocument = null;
 
-                // 注意：由于 Avalonia 控件不能被多个父级共享，我们不再使用缓存的文档进行增量更新
-                // 每次内容变化都需要重新解析以获得新的控件实例，这样可以避免控件复用导致的显示问题
+                // 注意：不再使用文档缓存，因为缓存 Avalonia 控件会导致内存泄漏
+                // Avalonia 控件持有对样式系统的引用，缓存这些控件会阻止 GC 回收
 
-                // 重新解析内容
                 // 检查是否需要渐进式渲染
                 var lines = markdownContent.Split(new[]
                 {
@@ -521,10 +543,10 @@ namespace Markdown.Avalonia
                     return;
                 }
 
-                newDocument = _engine.TransformElement(markdownContent);
+                var newDocument = _engine.TransformElement(markdownContent);
                 newDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
 
-                // 全量更新（不使用增量更新，避免控件复用导致的显示问题）
+                // 全量更新
                 _document = newDocument;
                 _currentContentHash = contentHash;
 
@@ -629,7 +651,7 @@ namespace Markdown.Avalonia
                 {
                     // 渲染完成
                     _currentContentHash = contentHash;
-                    AddToCache(contentHash, _document, fullContent);
+                    // 不再缓存文档，因为缓存 Avalonia 控件会导致内存泄漏
                     _isProgressiveRendering = false;
                     ProgressiveRenderingCompleted?.Invoke(this, EventArgs.Empty);
                 }
@@ -646,7 +668,7 @@ namespace Markdown.Avalonia
                     fallbackDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
                     _document = fallbackDocument;
                     _currentContentHash = contentHash;
-                    AddToCache(contentHash, _document, fullContent);
+                    // 不再缓存文档，因为缓存 Avalonia 控件会导致内存泄漏
 
                     if (_wrapper.Document?.Control is Control oldCtrl)
                     {
@@ -820,10 +842,7 @@ namespace Markdown.Avalonia
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         _currentContentHash = contentHash;
-                        if (_document != null)
-                        {
-                            AddToCache(contentHash, _document, fullContent);
-                        }
+                        // 不再缓存文档，因为缓存 Avalonia 控件会导致内存泄漏
                         _isProgressiveRendering = false;
                         ProgressiveRenderingCompleted?.Invoke(this, EventArgs.Empty);
                     }, DispatcherPriority.Background);
