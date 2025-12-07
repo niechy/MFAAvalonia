@@ -37,8 +37,8 @@
         <ApplicationRevision>0</ApplicationRevision>
         <ApplicationVersion>2.1.4</ApplicationVersion>
         <Version>1.1</Version>
-        <FileVersion>2.1.4</FileVersion>
-        <AssemblyVersion>2.1.4</AssemblyVersion>
+        <FileVersion>2.1.5</FileVersion>
+        <AssemblyVersion>2.1.5</AssemblyVersion>
         <InformationalVersion>0.0.1</InformationalVersion>
     </PropertyGroup>
 
@@ -85,7 +85,7 @@
         <PackageReference Include="Maa.Framework.Binding.Extensions" Version="5.1.0-preview.3" />
         <PackageReference Include="Maa.Framework.Binding.Native" Version="5.1.0-preview.3" />
         <PackageReference Include="Maa.Framework.Native" Version="5.1.0-preview.3" />
-        <PackageReference Include="Maa.Framework.Runtimes" Version="5.2.0-beta.2" />
+        <PackageReference Include="Maa.Framework.Runtimes" Version="5.2.0" />
                 <PackageReference Include="MailKit" Version="4.14.1" />
         		<PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.0.0" />
         		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
