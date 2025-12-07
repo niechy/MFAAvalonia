@@ -1,9 +1,11 @@
 ﻿using Avalonia.Platform;
 using Avalonia;
+using Avalonia.Styling;
 using AvaloniaEdit;
 using AvaloniaEdit.Highlighting.Xshd;
 using AvaloniaEdit.Highlighting;
 using AvaloniaEdit.TextMate;
+using SukiUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,6 +14,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using System.Linq;
+using System.Threading;
 using TextMateSharp.Grammars;
 
 namespace Markdown.Avalonia.SyntaxHigh
@@ -22,13 +25,16 @@ namespace Markdown.Avalonia.SyntaxHigh
 
         private Dictionary<string, string> _nameSolver;
         private Dictionary<string, IHighlightingDefinition> _definitions;
-        // TextMate 相关的静态缓存
-        private static readonly Lazy<RegistryOptions> _registryOptions = new Lazy<RegistryOptions>(() => new RegistryOptions(ThemeName.DarkPlus));
+        // TextMate 相关的缓存 - 支持主题切换
+        private static RegistryOptions _registryOptions = new(ThemeName.LightPlus);
+        private static ThemeName _currentThemeName = ThemeName.LightPlus;
 
-        // 缓存已安装 TextMate 的编辑器，避免重复安装
-        private static readonly Dictionary<TextEditor, TextMate.Installation> _textMateInstallations =
-            new Dictionary<TextEditor, TextMate.Installation>();
-        private static readonly object _installLock = new object();
+        // 缓存已安装 TextMate 的编辑器及其对应的 scopeName，用于主题切换时重新应用高亮
+        private static readonly Dictionary<TextEditor, (TextMate.Installation Installation, string ScopeName)> _textMateInstallations =
+            new();
+        private static readonly Lock _installLock = new();
+        // 是否已订阅主题变更事件
+        private static bool _isThemeChangeSubscribed = false;
 
         public SyntaxHighlightProvider(ObservableCollection<Alias> aliases)
         {
@@ -38,6 +44,90 @@ namespace Markdown.Avalonia.SyntaxHigh
 
             _aliases.CollectionChanged += (s, e) => AliasesCollectionChanged(e);
             AliasesCollectionChanged(null);
+
+            // 初始化 TextMate 主题并订阅 SukiUI 主题变更事件
+            InitializeAndSubscribeTheme();
+        }
+
+        /// <summary>
+        /// 初始化 TextMate 主题并订阅 SukiUI 主题变更事件
+        /// </summary>
+        private static void InitializeAndSubscribeTheme()
+        {
+            if (_isThemeChangeSubscribed)
+                return;
+            try
+            {
+                var sukiTheme = SukiTheme.GetInstance();
+
+                // 根据当前 SukiUI 主题设置 TextMate 主题
+                var newThemeName = sukiTheme.ActiveBaseTheme == ThemeVariant.Dark ? ThemeName.DarkPlus : ThemeName.LightPlus;
+                if (newThemeName != _currentThemeName)
+                {
+                    _currentThemeName = newThemeName;
+                    _registryOptions = new RegistryOptions(_currentThemeName);
+                }
+
+                // 订阅主题变更事件
+                sukiTheme.OnBaseThemeChanged += OnSukiThemeChanged;
+                _isThemeChangeSubscribed = true;
+            }
+            catch
+            {
+                // 如果无法获取 SukiTheme 实例，使用默认浅色主题
+            }
+        }
+
+        /// <summary>
+        /// SukiUI 主题变更时的处理
+        /// </summary>
+        private static void OnSukiThemeChanged(ThemeVariant themeVariant)
+        {
+            var newThemeName = themeVariant == ThemeVariant.Dark ? ThemeName.Dark : ThemeName.Light;
+
+            if (newThemeName == _currentThemeName)
+                return;
+
+            _currentThemeName = newThemeName;
+            _registryOptions = new RegistryOptions(_currentThemeName);
+
+            // 更新所有已安装的 TextMate 编辑器的主题
+            UpdateAllTextMateThemes();
+        }
+
+        /// <summary>
+        /// 更新所有已安装 TextMate 的编辑器的主题
+        /// </summary>
+        private static void UpdateAllTextMateThemes()
+        {
+            lock (_installLock)
+            {
+                // 收集需要更新的编辑器及其 scopeName
+                var editorsToUpdate = _textMateInstallations.ToList();
+
+                foreach (var kvp in editorsToUpdate)
+                {
+                    var editor = kvp.Key;
+                    var scopeName = kvp.Value.ScopeName;
+
+                    try
+                    {
+                        // 释放旧的安装
+                        kvp.Value.Installation.Dispose();
+                        _textMateInstallations.Remove(editor);
+
+                        // 使用新的 RegistryOptions 重新安装 TextMate
+                        var newInstallation = editor.InstallTextMate(_registryOptions);
+                        newInstallation.SetGrammar(scopeName);
+                        _textMateInstallations[editor] = (newInstallation, scopeName);
+                    }
+                    catch
+                    {
+                        // 忽略错误，编辑器可能已被释放
+                        _textMateInstallations.Remove(editor);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -93,10 +183,11 @@ namespace Markdown.Avalonia.SyntaxHigh
                 lock (_installLock)
                 {
                     // 检查是否已经安装过 TextMate
-                    if (!_textMateInstallations.TryGetValue(editor, out var installation))
+                    if (!_textMateInstallations.TryGetValue(editor, out var cached))
                     {
-                        installation = editor.InstallTextMate(_registryOptions.Value);
-                        _textMateInstallations[editor] = installation;
+                        var installation = editor.InstallTextMate(_registryOptions);
+                        installation.SetGrammar(scopeName);
+                        _textMateInstallations[editor] = (installation, scopeName);
 
                         // 当编辑器被卸载时清理缓存
                         editor.DetachedFromVisualTree += (s, e) =>
@@ -105,14 +196,21 @@ namespace Markdown.Avalonia.SyntaxHigh
                             {
                                 if (_textMateInstallations.TryGetValue(editor, out var inst))
                                 {
-                                    inst.Dispose();
+                                    inst.Installation.Dispose();
                                     _textMateInstallations.Remove(editor);
                                 }
                             }
                         };
                     }
-
-                    installation.SetGrammar(scopeName);
+                    else
+                    {
+                        // 如果已安装但 scopeName 不同，更新语法
+                        if (cached.ScopeName != scopeName)
+                        {
+                            cached.Installation.SetGrammar(scopeName);
+                            _textMateInstallations[editor] = (cached.Installation, scopeName);
+                        }
+                    }
                 }
             }
             catch (Exception)
@@ -338,10 +436,10 @@ namespace Markdown.Avalonia.SyntaxHigh
             // 尝试通过 RegistryOptions 获取
             try
             {
-                var language = _registryOptions.Value.GetLanguageByExtension("." + lang);
+                var language = _registryOptions.GetLanguageByExtension("." + lang);
                 if (language != null)
                 {
-                    return _registryOptions.Value.GetScopeByLanguageId(language.Id);
+                    return _registryOptions.GetScopeByLanguageId(language.Id);
                 }
             }
             catch

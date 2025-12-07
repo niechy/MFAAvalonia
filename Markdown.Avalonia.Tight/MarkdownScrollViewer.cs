@@ -17,6 +17,7 @@ using Markdown.Avalonia.StyleCollections;
 using Markdown.Avalonia.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -125,11 +126,15 @@ namespace Markdown.Avalonia
             AvaloniaProperty.Register<MarkdownScrollViewer, bool>(
                 nameof(SaveScrollValueWhenContentUpdated),
                 defaultValue: false);
-
         public static readonly StyledProperty<bool> EnableProgressiveRenderingProperty =
             AvaloniaProperty.Register<MarkdownScrollViewer, bool>(
                 nameof(EnableProgressiveRendering),
                 defaultValue: true);
+
+        public static readonly StyledProperty<bool> EnableVirtualizationProperty =
+            AvaloniaProperty.Register<MarkdownScrollViewer, bool>(
+                nameof(EnableVirtualization),
+                defaultValue: false); // 默认关闭虚拟化，因为可能影响文本选择
 
         public static readonly StyledProperty<int> InitialRenderLinesProperty =
             AvaloniaProperty.Register<MarkdownScrollViewer, int>(
@@ -139,12 +144,12 @@ namespace Markdown.Avalonia
         public static readonly StyledProperty<int> ProgressiveRenderBatchSizeProperty =
             AvaloniaProperty.Register<MarkdownScrollViewer, int>(
                 nameof(ProgressiveRenderBatchSize),
-                defaultValue: 200); // 每批次渲染200行，加快渲染速度
+                defaultValue: 500); // 每批次渲染500行，加快渲染速度
 
         public static readonly StyledProperty<int> ProgressiveRenderDelayMsProperty =
             AvaloniaProperty.Register<MarkdownScrollViewer, int>(
                 nameof(ProgressiveRenderDelayMs),
-                defaultValue: 10); // 减少延迟，加快渲染
+                defaultValue: 1); // 最小延迟，让 UI 有机会响应
 
         public static readonly AvaloniaProperty<Vector> ScrollValueProperty =
             AvaloniaProperty.RegisterDirect<MarkdownScrollViewer, Vector>(
@@ -230,6 +235,21 @@ namespace Markdown.Avalonia
         /// 渐进式渲染进度变化事件
         /// </summary>
         public event EventHandler<ProgressiveRenderingProgressEventArgs>? ProgressiveRenderingProgress;
+
+        /// <summary>
+        /// 已渲染的行数（用于增量渲染）
+        /// </summary>
+        private int _renderedLineCount;
+
+        /// <summary>
+        /// 当前渲染的所有行
+        /// </summary>
+        private string[]? _currentLines;
+
+        /// <summary>
+        /// 渲染性能计时器
+        /// </summary>
+        private readonly Stopwatch _renderStopwatch = new Stopwatch();
 
         #endregion
 
@@ -555,6 +575,15 @@ namespace Markdown.Avalonia
         }
 
         /// <summary>
+        /// 是否启用虚拟化
+        /// </summary>
+        public bool EnableVirtualization
+        {
+            get => GetValue(EnableVirtualizationProperty);
+            set => SetValue(EnableVirtualizationProperty, value);
+        }
+
+        /// <summary>
         /// 初始渲染的行数
         /// </summary>
         public int InitialRenderLines
@@ -598,6 +627,8 @@ namespace Markdown.Avalonia
                 _progressiveRenderCts = null;
             }
             _isProgressiveRendering = false;
+            _renderedLineCount = 0;
+            _currentLines = null;
         }
 
         private void UpdateMarkdown()
@@ -692,9 +723,8 @@ namespace Markdown.Avalonia
                 CreateErrorDocument($"Markdown 内容解析失败: {errorMsg}");
             }
         }
-
         /// <summary>
-        /// 启动渐进式渲染
+        /// 启动渐进式渲染（优化版本）
         /// </summary>
         private void StartProgressiveRendering(string fullContent, string[] lines, string contentHash, Vector savedOffset)
         {
@@ -707,12 +737,16 @@ namespace Markdown.Avalonia
 
             _progressiveRenderCts = new CancellationTokenSource();
             _isProgressiveRendering = true;
+            _currentLines = lines;
+            _renderedLineCount = 0;
 
             var ct = _progressiveRenderCts.Token;
 
             // 计算安全的初始渲染行数（不在代码块中间分割）
             int initialLines = FindSafeBreakPoint(lines, Math.Min(InitialRenderLines, lines.Length));
             string initialContent = string.Join("\n", lines.Take(initialLines));
+
+            _renderStopwatch.Restart();
 
             try
             {
@@ -723,6 +757,7 @@ namespace Markdown.Avalonia
                 // 更新显示
                 _document = initialDocument;
                 _currentContentHash = null; // 暂时不设置哈希，因为还没渲染完
+                _renderedLineCount = initialLines;
 
                 if (_wrapper.Document?.Control is Control oldContentControl)
                 {
@@ -741,20 +776,24 @@ namespace Markdown.Avalonia
                 if (SaveScrollValueWhenContentUpdated)
                     _viewer.Offset = savedOffset;
 
+                var elapsed = _renderStopwatch.ElapsedMilliseconds;
+                System.Diagnostics.Debug.WriteLine($"初始渲染 {initialLines} 行，耗时 {elapsed}ms");
+
                 // 触发进度事件
                 ProgressiveRenderingProgress?.Invoke(this, new ProgressiveRenderingProgressEventArgs(initialLines, lines.Length));
 
                 // 如果还有剩余内容，异步加载
                 if (initialLines < lines.Length)
                 {
-                    _ = ContinueProgressiveRenderingReplaceAsync(lines, initialLines, contentHash, fullContent, ct);
+                    // 使用优化的增量渲染
+                    _ = ContinueProgressiveRenderingOptimizedAsync(lines, initialLines, contentHash, ct);
                 }
                 else
                 {
                     // 渲染完成
                     _currentContentHash = contentHash;
-                    // 不再缓存文档，因为缓存 Avalonia 控件会导致内存泄漏
                     _isProgressiveRendering = false;
+                    _renderStopwatch.Stop();
                     ProgressiveRenderingCompleted?.Invoke(this, EventArgs.Empty);
                 }
             }
@@ -762,6 +801,7 @@ namespace Markdown.Avalonia
             {
                 System.Diagnostics.Debug.WriteLine($"渐进式渲染初始部分失败: {ex.Message}");
                 _isProgressiveRendering = false;
+                _renderStopwatch.Stop();
 
                 // 回退到普通渲染
                 try
@@ -770,7 +810,6 @@ namespace Markdown.Avalonia
                     fallbackDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
                     _document = fallbackDocument;
                     _currentContentHash = contentHash;
-                    // 不再缓存文档，因为缓存 Avalonia 控件会导致内存泄漏
 
                     if (_wrapper.Document?.Control is Control oldCtrl)
                     {
@@ -796,6 +835,7 @@ namespace Markdown.Avalonia
                 }
             }
         }
+
 
         /// <summary>
         /// 代码块开始标记的正则表达式（匹配 ``` 或 ~~~，可能带语言标识）
@@ -877,9 +917,149 @@ namespace Markdown.Avalonia
             // 如果目标行不在代码块内，返回目标行
             return targetLine;
         }
+        /// <summary>
+        /// 异步继续渐进式渲染（优化版本）
+        /// 使用增量追加模式，避免每次重新解析整个内容
+        /// </summary>
+        private async Task ContinueProgressiveRenderingOptimizedAsync(string[] lines, int startLine, string contentHash, CancellationToken ct)
+        {
+            int currentLine = startLine;
+            int batchSize = ProgressiveRenderBatchSize;
+            int delayMs = ProgressiveRenderDelayMs;
+            int totalLines = lines.Length;
+
+            // 动态调整批次大小
+            int adaptiveBatchSize = batchSize;
+
+            try
+            {
+                while (currentLine < totalLines && !ct.IsCancellationRequested)
+                {
+                    // 使用 Task.Yield 而非 Task.Delay，减少延迟
+                    if (delayMs > 0)
+                    {
+                        await Task.Delay(delayMs, ct);
+                    }
+                    else
+                    {
+                        await Task.Yield();
+                    }
+
+                    if (ct.IsCancellationRequested)
+                        break;
+
+                    // 计算这一批次要渲染到的行数（使用安全分割点）
+                    int targetEndLine = Math.Min(currentLine + adaptiveBatchSize, totalLines);
+                    int endLine = FindSafeBreakPoint(lines, targetEndLine);
+
+                    // 如果安全分割点没有前进，强制前进到目标位置或文档末尾
+                    if (endLine <= currentLine)
+                    {
+                        endLine = Math.Min(targetEndLine, totalLines);
+                    }
+
+                    var batchStopwatch = Stopwatch.StartNew();
+
+                    // 尝试使用增量追加模式
+                    bool useIncremental = _document is DocumentRootElement;
+
+                    // 在UI线程上更新
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (ct.IsCancellationRequested)
+                            return;
+
+                        try
+                        {
+                            if (useIncremental && _document is DocumentRootElement rootElement)
+                            {
+                                // 增量模式：只解析新增的部分
+                                string incrementalContent = string.Join("\n", lines.Skip(currentLine).Take(endLine - currentLine));
+                                var incrementalElements = _engine.ParseGamutElement(incrementalContent, new Parsers.ParseStatus(true));
+                                rootElement.AppendElements(incrementalElements);
+                                _renderedLineCount = endLine;
+                            }
+                            else
+                            {
+                                // 回退到替换模式
+                                string contentSoFar = string.Join("\n", lines.Take(endLine));
+                                var newDocument = _engine.TransformElement(contentSoFar);
+                                newDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+                                ReplaceDocument(newDocument);
+                                _renderedLineCount = endLine;
+                            }
+
+                            _headerRects = null;
+
+                            // 触发进度事件
+                            ProgressiveRenderingProgress?.Invoke(this, new ProgressiveRenderingProgressEventArgs(endLine, totalLines));
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"增量渲染批次失败: {ex.Message}，回退到替换模式");
+                            // 回退到替换模式
+                            try
+                            {
+                                string contentSoFar = string.Join("\n", lines.Take(endLine));
+                                var newDocument = _engine.TransformElement(contentSoFar);
+                                newDocument.Control.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+                                ReplaceDocument(newDocument);
+                                _renderedLineCount = endLine;
+                            }
+                            catch (Exception fallbackEx)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"替换模式也失败: {fallbackEx.Message}");
+                            }
+                        }
+                    }, DispatcherPriority.Background, ct);
+
+                    batchStopwatch.Stop();
+                    var batchTime = batchStopwatch.ElapsedMilliseconds;
+
+                    // 动态调整批次大小：如果渲染很快，增加批次大小；如果很慢，减少批次大小
+                    if (batchTime < 16) // 小于一帧的时间（60fps）
+                    {
+                        adaptiveBatchSize = Math.Min(adaptiveBatchSize * 2, 2000); // 最大2000行
+                    }
+                    else if (batchTime > 50) // 超过50ms
+                    {
+                        adaptiveBatchSize = Math.Max(adaptiveBatchSize / 2, 100); // 最小100行
+                    }
+
+                    currentLine = endLine;
+                }
+
+                // 渲染完成
+                if (!ct.IsCancellationRequested)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        _currentContentHash = contentHash;
+                        _isProgressiveRendering = false;
+                        _renderStopwatch.Stop();
+                        var totalTime = _renderStopwatch.ElapsedMilliseconds;
+                        System.Diagnostics.Debug.WriteLine($"渐进式渲染完成，总计 {totalLines} 行，耗时 {totalTime}ms");
+                        ProgressiveRenderingCompleted?.Invoke(this, EventArgs.Empty);
+                    }, DispatcherPriority.Background);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine("渐进式渲染被取消");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"渐进式渲染异常: {ex.Message}");
+            }
+            finally
+            {
+                _isProgressiveRendering = false;
+                _renderStopwatch.Stop();
+            }
+        }
 
         /// <summary>
-        /// 异步继续渐进式渲染（替换模式）
+        /// 异步继续渐进式渲染（替换模式 - 作为回退方案）
         /// 每次重新解析从开始到当前位置的所有内容，确保代码块等结构完整
         /// </summary>
         private async Task ContinueProgressiveRenderingReplaceAsync(string[] lines, int startLine, string contentHash, string fullContent, CancellationToken ct)
@@ -893,7 +1073,14 @@ namespace Markdown.Avalonia
                 while (currentLine < lines.Length && !ct.IsCancellationRequested)
                 {
                     // 等待一小段时间，让UI有机会响应
-                    await Task.Delay(delayMs, ct);
+                    if (delayMs > 0)
+                    {
+                        await Task.Delay(delayMs, ct);
+                    }
+                    else
+                    {
+                        await Task.Yield();
+                    }
 
                     if (ct.IsCancellationRequested)
                         break;
@@ -944,7 +1131,6 @@ namespace Markdown.Avalonia
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         _currentContentHash = contentHash;
-                        // 不再缓存文档，因为缓存 Avalonia 控件会导致内存泄漏
                         _isProgressiveRendering = false;
                         ProgressiveRenderingCompleted?.Invoke(this, EventArgs.Empty);
                     }, DispatcherPriority.Background);

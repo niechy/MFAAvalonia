@@ -26,9 +26,10 @@
       <PackageReference Include="TextMateSharp.Grammars" Version="1.0.70" />
     </ItemGroup>
   
-  <ItemGroup>
-    <ProjectReference Include="..\Markdown.Avalonia.Tight\Markdown.Avalonia.Tight.csproj" PrivateAssets="All" />
-  </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Markdown.Avalonia.Tight\Markdown.Avalonia.Tight.csproj" PrivateAssets="All" />
+      <ProjectReference Include="..\SukiUI\SukiUI.csproj" />
+    </ItemGroup>
     <PropertyGroup>
         <NoWarn>CS0618;CS8602;CS8618;NETSDK1206;CS8524;CS8604;CS0067;CS0219;CS0612;CS8629;CS8619</NoWarn>
     </PropertyGroup>
