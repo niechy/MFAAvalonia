@@ -317,12 +317,13 @@ namespace Markdown.Avalonia
             _viewer.PointerReleased += _viewer_PointerReleased;
 
             _wrapper = new Wrapper(this);
+            _wrapper.UseVirtualization = EnableVirtualization;
             _viewer.Content = _wrapper;
 
             // 订阅卸载事件以清理资源
             DetachedFromVisualTree += OnDetachedFromVisualTree;
         }
-
+        
         /// <summary>
         /// 当控件从视觉树中移除时清理资源
         /// </summary>
@@ -411,26 +412,33 @@ namespace Markdown.Avalonia
             if (_document is null) return;
             if (!SelectionEnabled) return;
 
-            var point = e.GetCurrentPoint(_document.Control);
-            if (point.Properties.IsLeftButtonPressed && _document is not null)
-            {
-                _isLeftButtonPressed = true;
-                _startPoint = point.Position;
-                _document.Select(_startPoint, point.Position);
+            // 获取用于坐标计算的控件（虚拟化模式下使用虚拟化面板）
+            var targetControl = GetSelectionTargetControl();
+            if (targetControl == null) return;
 
-                this.Focus();
-            }
+            var point = e.GetCurrentPoint(targetControl);
+                        if (point.Properties.IsLeftButtonPressed)
+                        {
+                            _isLeftButtonPressed = true;
+                            _startPoint = point.Position;
+                            PerformSelection(_startPoint, point.Position);
+            
+                            this.Focus();
+                        }
         }
 
         private void _viewer_PointerMoved(object? sender, PointerEventArgs e)
         {
             if (_document is null) return;
 
-            var point = e.GetCurrentPoint(_document.Control);
+            // 获取用于坐标计算的控件
+            var targetControl = GetSelectionTargetControl();
+            if (targetControl == null) return;
+
+            var point = e.GetCurrentPoint(targetControl);
             if (_isLeftButtonPressed && point.Properties.IsLeftButtonPressed)
             {
-                if (_document is not null)
-                    _document.Select(_startPoint, point.Position);
+                PerformSelection(_startPoint, point.Position);
             }
         }
 
@@ -438,13 +446,42 @@ namespace Markdown.Avalonia
         {
             if (_document is null) return;
 
-            var point = e.GetCurrentPoint(_document.Control);
+            // 获取用于坐标计算的控件
+            var targetControl = GetSelectionTargetControl();
+            if (targetControl == null) return;
+
+            var point = e.GetCurrentPoint(targetControl);
             if (_isLeftButtonPressed && !point.Properties.IsLeftButtonPressed)
             {
                 _isLeftButtonPressed = false;
+                PerformSelection(_startPoint, point.Position);
+            }
+        }
 
-                if (_document is not null)
-                    _document.Select(_startPoint, point.Position);
+        /// <summary>
+        /// 获取用于文本选择坐标计算的目标控件
+        /// </summary>
+        private Control? GetSelectionTargetControl()
+        {
+            if (_wrapper.UseVirtualization && _wrapper.VirtualizingPanel != null)
+            {
+                return _wrapper.VirtualizingPanel;
+            }
+            return _document?.Control;
+        }
+
+        /// <summary>
+        /// 执行文本选择
+        /// </summary>
+        private void PerformSelection(Point from, Point to)
+        {
+            if (_wrapper.UseVirtualization && _wrapper.VirtualizingPanel != null)
+            {
+                _wrapper.VirtualizingPanel.Select(from, to);
+            }
+            else if (_document != null)
+            {
+                _document.Select(from, to);
             }
         }
 
@@ -455,11 +492,22 @@ namespace Markdown.Avalonia
             // Ctrl+C
             if (e.Key == Key.C && e.KeyModifiers == KeyModifiers.Control)
             {
-                if (_document is not null
+                string? selectedText = null;
+                
+                if (_wrapper.UseVirtualization && _wrapper.VirtualizingPanel != null)
+                {
+                    selectedText = _wrapper.VirtualizingPanel.GetSelectedText();
+                }
+                else if (_document != null)
+                {
+                    selectedText = _document.GetSelectedText();
+                }
+
+                if (!string.IsNullOrEmpty(selectedText)
                     && TopLevel.GetTopLevel(this) is TopLevel top
                     && top.Clipboard is IClipboard clipboard)
                 {
-                    clipboard.SetTextAsync(_document.GetSelectedText());
+                    clipboard.SetTextAsync(selectedText);
                 }
             }
         }
@@ -580,7 +628,15 @@ namespace Markdown.Avalonia
         public bool EnableVirtualization
         {
             get => GetValue(EnableVirtualizationProperty);
-            set => SetValue(EnableVirtualizationProperty, value);
+            set
+            {
+                SetValue(EnableVirtualizationProperty, value);
+                // 同步更新 Wrapper 的虚拟化设置
+                if (_wrapper != null)
+                {
+                    _wrapper.UseVirtualization = value;
+                }
+            }
         }
 
         /// <summary>
@@ -1551,16 +1607,53 @@ namespace Markdown.Avalonia
             private readonly Canvas _canvas;
             private readonly Dictionary<Control, Rectangle> _rects;
             private DocumentElement? _document;
+            private VirtualizingMarkdownPanel? _virtualizingPanel;
+            private bool _useVirtualization;
+
+            /// <summary>
+            /// 是否使用虚拟化模式
+            /// </summary>
+            public bool UseVirtualization
+            {
+                get => _useVirtualization;
+                set
+                {
+                    if (_useVirtualization != value)
+                    {
+                        _useVirtualization = value;
+                        // 如果已有文档，需要重新设置以应用新的虚拟化模式
+                        if (_document != null)
+                        {
+                            var doc = _document;
+                            Document = null;
+                            Document = doc;
+                        }
+                    }
+                }
+            }
 
             public DocumentElement? Document
             {
                 get => _document;
                 set
                 {
+                    // 清理旧文档
                     if (_document is not null)
                     {
-                        VisualChildren.Remove(_document.Control);
-                        LogicalChildren.Remove(_document.Control);
+                        if (_useVirtualization && _virtualizingPanel != null)
+                        {
+                            // 虚拟化模式：清理虚拟化面板
+                            _virtualizingPanel.Clear();
+                            VisualChildren.Remove(_virtualizingPanel);
+                            LogicalChildren.Remove(_virtualizingPanel);
+                            _virtualizingPanel = null;
+                        }
+                        else
+                        {
+                            // 非虚拟化模式：直接移除文档控件
+                            VisualChildren.Remove(_document.Control);
+                            LogicalChildren.Remove(_document.Control);
+                        }
                         _document.Helper = null;
                         Clear();
                     }
@@ -1569,13 +1662,39 @@ namespace Markdown.Avalonia
 
                     if (_document is not null)
                     {
-                        VisualChildren.Insert(0, _document.Control);
-                        LogicalChildren.Insert(0, _document.Control);
-                        _document.Helper = this;
+                        if (_useVirtualization && _document is DocumentRootElement rootElement)
+                        {
+                            // 虚拟化模式：使用 VirtualizingMarkdownPanel
+                            _virtualizingPanel = new VirtualizingMarkdownPanel();
+                            _virtualizingPanel.SelectionHelper = this;
+                            _virtualizingPanel.SetElements(rootElement.Children);
+                            _virtualizingPanel.Classes.Add("Markdown_Avalonia_MarkdownViewer");
+
+                            VisualChildren.Insert(0, _virtualizingPanel);
+                            LogicalChildren.Insert(0, _virtualizingPanel);
+
+                            // 设置 Helper 到所有元素
+                            foreach (var child in rootElement.Children)
+                            {
+                                child.Helper = this;
+                            }
+                        }
+                        else
+                        {
+                            // 非虚拟化模式：直接使用文档控件
+                            VisualChildren.Insert(0, _document.Control);
+                            LogicalChildren.Insert(0, _document.Control);
+                            _document.Helper = this;
+                        }
                         InvalidateMeasure();
                     }
                 }
             }
+
+            /// <summary>
+            /// 获取用于布局的主控件（虚拟化面板或文档控件）
+            /// </summary>
+            public Control? ContentControl => _useVirtualization ? _virtualizingPanel : _document?.Control;
 
             public Wrapper(MarkdownScrollViewer v)
             {
@@ -1590,8 +1709,16 @@ namespace Markdown.Avalonia
 
             private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
             {
-                _document?.UnSelect();
+                if (_useVirtualization && _virtualizingPanel != null)
+                {
+                    _virtualizingPanel.UnSelect();
+                }
+                else
+                {
+                    _document?.UnSelect();
+                }
             }
+
             /// <summary>
             /// 清理所有资源，断开引用
             /// </summary>
@@ -1603,8 +1730,18 @@ namespace Markdown.Avalonia
                 // 清理文档
                 if (_document is not null)
                 {
-                    VisualChildren.Remove(_document.Control);
-                    LogicalChildren.Remove(_document.Control);
+                    if (_useVirtualization && _virtualizingPanel != null)
+                    {
+                        _virtualizingPanel.Clear();
+                        VisualChildren.Remove(_virtualizingPanel);
+                        LogicalChildren.Remove(_virtualizingPanel);
+                        _virtualizingPanel = null;
+                    }
+                    else
+                    {
+                        VisualChildren.Remove(_document.Control);
+                        LogicalChildren.Remove(_document.Control);
+                    }
                     _document.Helper = null;
                     _document = null;
                 }
@@ -1684,7 +1821,9 @@ namespace Markdown.Avalonia
                 if (!LayoutInformation.GetPreviousArrangeBounds(control).HasValue)
                     return null;
 
-                if (_document?.Control == null)
+                // 获取主内容控件
+                var contentControl = ContentControl;
+                if (contentControl == null)
                     return null;
 
                 double driftX = 0;
@@ -1694,7 +1833,7 @@ namespace Markdown.Avalonia
                 for (c = control.Parent;
                      c is not null
                      && c is Layoutable layoutable
-                     && !ReferenceEquals(_document.Control, layoutable);
+                     && !ReferenceEquals(contentControl, layoutable);
                      c = c.Parent)
                 {
                     driftX += layoutable.Bounds.X;
@@ -1707,6 +1846,11 @@ namespace Markdown.Avalonia
                     control.Bounds.Width,
                     control.Bounds.Height);
             }
+
+            /// <summary>
+            /// 获取虚拟化面板（如果正在使用虚拟化模式）
+            /// </summary>
+            public VirtualizingMarkdownPanel? VirtualizingPanel => _virtualizingPanel;
         }
     }
 }

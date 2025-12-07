@@ -70,7 +70,7 @@
                 <!-- Markdown 内容 -->
                 <full:MarkdownScrollViewer
                     Focusable="True" x:Name="Viewer"
-                    Margin="10,0,10,0"
+                    Margin="10,0,10,0" EnableVirtualization="True"
                     IsVisible="{Binding !IsLoading}"
                     Markdown="{Binding AnnouncementContent, Mode=OneWay}">
                     <full:MarkdownScrollViewer.Engine>
