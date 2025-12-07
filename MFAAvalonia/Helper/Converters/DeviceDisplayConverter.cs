@@ -20,9 +20,10 @@ public class DeviceDisplayConverter : MarkupExtension, IValueConverter
     {
         if (value is AdbDeviceInfo device)
         {
+            var name = device.Name;
             var index = GetFirstEmulatorIndex(device.Config);
-            return index == -1 ? $"{device.Name} ({device.AdbSerial})" : $"{device.Name} ({device.AdbSerial}) [{index}]";
-        }  
+            return index == -1 ? $"{(name.Contains("-") ? (name.Split("-").Length >= 2 ? name.Split("-")[1] : name.Split("-")[0]) : name)} ({device.AdbSerial})" : $"{device.Name} ({device.AdbSerial}) [{index}]";
+        }
         if (value is DesktopWindowInfo info)
         {
             return info.Name;
