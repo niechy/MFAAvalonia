@@ -1,7 +1,7 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Styles.Resources>
-        <FontFamily x:Key="DefaultFontFamily">Segoe UI Variable, Segoe UI,Microsoft YaHei UI, Microsoft YaHei,FangSong,SimSun,Microsoft JhengHei,PingFang SC,Ubuntu, Noto Sans CJK SC, avares://SukiUI/CustomFont#Alibaba PuHuiTi 3.0</FontFamily>
+        <FontFamily x:Key="DefaultFontFamily">avares://SukiUI/CustomFont#Alibaba PuHuiTi 3.0,Microsoft YaHei,Microsoft JhengHei,PingFang SC,Ubuntu, Noto Sans CJK SC</FontFamily>
         <FontWeight x:Key="DefaultDemiBold">DemiBold</FontWeight>
     </Styles.Resources>
 
