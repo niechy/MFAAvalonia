@@ -1,7 +1,7 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Styles.Resources>
-        <FontFamily x:Key="DefaultFontFamily">avares://SukiUI/CustomFont#Quicksand</FontFamily>
+        <FontFamily x:Key="DefaultFontFamily">Microsoft YaHei,FangSong,SimSun, avares://SukiUI/CustomFont#Quicksand, PingFang SC, Noto Sans CJK SC</FontFamily>
         <FontWeight x:Key="DefaultDemiBold">DemiBold</FontWeight>
     </Styles.Resources>
 

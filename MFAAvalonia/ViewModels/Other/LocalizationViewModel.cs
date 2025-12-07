@@ -6,9 +6,14 @@ using System;
 
 namespace MFAAvalonia.ViewModels.Other;
 
-public partial class LocalizationViewModel<T> : ViewModelBase
+/// <summary>
+/// 本地化 ViewModel（泛型版本）- 实现 IDisposable 以正确释放事件订阅
+/// </summary>
+public partial class LocalizationViewModel<T> : ViewModelBase, IDisposable
 {
     [ObservableProperty] private string _resourceKey = string.Empty;
+    private bool _subscribed;
+    private bool _disposed;
 
     partial void OnResourceKeyChanged(string value)
     {
@@ -23,6 +28,7 @@ public partial class LocalizationViewModel<T> : ViewModelBase
     {
         ResourceKey = resourceKey;
         LanguageHelper.LanguageChanged += OnLanguageChanged;
+        _subscribed = true;
     }
 
     public LocalizationViewModel(string resourceKey, params string[] keys)
@@ -30,6 +36,7 @@ public partial class LocalizationViewModel<T> : ViewModelBase
         ResourceKey = resourceKey;
         _formatArgsKeys = keys;
         LanguageHelper.LanguageChanged += OnLanguageChanged;
+        _subscribed = true;
     }
 
     private void OnLanguageChanged(object sender, EventArgs e)
@@ -66,13 +73,41 @@ public partial class LocalizationViewModel<T> : ViewModelBase
             Name = ResourceKey.ToLocalization();
     }
 
-
     public override string ToString()
         => ResourceKey;
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing && _subscribed)
+        {
+            LanguageHelper.LanguageChanged -= OnLanguageChanged;
+        }
+
+        _disposed = true;
+    }
+
+    ~LocalizationViewModel()
+    {
+        Dispose(false);
+    }
 }
-public partial class LocalizationViewModel : ViewModelBase
+
+/// <summary>
+/// 本地化 ViewModel - 实现 IDisposable 以正确释放事件订阅
+/// </summary>
+public partial class LocalizationViewModel : ViewModelBase, IDisposable
 {
     [ObservableProperty] private string _resourceKey = string.Empty;
+    private bool _subscribed;
+    private bool _disposed;
 
     partial void OnResourceKeyChanged(string value)
     {
@@ -87,6 +122,7 @@ public partial class LocalizationViewModel : ViewModelBase
     {
         ResourceKey = resourceKey;
         LanguageHelper.LanguageChanged += OnLanguageChanged;
+        _subscribed = true;
     }
 
     public LocalizationViewModel(string resourceKey, params string[] keys)
@@ -94,6 +130,7 @@ public partial class LocalizationViewModel : ViewModelBase
         ResourceKey = resourceKey;
         _formatArgsKeys = keys;
         LanguageHelper.LanguageChanged += OnLanguageChanged;
+        _subscribed = true;
     }
 
     /// <summary>
@@ -108,6 +145,7 @@ public partial class LocalizationViewModel : ViewModelBase
         _useLanguageHelper = true;
         UpdateName();
         LanguageHelper.LanguageChanged += OnLanguageChanged;
+        _subscribed = true;
     }
 
     private readonly string? _displayName;
@@ -155,7 +193,29 @@ public partial class LocalizationViewModel : ViewModelBase
             Name = ResourceKey.ToLocalization();
     }
 
-
     public override string ToString()
         => ResourceKey;
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing && _subscribed)
+        {
+            LanguageHelper.LanguageChanged -= OnLanguageChanged;
+        }
+
+        _disposed = true;
+    }
+
+    ~LocalizationViewModel()
+    {
+        Dispose(false);
+    }
 }

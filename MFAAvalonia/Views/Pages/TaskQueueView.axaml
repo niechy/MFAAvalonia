@@ -679,6 +679,11 @@
                                   ex:ScrollViewerExtensions.AutoScroll="True"
                                   ex:ScrollViewerExtensions.PanningMode="VerticalOnly">
                         <ItemsControl ItemsSource="{Binding Path=LogItemViewModels}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Name="ParentGrid">
@@ -720,6 +725,77 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+                    <!-- 使用虚拟化的 ListBox 替代 ItemsControl，大幅减少内存占用 -->
+                    <!-- <ListBox ItemsSource="{Binding Path=LogItemViewModels}" -->
+                    <!--          BorderBrush="Transparent" -->
+                    <!--          BorderThickness="0" -->
+                    <!--          Background="Transparent" -->
+                    <!--          Margin="15,8,10,5" -->
+                    <!--           -->
+                    <!--          ex:ScrollViewerExtensions.AutoScroll="True" -->
+                    <!--          ex:ScrollViewerExtensions.PanningMode="VerticalOnly" -->
+                    <!--          SelectionMode="Single"   -->
+                    <!--          x:Name="LogListBox" -->
+                    <!--          IsHitTestVisible="True"> -->
+                    <!--     <ListBox.Styles> -->
+                    <!--         <Style Selector="ListBoxItem"> -->
+                    <!--             <Setter Property="Padding" Value="0" /> -->
+                    <!--             <Setter Property="Margin" Value="0" /> -->
+                    <!--             <Setter Property="MinHeight" Value="0" /> -->
+                    <!--             <Setter Property="Background" Value="Transparent" /> -->
+                    <!--         </Style> -->
+                    <!--         <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter"> -->
+                    <!--             <Setter Property="Background" Value="Transparent" /> -->
+                    <!--         </Style> -->
+                    <!--         <Style Selector="ListBoxItem:selected /template/ ContentPresenter"> -->
+                    <!--             <Setter Property="Background" Value="Transparent" /> -->
+                    <!--         </Style> -->
+                    <!--     </ListBox.Styles> -->
+                    <!--     <ListBox.ItemsPanel> -->
+                    <!--         <ItemsPanelTemplate> -->
+                    <!--             <VirtualizingStackPanel /> -->
+                    <!--         </ItemsPanelTemplate> -->
+                    <!--     </ListBox.ItemsPanel> -->
+                    <!--     <ListBox.ItemTemplate> -->
+                    <!--         <DataTemplate> -->
+                    <!--             <Grid Name="ParentGrid"> -->
+                    <!--                 <Grid.ColumnDefinitions> -->
+                    <!--                     <ColumnDefinition Width="Auto" /> -->
+                    <!--                     <ColumnDefinition Width="Auto" /> -->
+                    <!--                 </Grid.ColumnDefinitions> -->
+                    <!--                 <TextBlock FontSize="12" -->
+                    <!--                            Name="FirstCol" -->
+                    <!--                            Foreground="{DynamicResource SukiDisabledText}" -->
+                    <!--                            Grid.Column="0" -->
+                    <!--                            HorizontalAlignment="Left" -->
+                    <!--                            Margin="0,5,2,0" -->
+                    <!--                            MinWidth="55" -->
+                    <!--                            Text="{Binding Time}" -->
+                    <!--                            TextWrapping="Wrap" -->
+                    <!--                            VerticalAlignment="Stretch" /> -->
+                    <!--                 <TextBlock FontSize="12" -->
+                    <!--                            FontWeight="{Binding Weight}" -->
+                    <!--                            Foreground="{Binding Color}" -->
+                    <!--                            Background="{Binding  BackgroundColor}" -->
+                    <!--                            Grid.Column="1" -->
+                    <!--                            HorizontalAlignment="Stretch" -->
+                    <!--                            Margin="0,5" -->
+                    <!--                            TextWrapping="WrapWithOverflow" -->
+                    <!--                            Text="{Binding Content}" -->
+                    <!--                            VerticalAlignment="Stretch"> -->
+                    <!--                     <TextBlock.MaxWidth> -->
+                    <!--                         <MultiBinding Converter="{converters:MaxWidthConverter}"> -->
+                    <!--                             <Binding ElementName="ParentGrid" -->
+                    <!--                                      Path="Bounds.Width" /> -->
+                    <!--                             <Binding ElementName="FirstCol" -->
+                    <!--                                      Path="Bounds.Width" /> -->
+                    <!--                         </MultiBinding> -->
+                    <!--                     </TextBlock.MaxWidth> -->
+                    <!--                 </TextBlock> -->
+                    <!--             </Grid> -->
+                    <!--         </DataTemplate> -->
+                    <!--     </ListBox.ItemTemplate> -->
+                    <!-- </ListBox> -->
                 </suki:GroupBox>
             </suki:GlassCard>
         </Grid>

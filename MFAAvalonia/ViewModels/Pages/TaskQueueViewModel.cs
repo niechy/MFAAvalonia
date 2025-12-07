@@ -227,7 +227,36 @@ public partial class TaskQueueViewModel : ViewModelBase
 
     #region 日志
 
-    public ObservableCollection<LogItemViewModel> LogItemViewModels { get; } = new();
+    /// <summary>
+    /// 日志最大数量限制，超出后自动清理旧日志
+    /// </summary>
+    private const int MaxLogCount = 50;
+
+    /// <summary>
+    /// 每次清理时移除的日志数量
+    /// </summary>
+    private const int LogCleanupBatchSize = 30;
+
+    /// <summary>
+    /// 使用 DisposableObservableCollection 自动管理 LogItemViewModel 的生命周期
+    /// 当元素被移除或集合被清空时，会自动调用 Dispose() 释放事件订阅
+    /// </summary>
+    public DisposableObservableCollection<LogItemViewModel> LogItemViewModels { get; } = new();
+
+    /// <summary>
+    /// 清理超出限制的旧日志，防止内存泄漏
+    /// DisposableObservableCollection 会自动调用被移除元素的 Dispose()
+    /// </summary>
+    private void TrimExcessLogs()
+    {
+        if (LogItemViewModels.Count <= MaxLogCount) return;
+
+        // 计算需要移除的数量
+        var removeCount = Math.Min(LogCleanupBatchSize, LogItemViewModels.Count - MaxLogCount + LogCleanupBatchSize);
+
+        // 使用 RemoveRange 批量移除，DisposableObservableCollection 会自动 Dispose
+        LogItemViewModels.RemoveRange(0, removeCount);
+    }
 
     public static string FormatFileSize(long size)
     {
@@ -462,7 +491,10 @@ public partial class TaskQueueViewModel : ViewModelBase
             {
                 BackgroundColor = backGroundBrush
             });
-            LoggerHelper.Info(content);
+            LoggerHelper.Info($"[Record] {content}");
+
+            // 自动清理超出限制的旧日志
+            TrimExcessLogs();
         });
     }
 
@@ -486,6 +518,8 @@ public partial class TaskQueueViewModel : ViewModelBase
                 var log = new LogItemViewModel(key, brush, "Regular", true, "HH':'mm':'ss", changeColor: changeColor, showTime: true, transformKey: transformKey, formatArgsKeys);
                 LogItemViewModels.Add(log);
                 LoggerHelper.Info(log.Content);
+                // 自动清理超出限制的旧日志
+                TrimExcessLogs();
             });
         });
     }
@@ -657,8 +691,10 @@ public partial class TaskQueueViewModel : ViewModelBase
     [RelayCommand]
     private void Clear()
     {
+        // DisposableObservableCollection 会自动调用所有元素的 Dispose()
         LogItemViewModels.Clear();
     }
+
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
     [RelayCommand]
     private void Export()

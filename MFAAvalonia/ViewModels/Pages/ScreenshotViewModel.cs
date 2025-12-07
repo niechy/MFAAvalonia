@@ -51,7 +51,9 @@ public partial class ScreenshotViewModel : ViewModelBase
 
                         DispatcherHelper.PostOnMainThread((() =>
                         {
+                            var oldImage = ScreenshotImage;
                             ScreenshotImage = bitmap;
+                            oldImage?.Dispose();
                             TaskName = string.Empty;
                         }));
                     }, name: "截图测试"),
@@ -68,7 +70,9 @@ public partial class ScreenshotViewModel : ViewModelBase
 
                     DispatcherHelper.PostOnMainThread((() =>
                     {
+                        var oldImage = ScreenshotImage;
                         ScreenshotImage = bitmap;
+                        oldImage?.Dispose();
                         TaskName = string.Empty;
                     }));
                 }, name: "截图测试");

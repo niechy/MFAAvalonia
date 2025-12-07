@@ -343,7 +343,7 @@ public class AvaloniaMemoryCracker : IDisposable
                     // 自适应清理间隔：内存压力越大，间隔越短
                     var adaptiveInterval = CalculateAdaptiveInterval(intervalSeconds, memoryInfo);
                     await Task.Delay(TimeSpan.FromSeconds(adaptiveInterval), _cts.Token);
-                } 
+                }
                 catch (OperationCanceledException)
                 {
                     break;
@@ -575,23 +575,17 @@ public class AvaloniaMemoryCracker : IDisposable
     #region 平台特定实现
 
     /// <summary>Windows平台优化（工作集调整）</summary>
+    /// <param name="aggressive">是否使用激进模式（已禁用，因为会导致严重卡顿）</param>
     private static void WindowsMemoryOptimization(bool aggressive)
     {
         try
         {
             var processHandle = GetCurrentProcess();
 
-            if (aggressive)
-            {
-                // 激进模式：清空工作集，强制将内存页面移到页面文件
-                // 注意：这可能导致后续访问时产生页面错误，但能有效降低内存占用
-                EmptyWorkingSet(processHandle);
-            }
-            else
-            {
-                // 普通模式：重置工作集大小限制，让系统自动管理
-                SetProcessWorkingSetSize(processHandle, (IntPtr)(-1), (IntPtr)(-1));
-            }
+            // 注意：EmptyWorkingSet 会导致大量页面错误，造成后续操作严重卡顿
+            // 因此我们只使用 SetProcessWorkingSetSize 来提示系统可以回收内存
+            // 这样既能降低内存占用，又不会导致严重的性能问题
+            SetProcessWorkingSetSize(processHandle, (IntPtr)(-1), (IntPtr)(-1));
         }
         catch (Exception ex)
         {

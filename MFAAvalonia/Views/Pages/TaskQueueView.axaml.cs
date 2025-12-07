@@ -39,7 +39,9 @@ public partial class TaskQueueView : UserControl
         InitializeComponent();
         MaaProcessor.Instance.InitializeData();
         InitializeDeviceSelectorLayout();
+
     }
+
 
     private int _currentLayoutMode = -1;
     private int _currentSelectorMode = -1;
@@ -874,25 +876,25 @@ public partial class TaskQueueView : UserControl
 
     /// <summary>
     /// 创建 input 类型的控件
-        /// </summary>
-        private Control CreateInputControl(
-            MaaInterface.MaaInterfaceSelectOption option,
-            MaaInterface.MaaInterfaceOption interfaceOption,
-            DragItemViewModel source)
+    /// </summary>
+    private Control CreateInputControl(
+        MaaInterface.MaaInterfaceSelectOption option,
+        MaaInterface.MaaInterfaceOption interfaceOption,
+        DragItemViewModel source)
+    {
+        var container = new StackPanel()
         {
-            var container = new StackPanel()
-            {
-                Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(0, 0, 0, 0) : new Thickness(10, 3, 10, 3)
-            };
-    
-            // 确保 Data 字典已初始化
-            option.Data ??= new Dictionary<string, string?>();
-    
-            if (interfaceOption.Inputs == null || interfaceOption.Inputs.Count == 0)
-                return container;
-    
-            // 初始化图标
-            interfaceOption.InitializeIcon();
+            Margin = interfaceOption.Inputs.Count == 1 ? new Thickness(0, 0, 0, 0) : new Thickness(10, 3, 10, 3)
+        };
+
+        // 确保 Data 字典已初始化
+        option.Data ??= new Dictionary<string, string?>();
+
+        if (interfaceOption.Inputs == null || interfaceOption.Inputs.Count == 0)
+            return container;
+
+        // 初始化图标
+        interfaceOption.InitializeIcon();
 
         foreach (var input in interfaceOption.Inputs)
         {
@@ -1130,7 +1132,8 @@ public partial class TaskQueueView : UserControl
         if (interfaceOption.Inputs.Count > 1)
         {
             var headerPanel = new StackPanel
-            {Orientation = Orientation.Horizontal,
+            {
+                Orientation = Orientation.Horizontal,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(-2, 4, 5, 4)
             };

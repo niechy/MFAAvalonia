@@ -199,8 +199,10 @@ public class DisplayIcon : TemplatedControl
 
             if (File.Exists(resolvedPath))
             {
+                var oldImage = ImageSource as Bitmap;
                 var bitmap = new Bitmap(resolvedPath);
                 ImageSource = bitmap;
+                oldImage?.Dispose();
                 IsImage = true;
                 IsText = false;
                 TextContent = null;

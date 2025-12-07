@@ -118,7 +118,9 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
         {
             if (!string.IsNullOrEmpty(BackgroundImagePath) && File.Exists(BackgroundImagePath))
             {
+                var oldImage = BackgroundImage;
                 BackgroundImage = new Bitmap(BackgroundImagePath);
+                oldImage?.Dispose();
                 HasBackgroundImage = true;
             }
             else
