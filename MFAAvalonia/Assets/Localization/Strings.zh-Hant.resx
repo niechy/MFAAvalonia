@@ -121,7 +121,7 @@
         <value>背景過渡效果</value>
     </data>
     <data name="BaseTheme" xml:space="preserve">
-        <value>基本主題​</value>
+        <value>基本主題</value>
     </data>
     <data name="BlueStacks" xml:space="preserve">
         <value>藍疊模擬器</value>
@@ -364,11 +364,14 @@
         <value>已選擇模擬器:{0}</value>
     </data>
     <data name="EnableRecording" xml:space="preserve">
-        <value>啟用儲存錄像 (用於除錯)</value>
-    </data>
+            <value>啟用儲存錄像 (用於除錯)</value>
+        </data>
     <data name="EnableSaveDraw" xml:space="preserve">
-        <value>啟用儲存截圖 (用於除錯)</value>
-    </data>
+            <value>啟用儲存截圖 (用於除錯)</value>
+        </data>
+    <data name="EnableSaveOnError" xml:space="preserve">
+            <value>啟用錯誤時儲存截圖 (用於除錯)</value>
+        </data>
     <data name="EnterTaskName" xml:space="preserve">
         <value>請輸入任務名稱</value>
     </data>
@@ -1114,7 +1117,7 @@
         <value>資源更新渠道</value>
     </data>
     <data name="UpdateLog" xml:space="preserve">
-        <value>​更新日誌</value>
+        <value>更新日誌</value>
     </data>
     <data name="ProxySettings" xml:space="preserve">
         <value>代理設定</value>

@@ -363,13 +363,16 @@
     <data name="EmulatorSelectionMessage" xml:space="preserve">
         <value>Emulator selected: {0}</value>
     </data>
-    <data name="EnableRecording" xml:space="preserve">
-        <value>Enable video recording (for debugging)</value>
-    </data>
-    <data name="EnableSaveDraw" xml:space="preserve">
-        <value>Enable save draw (for debugging)</value>
-    </data>
-    <data name="EnterTaskName" xml:space="preserve">
+        <data name="EnableRecording" xml:space="preserve">
+            <value>Enable video recording (for debugging)</value>
+        </data>
+        <data name="EnableSaveDraw" xml:space="preserve">
+            <value>Enable save draw (for debugging)</value>
+        </data>
+        <data name="EnableSaveOnError" xml:space="preserve">
+            <value>Enable save screenshot on error (for debugging)</value>
+        </data>
+        <data name="EnterTaskName" xml:space="preserve">
         <value>Please enter a task name</value>
     </data>
     <data name="Error" xml:space="preserve">

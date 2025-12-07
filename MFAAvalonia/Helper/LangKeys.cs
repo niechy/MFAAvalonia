@@ -126,9 +126,10 @@ public static class LangKeys
 	public static readonly string EmulatorDetectionStarted = "EmulatorDetectionStarted";
 	public static readonly string EmulatorExtras = "EmulatorExtras";
 	public static readonly string EmulatorSelectionMessage = "EmulatorSelectionMessage";
-	public static readonly string EnableRecording = "EnableRecording";
-	public static readonly string EnableSaveDraw = "EnableSaveDraw";
-	public static readonly string EnterTaskName = "EnterTaskName";
+		public static readonly string EnableRecording = "EnableRecording";
+		public static readonly string EnableSaveDraw = "EnableSaveDraw";
+		public static readonly string EnableSaveOnError = "EnableSaveOnError";
+		public static readonly string EnterTaskName = "EnterTaskName";
 	public static readonly string Error = "Error";
 	public static readonly string ErrorDetails = "ErrorDetails";
 	public static readonly string ErrorFeedbackLinkText = "ErrorFeedbackLinkText";
