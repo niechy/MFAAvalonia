@@ -4,6 +4,42 @@
         xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
         xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit">
 
+    <!-- ==================== 默认字体资源 ==================== -->
+    <!-- 避免中文字符缺失导致的字体加载内存过多 -->
+    <Styles.Resources>
+        <FontFamily x:Key="MarkdownDefaultFontFamily">avares://SukiUI/CustomFont#Alibaba PuHuiTi 3.0,Microsoft YaHei,Microsoft JhengHei,PingFang SC,Noto Sans CJK SC,Ubuntu,Segoe UI</FontFamily>
+    </Styles.Resources>
+
+    <!-- ==================== ColorTextBlock 组件字体设置 ==================== -->
+    <!-- 为所有 CTextBlock 及其子组件设置默认字体，避免中文渲染时加载大量字体 -->
+    <Style Selector="ctxt|CTextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CRun">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CSpan">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CBold">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CItalic">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CUnderline">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CStrikethrough">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CHyperlink">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+    <Style Selector="ctxt|CCode">
+        <Setter Property="FontFamily" Value="{DynamicResource MarkdownDefaultFontFamily}" />
+    </Style>
+
     <!-- ==================== 基础文本样式 ==================== -->
     <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock">
         <Setter Property="FontSize" Value="13" />

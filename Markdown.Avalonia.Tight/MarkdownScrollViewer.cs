@@ -27,8 +27,66 @@ using MdStyle = Markdown.Avalonia.MarkdownStyle;
 
 namespace Markdown.Avalonia
 {
-    public class MarkdownScrollViewer : Control
+    public class MarkdownScrollViewer : Control, IDisposable
     {
+        #region IDisposable 实现
+
+        /// <summary>
+        /// 跟踪是否已经释放资源
+        /// </summary>
+        private bool _disposed;
+
+        /// <summary>
+        /// 释放资源的核心方法（清理模式）
+        /// </summary>
+        /// <param name="disposing">
+        /// true: 由 Dispose() 调用，释放托管和非托管资源
+        /// false: 由终结器调用，仅释放非托管资源
+        /// </param>
+        protected void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                // 释放托管资源
+                // 调用 Cleanup 方法来清理所有托管资源和事件订阅
+                Cleanup();
+            }
+
+            // 释放非托管资源
+            // CancellationTokenSource 包装了非托管资源，需要显式释放
+            if (_progressiveRenderCts != null)
+            {
+                _progressiveRenderCts.Cancel();
+                _progressiveRenderCts.Dispose();
+                _progressiveRenderCts = null;
+            }
+
+            _disposed = true;
+        }
+
+        /// <summary>
+        /// 实现 IDisposable.Dispose 方法
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            // 告诉 GC 不需要调用终结器，因为资源已经被释放
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// 终结器（析构函数）- 作为安全网，防止用户忘记调用 Dispose
+        /// </summary>
+        ~MarkdownScrollViewer()
+        {
+            Dispose(disposing: false);
+        }
+
+        #endregion
+
         public static readonly DirectProperty<MarkdownScrollViewer, Uri?> SourceDirectProperty =
             AvaloniaProperty.RegisterDirect<MarkdownScrollViewer, Uri?>(
                 nameof(Source),
@@ -143,7 +201,7 @@ namespace Markdown.Avalonia
         {
             return new CacheStatistics();
         }
-        
+
         #endregion
 
         #region 渐进式渲染
@@ -232,58 +290,94 @@ namespace Markdown.Avalonia
 
             static bool nvl(bool? vl) => vl.HasValue && vl.Value;
 
-                                    // 使用命名方法而非匿名 lambda，便于取消订阅
-                                    _viewer.ScrollChanged += Viewer_ScrollChanged;
-                                    _viewer.PointerPressed += _viewer_PointerPressed;
-                                    _viewer.PointerMoved += _viewer_PointerMoved;
-                                    _viewer.PointerReleased += _viewer_PointerReleased;
-                        
-                                    _wrapper = new Wrapper(this);
-                                    _viewer.Content = _wrapper;
-                        
-                                    // 订阅卸载事件以清理资源
-                                    DetachedFromVisualTree += OnDetachedFromVisualTree;
-                                }
-                        
-                                /// <summary>
-                                /// 当控件从视觉树中移除时清理资源
-                                /// </summary>
-                                private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
-                                {
-                                    Cleanup();
-                                }
-                        
-                                /// <summary>
-                                /// 清理所有资源，取消事件订阅
-                                /// </summary>
-                                public void Cleanup()
-                                {
-                                    // 取消渐进式渲染
-                                    CancelProgressiveRendering();
-                        
-                                    // 取消事件订阅
-                                    DetachedFromVisualTree -= OnDetachedFromVisualTree;
-                                    _viewer.ScrollChanged -= Viewer_ScrollChanged;
-                                    _viewer.PointerPressed -= _viewer_PointerPressed;
-                                    _viewer.PointerMoved -= _viewer_PointerMoved;
-                                    _viewer.PointerReleased -= _viewer_PointerReleased;
-                        
-                                    // 清理文档内容
-                                    if (_wrapper.Document?.Control is Control contentControl)
-                                    {
-                                        contentControl.SizeChanged -= OnViewportSizeChanged;
-                                    }
-                                    _wrapper.Document = null;
-                                    _document = null;
-                                    _headerRects = null;
-                                    _currentContentHash = null;
-                        
-                                    // 清理样式引用
-                                    if (_markdownStyle != null)
-                                    {
-                                        Styles.Remove(_markdownStyle);
-                                    }
-                                }
+            // 使用命名方法而非匿名 lambda，便于取消订阅
+            _viewer.ScrollChanged += Viewer_ScrollChanged;
+            _viewer.PointerPressed += _viewer_PointerPressed;
+            _viewer.PointerMoved += _viewer_PointerMoved;
+            _viewer.PointerReleased += _viewer_PointerReleased;
+
+            _wrapper = new Wrapper(this);
+            _viewer.Content = _wrapper;
+
+            // 订阅卸载事件以清理资源
+            DetachedFromVisualTree += OnDetachedFromVisualTree;
+        }
+
+        /// <summary>
+        /// 当控件从视觉树中移除时清理资源
+        /// </summary>
+        private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+        {
+            Cleanup();
+        }
+
+        /// <summary>
+        /// 清理所有资源，取消事件订阅
+        /// </summary>
+        public void Cleanup()
+        {
+            // 如果已经释放，直接返回
+            if (_disposed)
+                return;
+
+            // 取消渐进式渲染（但不释放 CancellationTokenSource，由 Dispose 处理）
+            _progressiveRenderCts?.Cancel();
+
+            // 取消事件订阅
+            DetachedFromVisualTree -= OnDetachedFromVisualTree;
+            _viewer.ScrollChanged -= Viewer_ScrollChanged;
+            _viewer.PointerPressed -= _viewer_PointerPressed;
+            _viewer.PointerMoved -= _viewer_PointerMoved;
+            _viewer.PointerReleased -= _viewer_PointerReleased;
+
+            // 清理文档内容
+            if (_wrapper.Document?.Control is Control contentControl)
+            {
+                contentControl.SizeChanged -= OnViewportSizeChanged;
+            }
+
+            // 清理 Wrapper（这会清理内部的文档和事件订阅）
+            _wrapper.Cleanup();
+
+            // 清理 ScrollViewer 的内容引用和从视觉树中移除
+            _viewer.Content = null;
+            VisualChildren.Remove(_viewer);
+            LogicalChildren.Remove(_viewer);
+
+            _document = null;
+            _headerRects = null;
+            _currentContentHash = null;
+            _eventArgs = null;
+            _markdown = null;
+            _source = null;
+            _AssetPathRoot = null;
+
+            // 清理样式引用
+            if (_markdownStyle != null)
+            {
+                Styles.Remove(_markdownStyle);
+                _markdownStyle = null!;
+            }
+
+            // 清理选择相关状态
+            _selectionBrush = null;
+            _isLeftButtonPressed = false;
+
+            // 清理渐进式渲染事件
+            ProgressiveRenderingCompleted = null;
+            ProgressiveRenderingProgress = null;
+            HeaderScrolled = null;
+
+            // 清理 Markdown 引擎的 CascadeResources 引用，断开对父控件的引用
+            _engine.CascadeResources.Parent = null;
+            // 清理引擎的资源字典
+            _engine.CascadeResources.Owner = new ResourceDictionary();
+
+            // 清理插件引用
+            _plugins = null!;
+            _setup = null!;
+        }
+
 
         #region text selection
 
@@ -497,8 +591,12 @@ namespace Markdown.Avalonia
         /// </summary>
         public void CancelProgressiveRendering()
         {
-            _progressiveRenderCts?.Cancel();
-            _progressiveRenderCts = null;
+            if (_progressiveRenderCts != null)
+            {
+                _progressiveRenderCts.Cancel();
+                _progressiveRenderCts.Dispose();
+                _progressiveRenderCts = null;
+            }
             _isProgressiveRendering = false;
         }
 
@@ -600,6 +698,10 @@ namespace Markdown.Avalonia
         /// </summary>
         private void StartProgressiveRendering(string fullContent, string[] lines, string contentHash, Vector savedOffset)
         {
+            // 检查是否已释放
+            if (_disposed)
+                return;
+
             // 取消之前的渐进式渲染
             CancelProgressiveRendering();
 
@@ -1259,7 +1361,7 @@ namespace Markdown.Avalonia
 
         class Wrapper : Control, ISelectionRenderHelper
         {
-            private MarkdownScrollViewer _viewer;
+            private MarkdownScrollViewer? _viewer;
             private readonly Canvas _canvas;
             private readonly Dictionary<Control, Rectangle> _rects;
             private DocumentElement? _document;
@@ -1293,19 +1395,57 @@ namespace Markdown.Avalonia
             {
                 _viewer = v;
                 _canvas = new Canvas();
-                _canvas.PointerPressed += (s, e) => _document?.UnSelect();
+                _canvas.PointerPressed += OnCanvasPointerPressed;
 
                 _rects = new Dictionary<Control, Rectangle>();
 
                 VisualChildren.Add(_canvas);
             }
 
+            private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
+            {
+                _document?.UnSelect();
+            }
+            /// <summary>
+            /// 清理所有资源，断开引用
+            /// </summary>
+            public void Cleanup()
+            {
+                // 取消事件订阅
+                _canvas.PointerPressed -= OnCanvasPointerPressed;
+
+                // 清理文档
+                if (_document is not null)
+                {
+                    VisualChildren.Remove(_document.Control);
+                    LogicalChildren.Remove(_document.Control);
+                    _document.Helper = null;
+                    _document = null;
+                }
+
+                // 清理选择矩形
+                Clear();
+                _rects.Clear();
+
+                // 清理 Canvas 从视觉树中移除
+                VisualChildren.Remove(_canvas);
+                _canvas.Children.Clear();
+
+                // 断开对 viewer 的引用
+                _viewer = null;
+            }
+
+
             public void Register(Control control)
             {
+                if (_viewer == null) return;
+
                 if (!_rects.ContainsKey(control))
                 {
                     var brush = _viewer.ComputedSelectionBrush;
                     var bounds = GetRectInDoc(control);
+                    if (bounds == null) return;
+
                     var rect = new Rectangle()
                     {
                         Width = bounds.Value.Width,
@@ -1330,6 +1470,7 @@ namespace Markdown.Avalonia
                     _rects.Remove(control);
                 }
             }
+
             public void Clear()
             {
                 _canvas.Children.Clear();
@@ -1355,6 +1496,9 @@ namespace Markdown.Avalonia
             public Rect? GetRectInDoc(Control control)
             {
                 if (!LayoutInformation.GetPreviousArrangeBounds(control).HasValue)
+                    return null;
+
+                if (_document?.Control == null)
                     return null;
 
                 double driftX = 0;
