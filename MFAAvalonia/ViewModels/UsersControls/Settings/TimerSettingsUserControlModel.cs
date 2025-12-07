@@ -5,6 +5,7 @@ using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
 using MFAAvalonia.Extensions.MaaFW;
 using MFAAvalonia.Helper;
+using MFAAvalonia.Helper.ValueType;
 using System;
 using System.Linq;
 
@@ -33,7 +34,7 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
     {
         public partial class TimerProperties : ObservableObject
         {
-            public TimerProperties(int timeId, bool isOn, string time, string? timerConfig)
+            public TimerProperties(int timeId, bool isOn, string time, string? timerConfig, string? scheduleConfig)
             {
                 TimerId = timeId;
                 _isOn = isOn;
@@ -47,8 +48,10 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
                 {
                     _timerConfig = timerConfig;
                 }
+                _scheduleConfig = new TimerScheduleConfig(scheduleConfig ?? string.Empty);
                 LanguageHelper.LanguageChanged += OnLanguageChanged;
             }
+
 
             public int TimerId { get; set; }
 
@@ -103,7 +106,38 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
                     GlobalConfiguration.SetTimerConfig(TimerId, _timerConfig);
                 }
             }
+
+            private TimerScheduleConfig _scheduleConfig;
+
+            /// <summary>
+            /// Gets or sets the schedule config of the timer.
+            /// </summary>
+            public TimerScheduleConfig ScheduleConfig
+            {
+                get => _scheduleConfig;
+                set
+                {
+                    SetProperty(ref _scheduleConfig, value);
+                    GlobalConfiguration.SetTimerSchedule(TimerId, _scheduleConfig.Serialize());
+                    OnPropertyChanged(nameof(ScheduleDisplayText));
+                }
+            }
+
+            /// <summary>
+            /// Gets the display text for the schedule.
+            /// </summary>
+            public string ScheduleDisplayText => _scheduleConfig.GetDisplayText();
+
+            /// <summary>
+            /// Updates the schedule config and saves it.
+            /// </summary>
+            public void UpdateScheduleConfig()
+            {
+                GlobalConfiguration.SetTimerSchedule(TimerId, _scheduleConfig.Serialize());
+                OnPropertyChanged(nameof(ScheduleDisplayText));
+            }
         }
+
 
         public TimerProperties[] Timers { get; set; } = new TimerProperties[8];
         private readonly DispatcherTimer _dispatcherTimer;
@@ -113,7 +147,10 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
             {
                 Timers[i] = new TimerProperties(
                     i,
-                    GlobalConfiguration.GetTimer(i, bool.FalseString) == bool.TrueString, GlobalConfiguration.GetTimerTime(i, $"{i * 3}:0"), GlobalConfiguration.GetTimerConfig(i, ConfigurationManager.GetCurrentConfiguration()));
+                    GlobalConfiguration.GetTimer(i, bool.FalseString) == bool.TrueString,
+                    GlobalConfiguration.GetTimerTime(i, $"{i * 3}:0"),
+                    GlobalConfiguration.GetTimerConfig(i, ConfigurationManager.GetCurrentConfiguration()),
+                    GlobalConfiguration.GetTimerSchedule(i, string.Empty));
             }
             _dispatcherTimer = new();
             _dispatcherTimer.Interval = TimeSpan.FromMinutes(1);
@@ -121,16 +158,23 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
             _dispatcherTimer.Start();
         }
 
-        private void CheckTimerElapsed(object sender, EventArgs e)
+        private void CheckTimerElapsed(object? sender, EventArgs e)
         {
             var currentTime = DateTime.Now;
             foreach (var timer in Timers)
             {
-                if (timer.IsOn && timer.Time.Hours == currentTime.Hour && timer.Time.Minutes == currentTime.Minute)
+                //检查时间是否匹配，并且检查触发模式是否满足
+                if (timer.IsOn
+                    && timer.Time.Hours == currentTime.Hour
+                    && timer.Time.Minutes == currentTime.Minute
+                    && timer.ScheduleConfig.ShouldTrigger(currentTime))
                 {
                     ExecuteTimerTask(timer.TimerId);
                 }
-                if (timer.IsOn && timer.Time.Hours == currentTime.Hour && timer.Time.Minutes == currentTime.Minute + 2)
+                if (timer.IsOn
+                    && timer.Time.Hours == currentTime.Hour
+                    && timer.Time.Minutes == currentTime.Minute + 2
+                    && timer.ScheduleConfig.ShouldTrigger(currentTime))
                 {
                     SwitchConfiguration(timer.TimerId);
                 }
@@ -167,3 +211,4 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
         }
     }
 }
+

@@ -1315,6 +1315,66 @@
             <value>背景图片不透明度</value>
     </data>
     <data name="BackgroundImageOpacityDescription" xml:space="preserve">
-            <value>调整背景图片的不透明度，值越小图片越透明。</value>
+            <value>调整背景图片的不透明度，值越小图片越透明。</value>    
+    </data>
+    <data name="TriggerDate" xml:space="preserve">
+        <value>触发日期</value>
+    </data>
+    <data name="SchedulePickerTip" xml:space="preserve">
+        <value>点击选择触发日期</value>
+    </data>
+    <data name="ScheduleMode" xml:space="preserve">
+        <value>触发模式</value>
+    </data>
+    <data name="ScheduleDaily" xml:space="preserve">
+        <value>每天</value>
+    </data>
+    <data name="ScheduleWeekly" xml:space="preserve">
+        <value>按周</value>
+    </data>
+    <data name="ScheduleMonthly" xml:space="preserve">
+        <value>按月</value>
+    </data>
+    <data name="ScheduleWorkdays" xml:space="preserve">
+        <value>工作日</value>
+    </data>
+    <data name="ScheduleWeekends" xml:space="preserve">
+        <value>周末</value>
+    </data>
+    <data name="SelectDaysOfWeek" xml:space="preserve">
+        <value>选择星期</value>
+    </data>
+    <data name="SelectDaysOfMonth" xml:space="preserve">
+        <value>选择日期</value>
+    </data>
+    <data name="WeekdayMon" xml:space="preserve">
+        <value>周一</value>
+    </data>
+    <data name="WeekdayTue" xml:space="preserve">
+        <value>周二</value>
+    </data>
+    <data name="WeekdayWed" xml:space="preserve">
+        <value>周三</value>
+    </data>
+    <data name="WeekdayThu" xml:space="preserve">
+        <value>周四</value>
+    </data>
+    <data name="WeekdayFri" xml:space="preserve">
+        <value>周五</value>
+    </data>
+    <data name="WeekdaySat" xml:space="preserve">
+        <value>周六</value>
+    </data>
+    <data name="WeekdaySun" xml:space="preserve">
+        <value>周日</value>
+    </data>
+    <data name="ScheduleMonthlyDay" xml:space="preserve">
+        <value>每月{0}号</value>
+    </data>
+    <data name="ScheduleMonthlyDays" xml:space="preserve">
+        <value>每月{0}天</value>
+    </data>
+    <data name="ScheduleMonthlyDaySuffix" xml:space="preserve">
+        <value>号</value>
     </data>
 </root>

@@ -24,23 +24,24 @@ public static class GlobalConfiguration
         var builder = new ConfigurationBuilder()
             .SetBasePath(Path.GetDirectoryName(_configPath))
             .AddJsonFile(_configPath, optional: false, reloadOnChange: false);
-    
+
         return builder.Build();
     }
-    
+
     public static void SetValue(string key, string value)
     {
         lock (_fileLock)
         {
-            var configDict = File.Exists(_configPath) ? 
-                JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_configPath)) :
-                new Dictionary<string, string>();
+            var configDict = File.Exists(_configPath) ? JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_configPath)) : new Dictionary<string, string>();
 
             configDict[key] = value;
-            
+
             Directory.CreateDirectory(Path.GetDirectoryName(_configPath));
-            File.WriteAllText(_configPath, 
-                JsonSerializer.Serialize(configDict, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(_configPath,
+                JsonSerializer.Serialize(configDict, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                }));
         }
     }
 
@@ -64,7 +65,7 @@ public static class GlobalConfiguration
     {
         return GetValue($"Timer.Timer{i + 1}Time", defaultValue);
     }
-    
+
     public static void SetTimerTime(int i, string value)
     {
         SetValue($"Timer.Timer{i + 1}Time", value);
@@ -79,4 +80,16 @@ public static class GlobalConfiguration
     {
         SetValue($"Timer.Timer{i + 1}.Config", value);
     }
+    
+    public static string GetTimerSchedule(int i, string defaultValue)
+    {
+        return GetValue($"Timer.Timer{i + 1}.Schedule", defaultValue);
+    }
+
+    public static void SetTimerSchedule(int i, string value)
+    {
+        SetValue($"Timer.Timer{i + 1}.Schedule", value);
+    }
+
+
 }

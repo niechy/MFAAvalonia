@@ -87,23 +87,34 @@
                             VerticalAlignment="Center" />
                     </StackPanel>
                 </DockPanel>
-                <StackPanel IsVisible="{Binding TimerModels.Timers[0].IsOn}" Spacing="12">
-                    <DockPanel>
-                        <TimePicker ClockIdentifier="24HourClock"
-                                    DockPanel.Dock="Right"
-                                    Height="35"
-
-
-                                    SelectedTime="{Binding TimerModels.Timers[0].Time}"
-                                    VerticalAlignment="Center"
-                                    Width="205" />
-                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
-                            <TextBlock
-                                FontSize="15"
-                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
-                                VerticalAlignment="Center" />
-                        </StackPanel>
-                    </DockPanel>
+                                <StackPanel IsVisible="{Binding TimerModels.Timers[0].IsOn}" Spacing="12">
+                                    <DockPanel>
+                                        <TimePicker ClockIdentifier="24HourClock"
+                                                    DockPanel.Dock="Right"
+                                                    Height="35"
+                                                    SelectedTime="{Binding TimerModels.Timers[0].Time}"
+                                                    VerticalAlignment="Center"
+                                                    Width="205" />
+                                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock
+                                                FontSize="15"
+                                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
+                                                VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel>
+                                        <userControls:SchedulePicker
+                                            DockPanel.Dock="Right"
+                                            ScheduleConfig="{Binding TimerModels.Timers[0].ScheduleConfig}"
+                                            VerticalAlignment="Center"
+                                            Width="205" />
+                                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock
+                                                FontSize="15"
+                                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
+                                                VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DockPanel>
                     <DockPanel IsVisible="{Binding CustomConfig}">
                         <ComboBox extensions:ComboBoxExtensions.DisableNavigationOnLostFocus="True"
                             DisplayMemberBinding="{Binding Name}"
@@ -158,6 +169,19 @@
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
+                    <DockPanel>
+                        <userControls:SchedulePicker
+                            DockPanel.Dock="Right"
+                            ScheduleConfig="{Binding TimerModels.Timers[1].ScheduleConfig}"
+                            VerticalAlignment="Center"
+                            Width="205" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="15"
+                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
                     <DockPanel IsVisible="{Binding CustomConfig}">
                         <ComboBox extensions:ComboBoxExtensions.DisableNavigationOnLostFocus="True"
                             DisplayMemberBinding="{Binding Name}"
@@ -202,8 +226,6 @@
                         <TimePicker ClockIdentifier="24HourClock"
                                     DockPanel.Dock="Right"
                                     Height="35"
-
-
                                     SelectedTime="{Binding TimerModels.Timers[2].Time}"
                                     VerticalAlignment="Center"
                                     Width="205" />
@@ -211,6 +233,19 @@
                             <TextBlock
                                 FontSize="15"
                                 Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <userControls:SchedulePicker
+                            DockPanel.Dock="Right"
+                            ScheduleConfig="{Binding TimerModels.Timers[2].ScheduleConfig}"
+                            VerticalAlignment="Center"
+                            Width="205" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="15"
+                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
@@ -258,8 +293,6 @@
                         <TimePicker ClockIdentifier="24HourClock"
                                     DockPanel.Dock="Right"
                                     Height="35"
-
-
                                     SelectedTime="{Binding TimerModels.Timers[3].Time}"
                                     VerticalAlignment="Center"
                                     Width="205" />
@@ -267,6 +300,19 @@
                             <TextBlock
                                 FontSize="15"
                                 Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <userControls:SchedulePicker
+                            DockPanel.Dock="Right"
+                            ScheduleConfig="{Binding TimerModels.Timers[3].ScheduleConfig}"
+                            VerticalAlignment="Center"
+                            Width="205" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="15"
+                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
@@ -314,8 +360,6 @@
                         <TimePicker ClockIdentifier="24HourClock"
                                     DockPanel.Dock="Right"
                                     Height="35"
-
-
                                     SelectedTime="{Binding TimerModels.Timers[4].Time}"
                                     VerticalAlignment="Center"
                                     Width="205" />
@@ -323,6 +367,19 @@
                             <TextBlock
                                 FontSize="15"
                                 Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <userControls:SchedulePicker
+                            DockPanel.Dock="Right"
+                            ScheduleConfig="{Binding TimerModels.Timers[4].ScheduleConfig}"
+                            VerticalAlignment="Center"
+                            Width="205" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="15"
+                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
@@ -370,8 +427,6 @@
                         <TimePicker ClockIdentifier="24HourClock"
                                     DockPanel.Dock="Right"
                                     Height="35"
-
-
                                     SelectedTime="{Binding TimerModels.Timers[5].Time}"
                                     VerticalAlignment="Center"
                                     Width="205" />
@@ -379,6 +434,19 @@
                             <TextBlock
                                 FontSize="15"
                                 Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <userControls:SchedulePicker
+                            DockPanel.Dock="Right"
+                            ScheduleConfig="{Binding TimerModels.Timers[5].ScheduleConfig}"
+                            VerticalAlignment="Center"
+                            Width="205" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="15"
+                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
@@ -426,8 +494,6 @@
                         <TimePicker ClockIdentifier="24HourClock"
                                     DockPanel.Dock="Right"
                                     Height="35"
-
-
                                     SelectedTime="{Binding TimerModels.Timers[6].Time}"
                                     VerticalAlignment="Center"
                                     Width="205" />
@@ -435,6 +501,19 @@
                             <TextBlock
                                 FontSize="15"
                                 Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <userControls:SchedulePicker
+                            DockPanel.Dock="Right"
+                            ScheduleConfig="{Binding TimerModels.Timers[6].ScheduleConfig}"
+                            VerticalAlignment="Center"
+                            Width="205" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="15"
+                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
@@ -482,8 +561,6 @@
                         <TimePicker ClockIdentifier="24HourClock"
                                     DockPanel.Dock="Right"
                                     Height="35"
-
-
                                     SelectedTime="{Binding TimerModels.Timers[7].Time}"
                                     VerticalAlignment="Center"
                                     Width="205" />
@@ -491,6 +568,19 @@
                             <TextBlock
                                 FontSize="15"
                                 Text="{markup:I18n {x:Static helper:LangKeys.TriggerTime}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <userControls:SchedulePicker
+                            DockPanel.Dock="Right"
+                            ScheduleConfig="{Binding TimerModels.Timers[7].ScheduleConfig}"
+                            VerticalAlignment="Center"
+                            Width="205" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="15"
+                                Text="{markup:I18n {x:Static helper:LangKeys.TriggerDate}}"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>

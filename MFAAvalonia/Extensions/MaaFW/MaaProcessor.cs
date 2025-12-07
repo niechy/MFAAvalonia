@@ -813,7 +813,9 @@ public class MaaProcessor
             Instances.TaskQueueViewModel.SetConnected(true);
             //  tasker.Utility.SetOption_Recording(ConfigurationManager.Maa.GetValue(ConfigurationKeys.Recording, false));
             tasker.Global.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
+         //   tasker.Global.SetOption(GlobalOption.SaveOnError, ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveOnError, false));
             tasker.Global.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
+          
             LoggerHelper.Info("Maafw debug mode: " + ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
             // 注意：只订阅一次回调，避免嵌套订阅导致内存泄漏
             tasker.Callback += HandleCallBack;

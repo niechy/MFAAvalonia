@@ -438,7 +438,27 @@ public static class LangKeys
 	public static readonly string Reset = "Reset";
 	public static readonly string BackgroundImageTitle = "BackgroundImageTitle";
 	public static readonly string BackgroundImageDescription = "BackgroundImageDescription";
-	public static readonly string SelectBackgroundImage = "SelectBackgroundImage";
-	public static readonly string BackgroundImageOpacityTitle = "BackgroundImageOpacityTitle";
-	public static readonly string BackgroundImageOpacityDescription = "BackgroundImageOpacityDescription";
-}
+		public static readonly string SelectBackgroundImage = "SelectBackgroundImage";
+		public static readonly string BackgroundImageOpacityTitle = "BackgroundImageOpacityTitle";
+		public static readonly string BackgroundImageOpacityDescription = "BackgroundImageOpacityDescription";
+		public static readonly string TriggerDate = "TriggerDate";
+		public static readonly string SchedulePickerTip = "SchedulePickerTip";
+		public static readonly string ScheduleMode = "ScheduleMode";
+		public static readonly string ScheduleDaily = "ScheduleDaily";
+		public static readonly string ScheduleWeekly = "ScheduleWeekly";
+		public static readonly string ScheduleMonthly = "ScheduleMonthly";
+		public static readonly string ScheduleWorkdays = "ScheduleWorkdays";
+		public static readonly string ScheduleWeekends = "ScheduleWeekends";
+		public static readonly string SelectDaysOfWeek = "SelectDaysOfWeek";
+		public static readonly string SelectDaysOfMonth = "SelectDaysOfMonth";
+		public static readonly string WeekdayMon = "WeekdayMon";
+		public static readonly string WeekdayTue = "WeekdayTue";
+		public static readonly string WeekdayWed = "WeekdayWed";
+		public static readonly string WeekdayThu = "WeekdayThu";
+		public static readonly string WeekdayFri = "WeekdayFri";
+		public static readonly string WeekdaySat = "WeekdaySat";
+		public static readonly string WeekdaySun = "WeekdaySun";
+		public static readonly string ScheduleMonthlyDay = "ScheduleMonthlyDay";
+		public static readonly string ScheduleMonthlyDays = "ScheduleMonthlyDays";
+		public static readonly string ScheduleMonthlyDaySuffix = "ScheduleMonthlyDaySuffix";
+	}

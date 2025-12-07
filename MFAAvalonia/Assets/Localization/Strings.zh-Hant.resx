@@ -6,10 +6,14 @@
         <value>1.3</value>
     </resheader>
     <resheader name="reader">
-        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        </value>
     </resheader>
     <resheader name="writer">
-        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        </value>
     </resheader>
     <data name="About" xml:space="preserve">
         <value>關於我們</value>
@@ -1084,7 +1088,7 @@
     </data>
     <data name="GlobalHotkeyServiceError" xml:space="preserve">
         <value>全域快速鍵服務載入失敗</value>
-    <data name="MultiInstanceModeGlobalHotkeyDisabled" xml:space="preserve">
+        <data name="MultiInstanceModeGlobalHotkeyDisabled" xml:space="preserve">
         <value>多實例模式：全域快速鍵已停用</value>
     </data>
     </data>
@@ -1305,6 +1309,67 @@
         <value>調整背景圖片的不透明度，值越小圖片越透明。</value>
     </data>
     <data name="AgentConnectionRetry" xml:space="preserve">
-        <value>Agent 連線重試 ({0})...</value>
+        <value>Agent 連線重試 ({0})...</value>    
     </data>
+    <data name="TriggerDate" xml:space="preserve">
+        <value>觸發日期</value>
+    </data>
+    <data name="SchedulePickerTip" xml:space="preserve">
+        <value>點擊設定觸發日期</value>
+    </data>
+    <data name="ScheduleMode" xml:space="preserve">
+        <value>排程模式</value>
+    </data>
+    <data name="ScheduleDaily" xml:space="preserve">
+        <value>每天</value>
+    </data>
+    <data name="ScheduleWeekly" xml:space="preserve">
+        <value>每週</value>
+    </data>
+    <data name="ScheduleMonthly" xml:space="preserve">
+        <value>每月</value>
+    </data>
+    <data name="ScheduleWorkdays" xml:space="preserve">
+        <value>工作日</value>
+    </data>
+    <data name="ScheduleWeekends" xml:space="preserve">
+        <value>週末</value>
+    </data>
+    <data name="SelectDaysOfWeek" xml:space="preserve">
+        <value>選擇星期</value>
+    </data>
+    <data name="SelectDaysOfMonth" xml:space="preserve">
+        <value>選擇日期</value>
+    </data>
+    <data name="WeekdayMon" xml:space="preserve">
+        <value>週一</value>
+    </data>
+    <data name="WeekdayTue" xml:space="preserve">
+        <value>週二</value>
+    </data>
+    <data name="WeekdayWed" xml:space="preserve">
+        <value>週三</value>
+    </data>
+    <data name="WeekdayThu" xml:space="preserve">
+        <value>週四</value>
+    </data>
+    <data name="WeekdayFri" xml:space="preserve">
+        <value>週五</value>
+    </data>
+    <data name="WeekdaySat" xml:space="preserve">
+        <value>週六</value>
+    </data>
+    <data name="WeekdaySun" xml:space="preserve">
+        <value>週日</value>
+    </data>
+    <data name="ScheduleMonthlyDay" xml:space="preserve">
+        <value>{0}號</value>
+    </data>
+    <data name="ScheduleMonthlyDays" xml:space="preserve">
+        <value>日期: {0}</value>
+    </data>
+    <data name="ScheduleMonthlyDaySuffix" xml:space="preserve">
+        <value>號</value>
+    </data>
+
 </root>
