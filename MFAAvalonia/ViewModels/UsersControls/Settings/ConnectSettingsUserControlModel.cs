@@ -93,7 +93,7 @@ public partial class ConnectSettingsUserControlModel : ViewModelBase
     [ObservableProperty] private Win32ScreencapMethod _win32ControlScreenCapType =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.Win32ControlScreenCapType, Win32ScreencapMethod.FramePool, Win32ScreencapMethod.None, new UniversalEnumConverter<Win32ScreencapMethod>());
     [ObservableProperty] private Win32InputMethod _win32ControlMouseType =
-        ConfigurationManager.Current.GetValue(ConfigurationKeys.Win32ControlScreenCapType, Win32InputMethod.SendMessage, Win32InputMethod.None, new UniversalEnumConverter<Win32InputMethod>());
+        ConfigurationManager.Current.GetValue(ConfigurationKeys.Win32ControlMouseType, Win32InputMethod.SendMessage, Win32InputMethod.None, new UniversalEnumConverter<Win32InputMethod>());
     [ObservableProperty] private Win32InputMethod _win32ControlKeyboardType =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.Win32ControlKeyboardType, Win32InputMethod.SendMessage, Win32InputMethod.None, new UniversalEnumConverter<Win32InputMethod>());
 
