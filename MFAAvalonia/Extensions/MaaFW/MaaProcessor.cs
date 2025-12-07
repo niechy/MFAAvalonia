@@ -474,7 +474,7 @@ public class MaaProcessor
                 LoggerHelper.Error(e);
             }
             // 注册内置的自定义 Action（用于内存泄漏测试）
-            tasker.Resource.Register(new Custom.MemoryLeakTestAction());
+            //tasker.Resource.Register(new Custom.MemoryLeakTestAction());
             // 获取代理配置（假设Interface在UI线程中访问）
             var agentConfig = Interface?.Agent;
             if (agentConfig is { ChildExec: not null } && !_agentStarted)
@@ -863,17 +863,20 @@ public class MaaProcessor
                             out var detailJson,
                             imageBuffer, imageListBuffer);
                         var bitmap = imageBuffer.ToBitmap();
-                        if (hit && bitmap != null)
+                        if (bitmap != null)
                         {
-                            var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
-                            // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
-                            if (!ReferenceEquals(newBitmap, bitmap))
+                            if (hit)
                             {
-                                bitmap.Dispose();
+                                var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                                // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
+                                if (!ReferenceEquals(newBitmap, bitmap))
+                                {
+                                    bitmap.Dispose();
+                                }
+                                bitmap = newBitmap;
                             }
-                            bitmap = newBitmap;
+                            bitmapToSet = bitmap;
                         }
-                        bitmapToSet = bitmap;
                     }
                     catch (Exception ex)
                     {
@@ -881,6 +884,7 @@ public class MaaProcessor
                         bitmapToSet?.Dispose();
                         bitmapToSet = null;
                     }
+
 
                     if (bitmapToSet != null)
                     {
@@ -911,17 +915,20 @@ public class MaaProcessor
                         tasker.GetCachedImage(imageBuffer);
                         var bitmap = imageBuffer.ToBitmap();
                         tasker.GetActionDetail(actionId, out _, out _, rect, out var isSucceeded, out _);
-                        if (isSucceeded && bitmap != null)
+                        if (bitmap != null)
                         {
-                            var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
-                            // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
-                            if (!ReferenceEquals(newBitmap, bitmap))
+                            if (isSucceeded)
                             {
-                                bitmap.Dispose();
+                                var newBitmap = bitmap.DrawRectangle(rect, Brushes.LightGreen, 1.5f);
+                                // 如果 DrawRectangle 返回了新的 Bitmap，释放原始的
+                                if (!ReferenceEquals(newBitmap, bitmap))
+                                {
+                                    bitmap.Dispose();
+                                }
+                                bitmap = newBitmap;
                             }
-                            bitmap = newBitmap;
+                            bitmapToSet = bitmap;
                         }
-                        bitmapToSet = bitmap;
                     }
                     catch (Exception ex)
                     {
@@ -929,6 +936,7 @@ public class MaaProcessor
                         bitmapToSet?.Dispose();
                         bitmapToSet = null;
                     }
+
 
                     if (bitmapToSet != null)
                     {
@@ -943,12 +951,9 @@ public class MaaProcessor
                         });
                     }
                 }
-
             }
 
         }
-
-
         if (jObject.ContainsKey("focus"))
         {
             _focusHandler ??= new FocusHandler(AutoInitDictionary);
@@ -967,6 +972,7 @@ public class MaaProcessor
             LoggerHelper.Warning(waringMessage);
         LoggerHelper.Error(e.ToString());
     }
+
     private void HandleInitializationError(Exception e,
         string title,
         string message,
@@ -978,6 +984,7 @@ public class MaaProcessor
             LoggerHelper.Warning(waringMessage);
         LoggerHelper.Error(e.ToString());
     }
+
     private MaaController InitializeController(bool isAdb)
     {
         ConnectToMAA();
@@ -1088,7 +1095,7 @@ public class MaaProcessor
         return false;
     }
 
-    // 防止 interface 加载失败时 Toast 重复显示
+// 防止 interface 加载失败时 Toast 重复显示
     private static bool _interfaceLoadErrorShown = false;
 
     public static (string Key, string Fallback, string Version, string CustomTitle, string CustomFallback) ReadInterface()
@@ -1456,9 +1463,7 @@ public class MaaProcessor
     {
         return Instances.ConnectSettingsUserControlModel.Win32ControlKeyboardType;
     }
-
     private bool FirstTask = true;
-
     public const string NEW_SEPARATOR = "<|||>";
     public const string OLD_SEPARATOR = ":";
 
@@ -1467,8 +1472,8 @@ public class MaaProcessor
         _taskLoader ??= new TaskLoader(Interface);
         _taskLoader.LoadTasks(tasks, TasksSource, ref FirstTask, oldDrags);
     }
-
     private string? _tempResourceVersion;
+
     public void AppendVersionLog(string? resourceVersion)
     {
         if (resourceVersion is null || _tempResourceVersion == resourceVersion)
@@ -1737,6 +1742,7 @@ public class MaaProcessor
     }
 
     #endregion
+
     public async Task TestConnecting()
     {
         await GetTaskerAsync();
@@ -1764,12 +1770,14 @@ public class MaaProcessor
             StartTask(tasks, onlyStart, checkUpdate);
         }
     }
-
-    public CancellationTokenSource? CancellationTokenSource { get; set; } = new();
-
+    public CancellationTokenSource? CancellationTokenSource
+    {
+        get;
+        private set;
+    } = new();
     private DateTime? _startTime;
-
     private List<DragItemViewModel> _tempTasks = [];
+
     public async Task StartTask(List<DragItemViewModel>? tasks, bool onlyStart = false, bool checkUpdate = false)
     {
         Status = MFATask.MFATaskStatus.NOT_STARTED;
@@ -1826,7 +1834,6 @@ public class MaaProcessor
         // }
         public string? Param { get; set; }
     }
-
 
     private void UpdateTaskDictionary(ref MaaToken taskModels,
         List<MaaInterface.MaaInterfaceSelectOption>? options,
@@ -2208,7 +2215,6 @@ public class MaaProcessor
     }
 
     #endregion
-    
     #region 停止任务
 
     private Lock stop = new Lock();

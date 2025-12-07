@@ -451,21 +451,27 @@ public static class MFAExtensions
         return VersionChecker.VersionType.Stable;
     }
 
-    public static Bitmap? ToBitmap(this MaaImageBuffer buffer)
-    {
-        if (!buffer.TryGetEncodedData(out Stream EncodedDataStream)) return null;
-
-        try
+        public static Bitmap? ToBitmap(this MaaImageBuffer buffer)
         {
-            EncodedDataStream.Seek(0, SeekOrigin.Begin);
-            return new Bitmap(EncodedDataStream);
+            if (!buffer.TryGetEncodedData(out Stream EncodedDataStream)) return null;
+    
+            try
+            {
+                // 使用 using 确保 Stream 被正确释放，避免 unmanaged memory 泄漏
+                using (EncodedDataStream)
+                {
+                    EncodedDataStream.Seek(0, SeekOrigin.Begin);
+                    return new Bitmap(EncodedDataStream);
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                LoggerHelper.Error($"解码失败: {ex.Message}");
+                // 确保异常情况下也释放 Stream
+                EncodedDataStream?.Dispose();
+                return null;
+            }
         }
-        catch (ArgumentException ex)
-        {
-            LoggerHelper.Error($"解码失败: {ex.Message}");
-            return null;
-        }
-    }
     // public static System.Drawing.Bitmap? ToDrawingBitmap(this Bitmap? bitmap)
     // {
     //     if (bitmap == null)
