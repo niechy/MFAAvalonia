@@ -15,6 +15,7 @@ using SukiUI.MessageBox;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MFAAvalonia.Views.Windows;
@@ -75,6 +76,11 @@ public partial class RootView : SukiWindow
     private double _lastValidWidth;
     private double _lastValidHeight;
 
+    // 防抖机制：避免频繁保存窗口位置导致内存泄漏
+    private CancellationTokenSource? _saveWindowPositionCts;
+    private bool _pendingSave = false;
+    private const int SaveDebounceDelayMs = 500; // 500ms 防抖延迟
+
     private void HandleWindowStateChange()
     {
         if (ConfigurationManager.Current.GetValue(ConfigurationKeys.ShouldMinimizeToTray, false))
@@ -106,7 +112,7 @@ public partial class RootView : SukiWindow
         BeforeClosed();
         base.OnClosed(e);
     }
-    
+
     public void BeforeClosed(bool noLog)
     {
         if (!GlobalHotkeyService.IsStopped)
@@ -117,8 +123,8 @@ public partial class RootView : SukiWindow
             }
             ConfigurationManager.Current.SetValue(ConfigurationKeys.TaskItems, Instances.TaskQueueViewModel.TaskItemViewModels.ToList().Select(model => model.InterfaceItem));
 
-            // 确保窗口大小和位置被保存
-            SaveWindowSizeAndPosition();
+            // 确保窗口大小和位置被立即保存（绕过防抖机制）
+            SaveWindowSizeAndPositionImmediately();
             if (!noLog)
                 LoggerHelper.Info("MFA Closed!");
 
@@ -171,9 +177,8 @@ public partial class RootView : SukiWindow
     public static void AddLogByColor(string content,
         string brush = "Gray",
         string weight = "Regular",
-        bool showTime = true)
-        =>
-            Instances.TaskQueueViewModel.AddLog(content, brush, weight, showTime);
+        bool showTime = true) =>
+        Instances.TaskQueueViewModel.AddLog(content, brush, weight, showTime);
 
 
     public static void AddLog(string content,
@@ -243,7 +248,6 @@ public partial class RootView : SukiWindow
                         }
 
                         GlobalConfiguration.SetValue(ConfigurationKeys.NoAutoStart, bool.FalseString);
-
                         Instances.RootViewModel.LockController = (MaaProcessor.Interface?.Controller?.Count ?? 0) == 1;
 
                         ConfigurationManager.Current.SetValue(ConfigurationKeys.EnableEdit, ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableEdit, false));
@@ -261,9 +265,9 @@ public partial class RootView : SukiWindow
                             task.EnableSetting = true;
                         }
 
+
                         if (tempTask != null)
                             tempTask.EnableSetting = true;
-
 
                         if (!string.IsNullOrWhiteSpace(MaaProcessor.Interface?.Message))
                         {
@@ -453,7 +457,7 @@ public partial class RootView : SukiWindow
     }
 
     /// <summary>
-    /// 保存窗口大小和位置
+    /// 保存窗口大小和位置（带防抖机制）
     /// </summary>
     public void SaveWindowSizeAndPosition()
     {
@@ -463,50 +467,107 @@ public partial class RootView : SukiWindow
             return;
         }
 
+        // 更新缓存的窗口状态（这部分是轻量级操作，可以立即执行）
+        UpdateCachedWindowState();
+
+        // 使用防抖机制延迟实际的配置保存
+        ScheduleDebouncedSave();
+    }
+
+    /// <summary>
+    /// 更新缓存的窗口状态（轻量级操作）
+    /// </summary>
+    private void UpdateCachedWindowState()
+    {
+        try
+        {
+            if (WindowState == WindowState.Normal)
+            {
+                // 缓存窗口大小
+                double width = Width;
+                double height = Height;
+                if (width > 100 && height > 100)
+                {
+                    _lastValidWidth = width;
+                    _lastValidHeight = height;
+                }
+
+                // 缓存窗口位置
+                var position = Position;
+                if (position.X != 0 || position.Y != 0)
+                {
+                    _hasValidPosition = true;
+                    _lastValidPosition = position;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"更新缓存窗口状态失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 调度防抖保存
+    /// </summary>
+    private void ScheduleDebouncedSave()
+    {
+        // 标记有待保存的更改
+        _pendingSave = true;
+
+        // 取消之前的延迟保存任务
+        _saveWindowPositionCts?.Cancel();
+        _saveWindowPositionCts?.Dispose();
+        _saveWindowPositionCts = new CancellationTokenSource();
+
+        var token = _saveWindowPositionCts.Token;
+
+        // 启动新的延迟保存任务
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(SaveDebounceDelayMs, token);
+
+                // 如果没有被取消，执行实际保存
+                if (!token.IsCancellationRequested && _pendingSave)
+                {
+                    _pendingSave = false;
+                    await Dispatcher.UIThread.InvokeAsync(ExecuteActualSave);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // 任务被取消，忽略
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Error($"防抖保存任务失败: {ex.Message}");
+            }
+        }, token);
+    }
+
+    /// <summary>
+    /// 执行实际的配置保存（在防抖延迟后调用）
+    /// </summary>
+    private void ExecuteActualSave()
+    {
         try
         {
             // 保存最大化状态
             bool isMaximized = WindowState == WindowState.Maximized;
             ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowMaximized, isMaximized.ToString().ToLower());
 
-            // 只有在非最大化状态下才保存大小和位置
-            if (WindowState == WindowState.Normal)
+            // 保存缓存的窗口大小
+            if (_lastValidWidth > 100 && _lastValidHeight > 100)
             {
-                // 保存窗口大小
-                double width = Width;
-                double height = Height;
-                if (width > 100 && height > 100) // 确保有效的窗口大小
-                {
-                    _lastValidWidth = width;
-                    _lastValidHeight = height;
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowWidth, width.ToString());
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowHeight, height.ToString());
-                }
-
-                // 保存窗口位置 - 只有在位置有效时才保存
-                var position = Position;
-                if (position.X != 0 || position.Y != 0)
-                {
-                    _hasValidPosition = true;
-                    _lastValidPosition = position;
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionX, position.X.ToString());
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionY, position.Y.ToString());
-                }
-                else if (_hasValidPosition)
-                {
-                    // 如果当前位置是 (0, 0) 但之前有有效位置，使用缓存的位置
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionX, _lastValidPosition.X.ToString());
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionY, _lastValidPosition.Y.ToString());
-                }
+                ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowWidth, _lastValidWidth.ToString());
+                ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowHeight, _lastValidHeight.ToString());
             }
-            else if (_hasValidPosition)
+
+            // 保存缓存的窗口位置
+            if (_hasValidPosition)
             {
-                // 如果窗口不是正常状态（如最大化或最小化），使用缓存的大小和位置
-                if (_lastValidWidth > 100 && _lastValidHeight > 100)
-                {
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowWidth, _lastValidWidth.ToString());
-                    ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowHeight, _lastValidHeight.ToString());
-                }
                 ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionX, _lastValidPosition.X.ToString());
                 ConfigurationManager.Current.SetValue(ConfigurationKeys.MainWindowPositionY, _lastValidPosition.Y.ToString());
             }
@@ -515,5 +576,21 @@ public partial class RootView : SukiWindow
         {
             LoggerHelper.Error($"保存窗口大小和位置失败: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// 立即保存窗口大小和位置（用于关闭窗口时）
+    /// </summary>
+    public void SaveWindowSizeAndPositionImmediately()
+    {
+        // 取消任何待处理的防抖保存
+        _saveWindowPositionCts?.Cancel();
+        _saveWindowPositionCts?.Dispose();
+        _saveWindowPositionCts = null;
+        _pendingSave = false;
+
+        // 更新缓存并立即保存
+        UpdateCachedWindowState();
+        ExecuteActualSave();
     }
 }
