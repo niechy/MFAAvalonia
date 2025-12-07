@@ -93,10 +93,8 @@ public class SchedulePicker : TemplatedControl
         get => _isMonthlyMode;
         set
         {
-            Console.WriteLine(value);
             if (SetAndRaise(IsMonthlyModeProperty, ref _isMonthlyMode, value) && value)
             {
-                Console.WriteLine(11222);
                 SetScheduleType(TimerScheduleType.Monthly);
             }
         }
