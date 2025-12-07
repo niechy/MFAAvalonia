@@ -185,8 +185,8 @@
                 <!-- Background Image Settings -->
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                        <Button 
-                            Command="{Binding ClearBackgroundImageCommand}" Classes="Basic Round" 
+                        <Button
+                            Command="{Binding ClearBackgroundImageCommand}" Classes="Basic Round"
                             IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
                             Margin="7,0,8,0"
                             Padding="0"
@@ -199,8 +199,8 @@
                         <Button
                             Command="{Binding SelectBackgroundImageCommand}"
                             Content="{markup:I18n {x:Static helper:LangKeys.Select}}"
-                            Height="40" 
-                            Width="215"/>
+                            Height="40"
+                            Width="215" />
                     </StackPanel>
                     <StackPanel HorizontalAlignment="Left">
                         <TextBlock
@@ -273,6 +273,21 @@
                         FontSize="16"
                         FontWeight="SemiBold"
                         Text="{markup:I18n {x:Static helper:LangKeys.MinimizeToTray}}" />
+                </StackPanel>
+            </DockPanel>
+        </suki:GlassCard>
+        <suki:GlassCard Margin="0,25,0,0" Padding="25">
+            <DockPanel>
+                <ToggleSwitch
+                    Classes="Switch"
+                    DockPanel.Dock="Right"
+                    IsChecked="{Binding EnableToastNotification}"
+                    VerticalAlignment="Top" />
+                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Text="{markup:I18n {x:Static helper:LangKeys.Notification}}" />
                 </StackPanel>
             </DockPanel>
         </suki:GlassCard>

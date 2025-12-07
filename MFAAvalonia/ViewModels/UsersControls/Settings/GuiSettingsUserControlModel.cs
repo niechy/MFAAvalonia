@@ -51,6 +51,9 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
     [ObservableProperty] private bool _shouldMinimizeToTray = ConfigurationManager.Current.GetValue(ConfigurationKeys.ShouldMinimizeToTray, false);
     partial void OnShouldMinimizeToTrayChanged(bool value) => HandlePropertyChanged(ConfigurationKeys.ShouldMinimizeToTray, value);
 
+    [ObservableProperty] private bool _enableToastNotification = ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableToastNotification, true);
+    partial void OnEnableToastNotificationChanged(bool value) => HandlePropertyChanged(ConfigurationKeys.EnableToastNotification, value);
+
     // Background Image properties
     [ObservableProperty] private string? _backgroundImagePath =
         ConfigurationManager.Current.GetValue(ConfigurationKeys.BackgroundImagePath, string.Empty);

@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Platform;
+using MFAAvalonia.Configuration;
 using MFAAvalonia.Views.Windows;
 using SoundFlow.Abstracts.Devices;
 using SoundFlow.Backends.MiniAudio;
@@ -55,6 +56,12 @@ public class ToastNotification
     
     public static void Show(string title, string content = "", int duration = 4000, bool sound = true)
     {
+        // 检查是否启用了 Toast 通知
+        if (!ConfigurationManager.Current.GetValue(ConfigurationKeys.EnableToastNotification, true))
+        {
+            return;
+        }
+        
         DispatcherHelper.PostOnMainThread(() =>
         {
             Instance.AddToast(new NotificationView(duration)

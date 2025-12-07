@@ -70,13 +70,14 @@ public static class ConfigurationKeys
 
     #endregion
 
-    #region 界面设置
-
-    public const string LangIndex = "LangIndex";
-    public const string CurrentLanguage = "CurrentLanguage";
-    public const string ThemeIndex = "ThemeIndex";
-    public const string ShouldMinimizeToTray = "ShouldMinimizeToTray";
-    public const string EnableShowIcon = "EnableShowIcon";
+        #region 界面设置
+    
+        public const string LangIndex = "LangIndex";
+        public const string CurrentLanguage = "CurrentLanguage";
+        public const string ThemeIndex = "ThemeIndex";
+        public const string ShouldMinimizeToTray = "ShouldMinimizeToTray";
+        public const string EnableShowIcon = "EnableShowIcon";
+        public const string EnableToastNotification = "EnableToastNotification";
 
     public const string OtherColorTheme = "OtherColorTheme";
     public const string BackgroundStyle = "BackgroundStyle";
