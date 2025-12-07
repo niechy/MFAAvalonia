@@ -224,15 +224,33 @@ public partial class AnnouncementViewModel : ViewModelBase
             {
                 return;
             }
+            var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
+            var announcementDir = Path.Combine(resourcePath, AnnouncementFolder);
 
-            // 先创建并显示窗口（快速响应用户操作）
+            if (!Directory.Exists(announcementDir))
+            {
+                LoggerHelper.Warning($"公告文件夹不存在: {announcementDir}");
+                return;
+            }
             var announcementView = new AnnouncementView
             {
                 DataContext = viewModel
             };
-            viewModel.SetView(announcementView);
-            announcementView.Show();
-
+            // 后台线程获取 Markdown 文件列表并读取内容
+            var mdCount = Directory.GetFiles(announcementDir, "*.md").Length;
+            if (mdCount > 0)
+            {
+                // 先创建并显示窗口（快速响应用户操作）
+                viewModel.SetView(announcementView);
+                announcementView.Show();
+            }
+            else
+            {
+                ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.AnnouncementEmpty.ToLocalization());
+                announcementView.DataContext = null;
+                announcementView.Dispose();
+                return;
+            }
             // 异步加载公告元数据
             await viewModel.LoadAnnouncementMetadataAsync();
 
