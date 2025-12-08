@@ -12,6 +12,7 @@ using MFAAvalonia.Views.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Semver;
+using SukiUI.Controls;
 using SukiUI.Dialogs;
 using SukiUI.Enums;
 using SukiUI.Toasts;
@@ -330,6 +331,7 @@ public static class VersionChecker
             Instances.RootViewModel.SetUpdating(false);
             return;
         }
+
         SetProgress(progress, 10);
         string[] strings = [];
         if (isGithub)
@@ -372,7 +374,6 @@ public static class VersionChecker
             ToastHelper.Warn(LangKeys.FailToGetLatestVersionInfo.ToLocalization());
             Instances.RootViewModel.SetUpdating(false);
             Instances.TaskQueueViewModel.ClearDownloadProgress();
-
             return;
         }
 
@@ -396,7 +397,7 @@ public static class VersionChecker
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
         }
-        DispatcherHelper.PostOnMainThread(() => Instances.RootView.BeforeClosed(true,true));
+        DispatcherHelper.PostOnMainThread(() => Instances.RootView.BeforeClosed(true, true));
         var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_res");
         Directory.CreateDirectory(tempPath);
         string fileExtension = GetFileExtensionFromUrl(downloadUrl);
@@ -1718,7 +1719,7 @@ public static class VersionChecker
             GetDownloadUrlFromGitHubRelease(latestVersion, owner, repo, out url, out sha256);
         }
     }
-    
+
     private static string ExtractSha256FromDigest(string? digest)
     {
         if (string.IsNullOrEmpty(digest))
@@ -2395,13 +2396,18 @@ public static class VersionChecker
             return;
         DispatcherHelper.PostOnMainThread(() => bar.Value = percentage);
     }
+    
     private static void Dismiss(ISukiToast? toast)
     {
         if (toast == null)
             return;
+
         try
         {
-            DispatcherHelper.PostOnMainThread(() => Instances.ToastManager.Dismiss(toast));
+            if (toast is SukiToast sukiToast)
+                DispatcherHelper.PostOnMainThread(() => sukiToast.Dismiss());
+            else
+                DispatcherHelper.PostOnMainThread(() => Instances.ToastManager.Dismiss(toast));
         }
         catch (Exception e)
         {
