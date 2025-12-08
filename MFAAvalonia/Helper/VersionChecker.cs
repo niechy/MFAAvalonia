@@ -301,7 +301,7 @@ public static class VersionChecker
         ProgressBar? progress = null;
         TextBlock? textBlock = null;
         ISukiToast? sukiToast = null;
-        DispatcherHelper.PostOnMainThread(() =>
+        StackPanel stackPanel = await DispatcherHelper.RunOnMainThreadAsync(() =>
         {
             progress = new ProgressBar
             {
@@ -315,12 +315,14 @@ public static class VersionChecker
             };
             stackPanel.Children.Add(textBlock);
             stackPanel.Children.Add(progress);
-            sukiToast = Instances.ToastManager.CreateToast()
-                .WithTitle(LangKeys.UpdateResource.ToLocalization())
-                .WithContent(stackPanel).Queue();
+            return stackPanel;
         });
 
-
+        sukiToast = await DispatcherHelper.RunOnMainThreadAsync(() =>
+            Instances.ToastManager.CreateToast()
+                .WithTitle(LangKeys.UpdateResource.ToLocalization())
+                .WithContent(stackPanel).Queue()
+        );
         var localVersion = string.IsNullOrWhiteSpace(currentVersion) ? MaaProcessor.Interface?.Version ?? string.Empty : currentVersion;
 
         if (string.IsNullOrWhiteSpace(localVersion))
@@ -358,6 +360,7 @@ public static class VersionChecker
         }
         catch (Exception ex)
         {
+            Console.WriteLine(sukiToast == null);
             Dismiss(sukiToast);
             ToastHelper.Warn($"{LangKeys.FailToGetLatestVersionInfo.ToLocalization()}", ex.Message, -1);
             Instances.RootViewModel.SetUpdating(false);
@@ -2396,7 +2399,7 @@ public static class VersionChecker
             return;
         DispatcherHelper.PostOnMainThread(() => bar.Value = percentage);
     }
-    
+
     private static void Dismiss(ISukiToast? toast)
     {
         if (toast == null)

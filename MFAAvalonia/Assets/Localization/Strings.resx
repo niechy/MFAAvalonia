@@ -371,16 +371,16 @@
     <data name="EmulatorSelectionMessage" xml:space="preserve">
         <value>已选择模拟器:{0}</value>
     </data>
-        <data name="EnableRecording" xml:space="preserve">
+    <data name="EnableRecording" xml:space="preserve">
             <value>启用保存录像 (用于调试)</value>
         </data>
-        <data name="EnableSaveDraw" xml:space="preserve">
+    <data name="EnableSaveDraw" xml:space="preserve">
             <value>启用保存截图 (用于调试)</value>
         </data>
-        <data name="EnableSaveOnError" xml:space="preserve">
+    <data name="EnableSaveOnError" xml:space="preserve">
             <value>启用错误时保存截图 (用于调试)</value>
         </data>
-        <data name="EnterTaskName" xml:space="preserve">
+    <data name="EnterTaskName" xml:space="preserve">
         <value>请输入任务名称</value>
     </data>
     <data name="Error" xml:space="preserve">
