@@ -44,50 +44,49 @@ sealed class Program
     public static Dictionary<string, string> Args { get; private set; } = new();
     private static Mutex? _mutex;
     private static bool _mutexReleased = false;
-    private static readonly object _mutexLock = new();
+    private static readonly object _mutexLock = new(); 
     private static int _mutexOwnerThreadId = -1;
     public static bool IsNewInstance = true;
 
     public static void ReleaseMutex()
     {
-        lock (_mutexLock)
-        {
-            if (_mutexReleased || _mutex == null)
-            {
-                return;
-            }
 
-            // 检查当前线程是否是获取 Mutex 的线程
-            if (Environment.CurrentManagedThreadId != _mutexOwnerThreadId)
+        if (_mutexReleased || _mutex == null)
+        {
+            return;
+        }
+
+        // 检查当前线程是否是获取 Mutex 的线程
+        if (Environment.CurrentManagedThreadId != _mutexOwnerThreadId)
+        {
+            // 如果不是，尝试通过 UI 线程（主线程）来释放
+            // 因为在 Avalonia 中，UI 线程就是主线程
+            try
             {
-                // 如果不是，尝试通过 UI 线程（主线程）来释放
-                // 因为在 Avalonia 中，UI 线程就是主线程
+
+                // 同步调用到 UI 线程执行释放
+                _ = DispatcherHelper.RunOnMainThreadAsync(ReleaseMutexInternal);
+
+            }
+            catch (Exception)
+            {
+                // Dispatcher 可能已经关闭，直接关闭 Mutex 句柄
                 try
                 {
-
-                    // 同步调用到 UI 线程执行释放
-                    DispatcherHelper.RunOnMainThread(ReleaseMutexInternal);
-
+                    _mutex?.Close();
+                    _mutex = null;
+                    _mutexReleased = true;
                 }
-                catch (Exception)
+                catch
                 {
-                    // Dispatcher 可能已经关闭，直接关闭 Mutex 句柄
-                    try
-                    {
-                        _mutex?.Close();
-                        _mutex = null;
-                        _mutexReleased = true;
-                    }
-                    catch
-                    {
-                        // 忽略
-                    }
+                    // 忽略
                 }
-                return;
             }
-
-            ReleaseMutexInternal();
+            return;
         }
+
+        ReleaseMutexInternal();
+
     }
 
     private static void ReleaseMutexInternal()

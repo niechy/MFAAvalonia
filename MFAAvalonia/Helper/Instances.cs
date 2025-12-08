@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using MFAAvalonia.Configuration;
 using MFAAvalonia.Extensions;
@@ -48,7 +49,7 @@ public static partial class Instances
                         {
                             // 设计时核心逻辑：接口自动匹配实现类，普通类直接创建
                             object designInstance;
-                           
+
                             if (serviceType.IsInterface)
                             {
                                 // 1. 接口类型：去掉"I"前缀，查找对应的实现类
@@ -162,7 +163,21 @@ public static partial class Instances
     /// </summary>
     public static void ShutdownApplication()
     {
+        ShutdownApplication(false);
+    }
+
+    public static void ShutdownApplication(bool forceStop)
+    {
         Program.ReleaseMutex();
+        if (forceStop)
+        {
+            // 强制退出时，只做最基本的清理，避免卡住
+            RootView.BeforeClosed(true, false);
+            Environment.Exit(0);
+            return;
+        }
+        // 使用异步投递避免从后台线程同步调用UI线程导致死锁
+        // 然后使用 Environment.Exit 确保进程退出
         DispatcherHelper.PostOnMainThread(() => ApplicationLifetime.Shutdown());
     }
 

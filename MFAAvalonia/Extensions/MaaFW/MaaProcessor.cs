@@ -219,7 +219,23 @@ public class MaaProcessor
 
             try
             {
-                oldTasker.Stop().Wait();
+                // 使用超时机制避免无限等待，最多等待 5 秒
+                var stopTask = Task.Run(() =>
+                {
+                    try
+                    {
+                        oldTasker.Stop().Wait();
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Warning($"MaaTasker Stop inner failed: {ex.Message}");
+                    }
+                });
+
+                if (!stopTask.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    LoggerHelper.Warning("MaaTasker Stop timed out after 5 seconds");
+                }
             }
             catch (Exception e)
             {
@@ -815,7 +831,7 @@ public class MaaProcessor
             tasker.Global.SetOption_SaveDraw(ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveDraw, false));
             tasker.Global.SetOption(GlobalOption.SaveOnError, ConfigurationManager.Maa.GetValue(ConfigurationKeys.SaveOnError, true));
             tasker.Global.SetOption_DebugMode(ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
-          
+
             LoggerHelper.Info("Maafw debug mode: " + ConfigurationManager.Maa.GetValue(ConfigurationKeys.ShowHitDraw, false));
             // 注意：只订阅一次回调，避免嵌套订阅导致内存泄漏
             tasker.Callback += HandleCallBack;
@@ -2590,7 +2606,7 @@ public class MaaProcessor
         switch (afterTask)
         {
             case "CloseMFA":
-                Instances.ShutdownApplication();
+               Instances.ShutdownApplication();
                 break;
             case "CloseEmulator":
                 CloseSoftware();

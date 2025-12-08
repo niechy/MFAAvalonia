@@ -396,7 +396,7 @@ public static class VersionChecker
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
         }
-        DispatcherHelper.PostOnMainThread(() => Instances.RootView.BeforeClosed(true));
+        DispatcherHelper.PostOnMainThread(() => Instances.RootView.BeforeClosed(true,true));
         var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_res");
         Directory.CreateDirectory(tempPath);
         string fileExtension = GetFileExtensionFromUrl(downloadUrl);

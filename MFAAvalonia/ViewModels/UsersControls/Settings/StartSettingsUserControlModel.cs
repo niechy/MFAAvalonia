@@ -112,6 +112,7 @@ public partial class StartSettingsUserControlModel : ViewModelBase
     {
         ConfigurationManager.Current.SetValue(ConfigurationKeys.AfterTask, value);
     }
+    
     [RelayCommand]
     private void QuickSettings()
     {

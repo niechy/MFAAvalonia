@@ -113,23 +113,28 @@ public partial class RootView : SukiWindow
         base.OnClosed(e);
     }
 
-    public void BeforeClosed(bool noLog)
+    public void BeforeClosed(bool noLog, bool stopTask)
     {
         if (!GlobalHotkeyService.IsStopped)
         {
             if (Instances.RootViewModel.IsRunning)
             {
-                MaaProcessor.Instance.Stop(MFATask.MFATaskStatus.STOPPED);
+                if (stopTask)
+                    MaaProcessor.Instance.Stop(MFATask.MFATaskStatus.STOPPED);
+                else
+                    DispatcherHelper.PostOnMainThread(() => Instances.RootViewModel.IsRunning = false);
             }
             ConfigurationManager.Current.SetValue(ConfigurationKeys.TaskItems, Instances.TaskQueueViewModel.TaskItemViewModels.ToList().Select(model => model.InterfaceItem));
-
             // 确保窗口大小和位置被立即保存（绕过防抖机制）
-            SaveWindowSizeAndPositionImmediately();
+
+            DispatcherHelper.PostOnMainThread(SaveWindowSizeAndPositionImmediately);
             if (!noLog)
                 LoggerHelper.Info("MFA Closed!");
 
             MaaProcessor.Instance.SetTasker();
+
             CustomClassLoader.Dispose();
+
             if (!noLog)
                 LoggerHelper.DisposeLogger();
             GlobalHotkeyService.Shutdown();
@@ -139,7 +144,7 @@ public partial class RootView : SukiWindow
 
     public void BeforeClosed()
     {
-        BeforeClosed(false);
+        BeforeClosed(false, true);
     }
 
     public async Task<bool> ConfirmExit(Action? action = null)

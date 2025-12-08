@@ -659,7 +659,8 @@ public partial class TaskQueueViewModel : ViewModelBase
     [ObservableProperty] private bool _isConnected;
     public void SetConnected(bool isConnected)
     {
-        IsConnected = isConnected;
+        // 使用异步投递避免从非UI线程修改属性时导致死锁
+        DispatcherHelper.PostOnMainThread(() => IsConnected = isConnected);
     }
 
     [RelayCommand]
