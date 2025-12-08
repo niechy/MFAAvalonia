@@ -319,17 +319,6 @@ namespace Markdown.Avalonia
             _wrapper = new Wrapper(this);
             _wrapper.UseVirtualization = EnableVirtualization;
             _viewer.Content = _wrapper;
-
-            // 订阅卸载事件以清理资源
-            DetachedFromVisualTree += OnDetachedFromVisualTree;
-        }
-        
-        /// <summary>
-        /// 当控件从视觉树中移除时清理资源
-        /// </summary>
-        private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
-        {
-            Cleanup();
         }
 
         /// <summary>
@@ -345,7 +334,6 @@ namespace Markdown.Avalonia
             _progressiveRenderCts?.Cancel();
 
             // 取消事件订阅
-            DetachedFromVisualTree -= OnDetachedFromVisualTree;
             _viewer.ScrollChanged -= Viewer_ScrollChanged;
             _viewer.PointerPressed -= _viewer_PointerPressed;
             _viewer.PointerMoved -= _viewer_PointerMoved;
@@ -417,14 +405,14 @@ namespace Markdown.Avalonia
             if (targetControl == null) return;
 
             var point = e.GetCurrentPoint(targetControl);
-                        if (point.Properties.IsLeftButtonPressed)
-                        {
-                            _isLeftButtonPressed = true;
-                            _startPoint = point.Position;
-                            PerformSelection(_startPoint, point.Position);
-            
-                            this.Focus();
-                        }
+            if (point.Properties.IsLeftButtonPressed)
+            {
+                _isLeftButtonPressed = true;
+                _startPoint = point.Position;
+                PerformSelection(_startPoint, point.Position);
+
+                this.Focus();
+            }
         }
 
         private void _viewer_PointerMoved(object? sender, PointerEventArgs e)
@@ -493,7 +481,7 @@ namespace Markdown.Avalonia
             if (e.Key == Key.C && e.KeyModifiers == KeyModifiers.Control)
             {
                 string? selectedText = null;
-                
+
                 if (_wrapper.UseVirtualization && _wrapper.VirtualizingPanel != null)
                 {
                     selectedText = _wrapper.VirtualizingPanel.GetSelectedText();
