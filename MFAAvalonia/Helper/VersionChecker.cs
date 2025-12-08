@@ -298,7 +298,6 @@ public static class VersionChecker
     {
         shouldShowToast = false;
         Instances.RootViewModel.SetUpdating(true);
-        MaaProcessor.Instance.SetTasker();
         ProgressBar? progress = null;
         TextBlock? textBlock = null;
         ISukiToast? sukiToast = null;
@@ -397,6 +396,7 @@ public static class VersionChecker
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
         }
+        MaaProcessor.Instance.SetTasker();
         DispatcherHelper.PostOnMainThread(() => Instances.RootView.BeforeClosed(true, true));
         var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_res");
         Directory.CreateDirectory(tempPath);
