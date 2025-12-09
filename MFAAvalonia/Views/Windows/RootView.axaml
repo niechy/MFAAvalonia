@@ -19,12 +19,12 @@
     xmlns:extensions="clr-namespace:MFAAvalonia.Extensions"
     xmlns:helper="clr-namespace:MFAAvalonia.Helper"
     xmlns:markup="https://codewf.com"
-    xmlns:markupExtensions="clr-namespace:FluentIcons.Avalonia.Fluent.MarkupExtensions;assembly=FluentIcons.Avalonia.Fluent"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pages="clr-namespace:MFAAvalonia.Views.Pages"
     xmlns:suki="https://github.com/kikipoulet/SukiUI"
     xmlns:windows="clr-namespace:MFAAvalonia.ViewModels.Windows"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent">
     <suki:SukiWindow.Styles>
         <Style Selector="ToggleButton.SP:checked > PathIcon">
             <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
@@ -235,17 +235,17 @@
             <suki:SukiSideMenu.Items>
                 <suki:SukiSideMenuItem IsContentMovable="False"
                                        Header="{markup:I18n {x:Static helper:LangKeys.Home}}"
-                                       Icon="{markupExtensions:FluentIcon Icon=TasksApp,
+                                       Icon="{fluent:FluentIcon Icon=TasksApp,
                                                        IconVariant=Regular}"
                                        PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:TaskQueueView}}" />
                 <suki:SukiSideMenuItem IsContentMovable="False"
                                        Header="{markup:I18n {x:Static helper:LangKeys.ScreenshotPage}}"
-                                       Icon="{markupExtensions:FluentIcon Icon=Screenshot,
+                                       Icon="{fluent:FluentIcon Icon=Screenshot,
                                                        IconVariant=Regular}"
                                        PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:ScreenshotView}}" />
                 <suki:SukiSideMenuItem IsContentMovable="False"
                                        Header="{markup:I18n {x:Static helper:LangKeys.ResourceOption}}"
-                                       Icon="{markupExtensions:FluentIcon Icon=Apps,
+                                       Icon="{fluent:FluentIcon Icon=Apps,
                                                        IconVariant=Regular}"
                                        IsVisible="False"
                                        PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:ResourcesView}}" />
@@ -259,7 +259,7 @@
             <suki:SukiSideMenu.FooterMenuItems>
                 <suki:SukiSideMenuItem IsContentMovable="False"
                                        Header="{markup:I18n {x:Static helper:LangKeys.Settings}}"
-                                       Icon="{markupExtensions:FluentIcon Icon=Settings,
+                                       Icon="{fluent:FluentIcon Icon=Settings,
                                                            IconVariant=Regular}"
                                        PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:SettingsView}}" />
             </suki:SukiSideMenu.FooterMenuItems>

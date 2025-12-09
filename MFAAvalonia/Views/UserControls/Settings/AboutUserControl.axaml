@@ -8,14 +8,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:helper="clr-namespace:MFAAvalonia.Helper"
              xmlns:markup="https://codewf.com"
-             xmlns:markupExtensions="clr-namespace:FluentIcons.Avalonia.Fluent.MarkupExtensions;assembly=FluentIcons.Avalonia.Fluent"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:utilities="clr-namespace:MFAAvalonia.Utilities"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:pages="clr-namespace:MFAAvalonia.ViewModels.Pages"
              xmlns:full="https://github.com/whistyun/Markdown.Avalonia"
-             xmlns:extensions="clr-namespace:MFAAvalonia.Extensions">
+             xmlns:extensions="clr-namespace:MFAAvalonia.Extensions"
+             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent">
     <StackPanel Spacing="10">
         <!-- 项目描述 -->
         <suki:GlassCard Padding="20,13,30,-13"
@@ -25,11 +25,12 @@
                     <DockPanel>
                         <StackPanel Orientation="Horizontal"
                                     DockPanel.Dock="Left">
-                            <ContentControl Content="{markupExtensions:FluentIcon Icon=BookOpen, IconSize=Size20}" />
+                            <ContentControl Content="{fluent:FluentIcon Icon=BookOpen, IconSize=Size20}" />
                             <TextBlock Text="{markup:I18n {x:Static helper:LangKeys.ProjectDescription}}"
                                        FontSize="16"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center" />
+                            
                         </StackPanel>
                         <ToggleButton Name="DescriptionToggle"
                                       IsChecked="False"
@@ -38,10 +39,10 @@
                                       Background="Transparent"
                                       BorderThickness="0">
                             <Panel>
-                                <ContentControl Content="{markupExtensions:FluentIcon Icon=ChevronDown, IconSize=Size16}"
+                                <ContentControl Content="{fluent:FluentIcon Icon=ChevronDown, IconSize=Size16}"
                                                 Foreground="{DynamicResource SukiText}"
                                                 IsVisible="{Binding !IsChecked, ElementName=DescriptionToggle}" />
-                                <ContentControl Content="{markupExtensions:FluentIcon Icon=ChevronUp, IconSize=Size16}"
+                                <ContentControl Content="{fluent:FluentIcon Icon=ChevronUp, IconSize=Size16}"
                                                 Foreground="{DynamicResource SukiText}"
                                                 IsVisible="{Binding IsChecked, ElementName=DescriptionToggle}" />
                             </Panel>
@@ -78,7 +79,7 @@
                     <DockPanel>
                         <StackPanel Orientation="Horizontal"
                                     DockPanel.Dock="Left">
-                            <ContentControl Content="{markupExtensions:FluentIcon Icon=ContactCard, IconSize=Size20}" />
+                            <ContentControl Content="{fluent:FluentIcon Icon=ContactCard, IconSize=Size20}" />
                             <TextBlock Text="{markup:I18n {x:Static helper:LangKeys.ContactInfo}}"
                                        FontSize="16"
                                        FontWeight="SemiBold"
@@ -91,10 +92,10 @@
                                       Background="Transparent"
                                       BorderThickness="0">
                             <Panel>
-                                <ContentControl Content="{markupExtensions:FluentIcon Icon=ChevronDown, IconSize=Size16}"
+                                <ContentControl Content="{fluent:FluentIcon Icon=ChevronDown, IconSize=Size16}"
                                                 Foreground="{DynamicResource SukiText}"
                                                 IsVisible="{Binding !IsChecked, ElementName=ContactToggle}" />
-                                <ContentControl Content="{markupExtensions:FluentIcon Icon=ChevronUp, IconSize=Size16}"
+                                <ContentControl Content="{fluent:FluentIcon Icon=ChevronUp, IconSize=Size16}"
                                                 Foreground="{DynamicResource SukiText}"
                                                 IsVisible="{Binding IsChecked, ElementName=ContactToggle}" />
                             </Panel>
@@ -130,7 +131,7 @@
             <DockPanel>
                 <Button Click="ShowLicense_Click" BorderBrush="Transparent"
                         BorderThickness="0"
-                            Content="{markupExtensions:FluentIcon Icon=Send,
+                            Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"
@@ -139,7 +140,7 @@
                 <StackPanel HorizontalAlignment="Left"
                             VerticalAlignment="Center"
                             Orientation="Horizontal">
-                            <ContentControl Content="{markupExtensions:FluentIcon Icon=Certificate, IconSize=Size20}" />
+                            <ContentControl Content="{fluent:FluentIcon Icon=Certificate, IconSize=Size20}" />
                             <TextBlock Text="{markup:I18n {x:Static helper:LangKeys.LicenseInfo}}"
                                        FontSize="16"
                                        FontWeight="SemiBold"
@@ -152,7 +153,7 @@
                 <Button BorderBrush="Transparent"
                         BorderThickness="0"
                         Click="DisplayAnnouncement"
-                        Content="{markupExtensions:FluentIcon Icon=Send,
+                        Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"
@@ -173,7 +174,7 @@
                 <Button BorderBrush="Transparent"
                         BorderThickness="0"
                         Click="Button_OnClick"
-                        Content="{markupExtensions:FluentIcon Icon=Send,
+                        Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"
@@ -195,7 +196,7 @@
                         BorderThickness="0"
                         Command="{x:Static utilities:UrlUtilities.OpenLink}"
                         CommandParameter="{x:Static helper:MFAUrls.GitHub}"
-                        Content="{markupExtensions:FluentIcon Icon=Send,
+                        Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"
@@ -222,7 +223,7 @@
                         BorderThickness="0"
                         Command="{x:Static utilities:UrlUtilities.OpenLink}"
                         CommandParameter="{x:Static helper:MFAUrls.GitHubIssues}"
-                        Content="{markupExtensions:FluentIcon Icon=Send,
+                        Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"
@@ -250,7 +251,7 @@
                         BorderThickness="0"
                         Command="{x:Static utilities:UrlUtilities.OpenLink}"
                         CommandParameter="{Binding ResourceGithub}"
-                        Content="{markupExtensions:FluentIcon Icon=Send,
+                        Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"
@@ -278,7 +279,7 @@
                         BorderThickness="0"
                         Command="{x:Static utilities:UrlUtilities.OpenLink}"
                         CommandParameter="{Binding ResourceIssues}"
-                        Content="{markupExtensions:FluentIcon Icon=Send,
+                        Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"

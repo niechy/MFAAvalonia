@@ -15,7 +15,7 @@
     xmlns:userControls="clr-namespace:MFAAvalonia.Views.UserControls"
     xmlns:calcBinding="clr-namespace:CalcBinding;assembly=CalcBindingAva"
     xmlns:utilities="clr-namespace:MFAAvalonia.Utilities"
-    xmlns:markupExtensions="clr-namespace:FluentIcons.Avalonia.Fluent.MarkupExtensions;assembly=FluentIcons.Avalonia.Fluent">
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent">
     <Design.DataContext>
         <settings:VersionUpdateSettingsUserControlModel />
     </Design.DataContext>
@@ -285,7 +285,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="0"
                         Command="{Binding CheckMFAUpdateCommand}"
-                        Content="{markupExtensions:FluentIcon Icon=ArrowRepeatAll,
+                        Content="{fluent:FluentIcon Icon=ArrowRepeatAll,
                                                           IconSize=Size16}"
                         IsEnabled="{calcBinding:Binding '!IsUpdating and Idle',
                                                         Source={x:Static helper:Instances.RootViewModel}}"
@@ -307,7 +307,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="0"
                         Command="{Binding CheckResourceUpdateCommand}"
-                        Content="{markupExtensions:FluentIcon Icon=ArrowRepeatAll,
+                        Content="{fluent:FluentIcon Icon=ArrowRepeatAll,
                                                           IconSize=Size16}"
                         IsEnabled="{calcBinding:Binding '!IsUpdating and Idle',
                                                         Source={x:Static helper:Instances.RootViewModel}}"
@@ -329,7 +329,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="0"
                         Command="{Binding UpdateMFACommand}"
-                        Content="{markupExtensions:FluentIcon Icon=ArrowRepeatAll,
+                        Content="{fluent:FluentIcon Icon=ArrowRepeatAll,
                                                           IconSize=Size16}"
                         IsEnabled="{calcBinding:Binding '!IsUpdating and Idle',
                                                         Source={x:Static helper:Instances.RootViewModel}}"
@@ -351,7 +351,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="0"
                         Command="{Binding UpdateResourceCommand}"
-                        Content="{markupExtensions:FluentIcon Icon=ArrowRepeatAll,
+                        Content="{fluent:FluentIcon Icon=ArrowRepeatAll,
                                                           IconSize=Size16}"
                         IsEnabled="{calcBinding:Binding '!IsUpdating and Idle',
                                                         Source={x:Static helper:Instances.RootViewModel}}"
@@ -373,7 +373,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="0"
                         Command="{Binding RedownloadResourceCommand}"
-                        Content="{markupExtensions:FluentIcon Icon=ArrowRepeatAll,
+                        Content="{fluent:FluentIcon Icon=ArrowRepeatAll,
                                                           IconSize=Size16}"
                         IsEnabled="{calcBinding:Binding '!IsUpdating and Idle',
                                                         Source={x:Static helper:Instances.RootViewModel}}"
@@ -396,7 +396,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="0"
                         Command="{Binding UpdateMaaFWCommand}"
-                        Content="{markupExtensions:FluentIcon Icon=ArrowRepeatAll,
+                        Content="{fluent:FluentIcon Icon=ArrowRepeatAll,
                                                           IconSize=Size16}"
                         IsEnabled="{calcBinding:Binding '!IsUpdating and Idle',
                                                         Source={x:Static helper:Instances.RootViewModel}}"

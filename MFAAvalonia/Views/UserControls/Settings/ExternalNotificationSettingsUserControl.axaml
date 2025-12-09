@@ -9,12 +9,12 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helper="clr-namespace:MFAAvalonia.Helper"
     xmlns:markup="https://codewf.com"
-    xmlns:markupExtensions="clr-namespace:FluentIcons.Avalonia.Fluent.MarkupExtensions;assembly=FluentIcons.Avalonia.Fluent"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:settings="clr-namespace:MFAAvalonia.ViewModels.UsersControls.Settings"
     xmlns:suki="https://github.com/kikipoulet/SukiUI"
     xmlns:userControls="clr-namespace:MFAAvalonia.Views.UserControls"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent">
     <Design.DataContext>
         <settings:ExternalNotificationSettingsUserControlModel />
     </Design.DataContext>
@@ -27,7 +27,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="0"
                         Command="{Binding ExternalNotificationSendTestCommand}"
-                        Content="{markupExtensions:FluentIcon Icon=Send,
+                        Content="{fluent:FluentIcon Icon=Send,
                                                           IconSize=Size16}"
                         DockPanel.Dock="Right"
                         Height="40"
