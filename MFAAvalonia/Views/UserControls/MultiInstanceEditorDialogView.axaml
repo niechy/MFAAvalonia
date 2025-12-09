@@ -7,7 +7,7 @@
              x:DataType="usersControls:MultiInstanceEditorDialogViewModel"
              xmlns:extensions="clr-namespace:MFAAvalonia.Extensions"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent.Markup;assembly=FluentIcons.Avalonia.Fluent"
              xmlns:usersControls="clr-namespace:MFAAvalonia.ViewModels.UsersControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="MFAAvalonia.Views.UserControls.MultiInstanceEditorDialogView">

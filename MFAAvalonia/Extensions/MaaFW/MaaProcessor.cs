@@ -1031,7 +1031,7 @@ public class MaaProcessor
                 Config.AdbDevice.AdbSerial,
                 Config.AdbDevice.ScreenCap, Config.AdbDevice.Input,
                 !string.IsNullOrWhiteSpace(Config.AdbDevice.Config) ? Config.AdbDevice.Config : "{}",
-                Path.Combine(AppContext.BaseDirectory, "MaaAgentBinary")
+                Path.Combine(AppContext.BaseDirectory, "libs", "MaaAgentBinary")
             )
             : new MaaWin32Controller(
                 Config.DesktopWindow.HWnd,
@@ -2606,7 +2606,7 @@ public class MaaProcessor
         switch (afterTask)
         {
             case "CloseMFA":
-               Instances.ShutdownApplication();
+                Instances.ShutdownApplication();
                 break;
             case "CloseEmulator":
                 CloseSoftware();

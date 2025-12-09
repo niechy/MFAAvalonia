@@ -5,7 +5,7 @@
                  xmlns:suki="https://github.com/kikipoulet/SukiUI" ShowInTaskbar="False" Owner="{x:Null}"
                  xmlns:settings="clr-namespace:MFAAvalonia.Views.Windows"
                  xmlns:converters="clr-namespace:MFAAvalonia.Helper.Converters"
-                 xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+                 xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent.Markup;assembly=FluentIcons.Avalonia.Fluent"
                  xmlns:helper="clr-namespace:MFAAvalonia.Helper"
                  xmlns:markupExtensions="https://codewf.com" SystemDecorations="None"
                  x:DataType="settings:NotificationView"

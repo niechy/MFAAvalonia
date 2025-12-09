@@ -15,7 +15,7 @@
              xmlns:pages="clr-namespace:MFAAvalonia.ViewModels.Pages"
              xmlns:full="https://github.com/whistyun/Markdown.Avalonia"
              xmlns:extensions="clr-namespace:MFAAvalonia.Extensions"
-             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent">
+             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent.Markup;assembly=FluentIcons.Avalonia.Fluent">
     <StackPanel Spacing="10">
         <!-- 项目描述 -->
         <suki:GlassCard Padding="20,13,30,-13"

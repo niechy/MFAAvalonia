@@ -11,10 +11,9 @@ namespace MFAAvalonia;
 
 public static class PrivatePathHelper
 {
-    
     // 缓存已加载的库句柄，避免重复加载
     private static readonly Dictionary<string, IntPtr> _loadedLibraries = new(StringComparer.OrdinalIgnoreCase);
-    
+
     // Windows API: 添加 DLL 搜索目录
     [SupportedOSPlatform("windows")]
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -68,7 +67,7 @@ public static class PrivatePathHelper
             //         }
             //     }
             // }
-            
+
             AssemblyLoadContext.Default.ResolvingUnmanagedDll += (assembly, libraryName) =>
             {
                 try
@@ -302,7 +301,9 @@ public static class PrivatePathHelper
                     catch { }
                 }
             }
-
+            var agentPath = Path.Combine(baseDirectory, "MaaAgentBinary");
+            if (Path.Exists(agentPath))
+                Directory.Delete(agentPath, true);
             if (duplicateFiles.Count == 0)
                 return;
 
@@ -364,5 +365,4 @@ public static class PrivatePathHelper
     {
         return extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) || extension.Equals(".so", StringComparison.OrdinalIgnoreCase) || extension.Equals(".dylib", StringComparison.OrdinalIgnoreCase);
     }
-
 }

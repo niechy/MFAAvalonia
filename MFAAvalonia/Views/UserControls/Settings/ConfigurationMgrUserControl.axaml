@@ -6,7 +6,7 @@
     x:DataType="settings:SettingsViewModel"
     xmlns="https://github.com/avaloniaui"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent.Markup;assembly=FluentIcons.Avalonia.Fluent"
     xmlns:helper="clr-namespace:MFAAvalonia.Helper"
     xmlns:markup="https://codewf.com"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -66,11 +66,10 @@
                                         HorizontalContentAlignment="Center"
                                         VerticalAlignment="Center">
                                         <fluent:FluentIcon
-                                            Height="16"
                                             Icon="Delete"
                                             IconSize="Size16"
                                             IconVariant="Regular"
-                                            Width="16" />
+                                            />
                                     </Button>
                                 </Grid>
                             </DataTemplate>

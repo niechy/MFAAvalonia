@@ -12,7 +12,7 @@
              xmlns:converters="clr-namespace:MFAAvalonia.Helper.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:ex="clr-namespace:MFAAvalonia.Extensions"
-             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent.Markup;assembly=FluentIcons.Avalonia.Fluent"
              xmlns:valueType="clr-namespace:MFAAvalonia.Helper.ValueType"
              xmlns:maa="clr-namespace:MFAAvalonia.Extensions.MaaFW"
              xmlns:markup="https://codewf.com"
@@ -25,7 +25,8 @@
              xmlns:behaviors="using:Avalonia.Xaml.Interactions.Core"
              xmlns:interaction="using:Avalonia.Xaml.Interactivity"
              xmlns:avalonia="https://github.com/whistyun/Markdown.Avalonia.Tight"
-             xmlns:helper="clr-namespace:MFAAvalonia.Helper">
+             xmlns:helper="clr-namespace:MFAAvalonia.Helper"
+             xmlns:avalonia1="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia">
     <Design.DataContext>
         <pages:TaskQueueViewModel />
     </Design.DataContext>
@@ -184,7 +185,7 @@
                                         Margin="7,0,8,0"
                                         Padding="0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.Reset}}">
-                                        <fluent:FluentIcon Height="18"
+                                        <avalonia1:FluentIcon Height="18"
                                                            Icon="ArrowSync"
                                                            IconSize="Size16"
                                                            IconVariant="Regular" />
@@ -530,7 +531,7 @@
                                         Margin="3,0,2,0"
                                         Padding="0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.Custom}}">
-                                    <fluent:FluentIcon Height="18"
+                                    <avalonia1:FluentIcon Height="18"
                                                        Icon="DesktopEdit"
                                                        IconSize="Size16"
                                                        IconVariant="Regular" />
@@ -542,10 +543,10 @@
                                         Padding="0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.TooltipRefresh}}"
                                         VerticalAlignment="Center">
-                                    <fluent:FluentIcon Height="18"
-                                                       Icon="ArrowSync"
-                                                       IconSize="Size16"
-                                                       IconVariant="Regular" />
+                                    <avalonia1:FluentIcon Height="18"
+                                                          Icon="ArrowSync"
+                                                          IconSize="Size16"
+                                                          IconVariant="Regular" />
                                 </Button>
                                 <ContentControl
                                     Content="{Binding IsConnected, Converter={StaticResource ConnectedConditionConverter}, Source={x:Static helper:Instances.TaskQueueViewModel}}" />
@@ -649,10 +650,10 @@
                                         Padding="0" Margin="3,-3,3,0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.ExportLog}}"
                                         VerticalAlignment="Center">
-                                    <fluent:FluentIcon Height="20"
-                                                       Icon="FolderArrowRight"
-                                                       IconSize="Size16" VerticalAlignment="Center"
-                                                       IconVariant="Regular" />
+                                    <avalonia1:FluentIcon Height="20"
+                                                          Icon="FolderArrowRight"
+                                                          IconSize="Size16" VerticalAlignment="Center"
+                                                          IconVariant="Regular" />
                                 </Button>
 
                                 <Button Classes="Basic Round"

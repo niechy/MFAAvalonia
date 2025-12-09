@@ -15,7 +15,7 @@
     xmlns:userControls="clr-namespace:MFAAvalonia.Views.UserControls"
     xmlns:calcBinding="clr-namespace:CalcBinding;assembly=CalcBindingAva"
     xmlns:utilities="clr-namespace:MFAAvalonia.Utilities"
-    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent">
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent.Markup;assembly=FluentIcons.Avalonia.Fluent">
     <Design.DataContext>
         <settings:VersionUpdateSettingsUserControlModel />
     </Design.DataContext>
@@ -128,15 +128,15 @@
                             Text="Token"
                             VerticalAlignment="Center" />
                     </StackPanel>
-                    <WrapPanel Grid.Column="1" HorizontalAlignment="Right" Margin="0,5,0,0" FlowDirection="RightToLeft" >
-                        <suki:PasswordBox  FlowDirection="LeftToRight"
-                                           Watermark="{markup:I18n {x:Static helper:LangKeys.Optional}}"
-                                           HorizontalAlignment="Center" MinHeight="40"
-                                           Password="{Binding GitHubToken}"
-                                           Width="215" />
+                    <WrapPanel Grid.Column="1" HorizontalAlignment="Right" Margin="0,5,0,0" FlowDirection="RightToLeft">
+                        <suki:PasswordBox FlowDirection="LeftToRight"
+                                          Watermark="{markup:I18n {x:Static helper:LangKeys.Optional}}"
+                                          HorizontalAlignment="Center" MinHeight="40"
+                                          Password="{Binding GitHubToken}"
+                                          Width="215" />
                         <Button
                             BorderBrush="Transparent"
-                            BorderThickness="0"  FlowDirection="LeftToRight"
+                            BorderThickness="0" FlowDirection="LeftToRight"
                             Command="{x:Static utilities:UrlUtilities.OpenLink}"
                             CommandParameter="{x:Static helper:MFAUrls.GitHubToken}"
                             Height="40"
