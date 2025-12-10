@@ -648,11 +648,14 @@
         <value>软件已为最新版本！</value>
     </data>
     <data name="MinimizeToTray" xml:space="preserve">
-        <value>最小化时隐藏至托盘</value>
-    </data>
+            <value>最小化时隐藏至托盘</value>
+        </data>
+    <data name="MinimizeToTrayDescription" xml:space="preserve">
+            <value>启用后，点击最小化按钮时窗口将隐藏到系统托盘而不是任务栏。</value>
+        </data>
     <data name="MiniTouch" xml:space="preserve">
-        <value>MiniTouch (旧)</value>
-    </data>
+            <value>MiniTouch (旧)</value>
+        </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
         <value>请购买 Mirror 酱服务以实现自动更新，或将下载源切换至 GitHub</value>
     </data>
@@ -1248,6 +1251,9 @@
     <data name="Notification" xml:space="preserve">
         <value>通知</value>
     </data>
+    <data name="NotificationDescription" xml:space="preserve">
+        <value>启用后，任务完成或发生重要事件时将显示系统通知提醒。</value>
+    </data>
     <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
         <value>多开快捷设置</value>
     </data>
@@ -1378,6 +1384,16 @@
         <value>每月{0}天</value>
     </data>
     <data name="ScheduleMonthlyDaySuffix" xml:space="preserve">
-        <value>号</value>
+        <value>号</value>  
     </data>
+    <data name="FontScaleTitle" xml:space="preserve">
+        <value>字体大小缩放</value>
+    </data>
+    <data name="FontScaleDescription" xml:space="preserve">
+        <value>调整界面字体的整体缩放比例，所有字体将按比例放大或缩小。</value>
+    </data>
+    <data name="FontScaleValue" xml:space="preserve">
+        <value>{0}%</value>
+    </data>
+
 </root>

@@ -639,12 +639,15 @@
     <data name="MFAIsLatestVersion" xml:space="preserve">
         <value>軟體已為最新版本！</value>
     </data>
-    <data name="MinimizeToTray" xml:space="preserve">
-        <value>最小化時隱藏至工作列</value>
-    </data>
-    <data name="MiniTouch" xml:space="preserve">
-        <value>MiniTouch (舊)</value>
-    </data>
+        <data name="MinimizeToTray" xml:space="preserve">
+            <value>最小化時隱藏至工作列</value>
+        </data>
+        <data name="MinimizeToTrayDescription" xml:space="preserve">
+            <value>啟用後，點擊最小化按鈕時視窗將隱藏到系統工作列而不是工作列。</value>
+        </data>
+        <data name="MiniTouch" xml:space="preserve">
+            <value>MiniTouch (舊)</value>
+        </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
         <value>請購買 Mirror 醬服務以實現自動更新，或將下載源切換至 GitHub</value>
     </data>
@@ -1236,10 +1239,13 @@
     <data name="UndefinedError" xml:space="preserve">
         <value>未定義錯誤</value>
     </data>
-    <data name="Notification" xml:space="preserve">
-        <value>通知</value>
-    </data>
-    <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
+        <data name="Notification" xml:space="preserve">
+            <value>通知</value>
+        </data>
+        <data name="NotificationDescription" xml:space="preserve">
+            <value>啟用後，任務完成或發生重要事件時將顯示系統通知提醒。</value>
+        </data>
+        <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
         <value>多開快捷設定</value>
     </data>
     <data name="EmulatorMultiInstanceEditor" xml:space="preserve">

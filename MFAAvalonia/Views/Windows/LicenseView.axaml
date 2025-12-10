@@ -1,10 +1,10 @@
-<suki:SukiWindow 
+<suki:SukiWindow
     Height="600"
     MinHeight="300"
     MinWidth="500"
     Title="{markup:I18n {x:Static helper:LangKeys.LicenseInfo}}"
     Width="800"
-   
+
     WindowStartupLocation="CenterScreen"
     d:DesignHeight="600"
     d:DesignWidth="800"
@@ -26,42 +26,44 @@
             Stretch="Uniform"
             Width="18" />
     </suki:SukiWindow.LogoContent>
-    
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <LayoutTransformControl LayoutTransform="{Binding ScaleTransform, Source={x:Static helper:FontService.Instance}}">
 
-        <ScrollViewer
-            Grid.Row="0"
-            HorizontalScrollBarVisibility="Disabled"
-            VerticalScrollBarVisibility="Auto"
-            Margin="10">
-            <TextBlock
-                Text="{Binding LicenseContent}"
-                TextWrapping="Wrap"
-                FontFamily="Consolas, Courier New, monospace"
-                FontSize="12" />
-        </ScrollViewer>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <Border
-            Grid.Row="1"
-            Background="{DynamicResource SukiBackgroundColor}"
-            Padding="12">
-            <Grid MinHeight="40" VerticalAlignment="Center">
-                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-                    <Button
-                        Classes="Basic"
-                        Click="CopyLicense_Click"
-                        Content="{markup:I18n {x:Static helper:LangKeys.CopyToClipboard}}"
-                        Margin="0,0,12,0" />
-                    <Button
-                        Classes="Primary"
-                        Click="Close_Click"
-                        Content="{markup:I18n {x:Static helper:LangKeys.Confirm}}" />
-                </StackPanel>
-            </Grid>
-        </Border>
-    </Grid>
+            <ScrollViewer
+                Grid.Row="0"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                Margin="10">
+                <TextBlock
+                    Text="{Binding LicenseContent}"
+                    TextWrapping="Wrap"
+                    FontFamily="Consolas, Courier New, monospace"
+                    FontSize="12" />
+            </ScrollViewer>
+
+            <Border
+                Grid.Row="1"
+                Background="{DynamicResource SukiBackgroundColor}"
+                Padding="12">
+                <Grid MinHeight="40" VerticalAlignment="Center">
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <Button
+                            Classes="Basic"
+                            Click="CopyLicense_Click"
+                            Content="{markup:I18n {x:Static helper:LangKeys.CopyToClipboard}}"
+                            Margin="0,0,12,0" />
+                        <Button
+                            Classes="Primary"
+                            Click="Close_Click"
+                            Content="{markup:I18n {x:Static helper:LangKeys.Confirm}}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </LayoutTransformControl>
 </suki:SukiWindow>

@@ -64,6 +64,11 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
         ConfigurationManager.Current.GetValue(ConfigurationKeys.BackgroundImageOpacity, 0.2);
 
     [ObservableProperty] private bool _hasBackgroundImage;
+// Font Scale properties
+    [ObservableProperty] private double _fontScale =
+        ConfigurationManager.Current.GetValue(ConfigurationKeys.FontScale, FontService.DefaultScale);
+
+    [ObservableProperty] public string _fontScaleDisplay;
 
     partial void OnBackgroundImagePathChanged(string? value)
     {
@@ -73,6 +78,13 @@ public partial class GuiSettingsUserControlModel : ViewModelBase
 
     partial void OnBackgroundImageOpacityChanged(double value) =>
         HandlePropertyChanged(ConfigurationKeys.BackgroundImageOpacity, value);
+
+
+    partial void OnFontScaleChanged(double value)
+    {
+        FontService.Instance.ApplyFontScale(value);
+        FontScaleDisplay = LangKeys.FontScaleValue.ToLocalizationFormatted(false, ((int)(FontScale * 100)).ToString());
+    }
 
     protected override void Initialize()
     {

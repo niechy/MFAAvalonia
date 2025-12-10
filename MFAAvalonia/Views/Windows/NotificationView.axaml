@@ -20,81 +20,83 @@
     <suki:SukiWindow.Resources>
         <converters:BoolToGridLengthConverter x:Key="Converter" />
     </suki:SukiWindow.Resources>
+    <LayoutTransformControl LayoutTransform="{Binding ScaleTransform, Source={x:Static helper:FontService.Instance}}">
 
-    <Grid Margin="10" x:Name="AnimationHost">
-        <Grid.RowDefinitions>
-            <!-- 第一行：标题和消息（高度自适应内容） -->
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <!-- 第二行：按钮区域（高度自适应按钮） -->
-            <RowDefinition
-                Height="{Binding HasActionButton, 
+        <Grid Margin="10" x:Name="AnimationHost">
+            <Grid.RowDefinitions>
+                <!-- 第一行：标题和消息（高度自适应内容） -->
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <!-- 第二行：按钮区域（高度自适应按钮） -->
+                <RowDefinition
+                    Height="{Binding HasActionButton, 
                            RelativeSource={RelativeSource AncestorType=settings:NotificationView}, 
                            Converter={StaticResource Converter}}" />
 
-        </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Left" TextAlignment="Left"
-                   FontWeight="Medium" Margin="7 0 0 0 "
-                   Text="{markupExtensions:I18n {x:Static helper:LangKeys.Notification}}" />
-
-        <Button
-            Grid.Row="0"
-            Classes="Basic Round"
-            Click="CloseButton_OnClick"
-            Height="17"
-            Margin="3,5,3,0"
-            Padding="0"
-            VerticalAlignment="Center"
-            HorizontalAlignment="Right">
-
-            <Path
-                Data="{StaticResource CloseGeometry}"
-                Height="11"
-                Fill="{DynamicResource SukiLowText}"
-                Margin="3,-6,4,0"
-                Stretch="Uniform" />
-        </Button>
-        <Grid Grid.Row="1" Margin="10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"></ColumnDefinition>
-                <ColumnDefinition Width="*"></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"></RowDefinition>
-                <RowDefinition Height="Auto"></RowDefinition>
             </Grid.RowDefinitions>
-            <Image Grid.Row="1" Grid.Column="0"
-                   Height="45"
-                   Source="{x:Static helper:IconHelper.Icon}"
-                   Stretch="Uniform" VerticalAlignment="Top" Margin="0 0 10 0"
-                   Width="45" />
+            <TextBlock Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Left" TextAlignment="Left"
+                       FontWeight="Medium" Margin="7 0 0 0 "
+                       Text="{markupExtensions:I18n {x:Static helper:LangKeys.Notification}}" />
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Top"
-                        Grid.Row="1">
+            <Button
+                Grid.Row="0"
+                Classes="Basic Round"
+                Click="CloseButton_OnClick"
+                Height="17"
+                Margin="3,5,3,0"
+                Padding="0"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Right">
 
-                <TextBlock VerticalAlignment="Top"
-                           Text="{Binding TitleText,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
-                           FontSize="15" Margin="5 0 0 0"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Left" />
+                <Path
+                    Data="{StaticResource CloseGeometry}"
+                    Height="11"
+                    Fill="{DynamicResource SukiLowText}"
+                    Margin="3,-6,4,0"
+                    Stretch="Uniform" />
+            </Button>
+            <Grid Grid.Row="1" Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Image Grid.Row="1" Grid.Column="0"
+                       Height="45"
+                       Source="{x:Static helper:IconHelper.Icon}"
+                       Stretch="Uniform" VerticalAlignment="Top" Margin="0 0 10 0"
+                       Width="45" />
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Top"
+                            Grid.Row="1">
+
+                    <TextBlock VerticalAlignment="Top"
+                               Text="{Binding TitleText,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
+                               FontSize="15" Margin="5 0 0 0"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Left" />
 
 
-                <TextBlock VerticalAlignment="Top"
-                           Text="{Binding MessageText,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
-                           FontSize="14" HorizontalAlignment="Left"
-                           Margin="5 6 0 0" />
+                    <TextBlock VerticalAlignment="Top"
+                               Text="{Binding MessageText,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
+                               FontSize="14" HorizontalAlignment="Left"
+                               Margin="5 6 0 0" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 按钮区域 -->
+            <StackPanel Grid.Row="2" Height="0" Grid.Column="1"
+                        IsVisible="{Binding HasActionButton,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
+                        Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0 0 0 0">
+                <!-- 自定义按钮（可选） -->
+                <Button x:Name="ActionButton"
+                        CornerRadius="4"
+                        Content="{Binding MessageText,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
+                        IsVisible="{Binding HasActionButton,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}" />
             </StackPanel>
         </Grid>
-
-        <!-- 按钮区域 -->
-        <StackPanel Grid.Row="2" Height="0" Grid.Column="1"
-                    IsVisible="{Binding HasActionButton,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
-                    Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0 0 0 0">
-            <!-- 自定义按钮（可选） -->
-            <Button x:Name="ActionButton"
-                    CornerRadius="4"
-                    Content="{Binding MessageText,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}"
-                    IsVisible="{Binding HasActionButton,RelativeSource={RelativeSource AncestorType=settings:NotificationView}}" />
-        </StackPanel>
-    </Grid>
+    </LayoutTransformControl>
 </suki:SukiWindow>

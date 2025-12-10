@@ -147,7 +147,7 @@
             <TextBlock VerticalAlignment="Center" IsVisible="{Binding IsCustomTitleVisible}"
                        FontSize="13" Text="{Binding CustomTitle}"
                        FontWeight="Bold">
-                
+
                 <!-- <TextBlock.Text> -->
                 <!--     <MultiBinding Converter="{converters:TitleConverter}" Mode="OneWay"> -->
                 <!--         <Binding Path="CustomTitle" /> -->
@@ -165,15 +165,15 @@
                 <!-- </TextBlock.Text> -->
             </TextBlock>
             <TextBlock VerticalAlignment="Center" IsVisible="{calcBinding:Binding '!IsCustomTitleVisible' }"
-                       FontSize="13" Text="{markup:I18n {x:Static helper:LangKeys.AppTitle}}" 
-                       FontWeight="Bold"/>
-            
-            <TextBlock VerticalAlignment="Center" Margin="5 0 0 0" IsVisible="{Binding IsResourceNameVisible}" Foreground="{DynamicResource SukiLowText}"
-                       FontSize="13" Text="{Binding ResourceName}" 
-                      />
-            <TextBlock VerticalAlignment="Center" Margin="1 0 0 0" IsVisible="{Binding IsResourceNameVisible}" Foreground="{DynamicResource SukiLowText}"
-                       FontSize="13" Text="{Binding ResourceVersion}" 
-                      />
+                       FontSize="13" Text="{markup:I18n {x:Static helper:LangKeys.AppTitle}}"
+                       FontWeight="Bold" />
+
+            <TextBlock VerticalAlignment="Center" Margin="5 0 0 0" IsVisible="{Binding IsResourceNameVisible}"
+                       Foreground="{DynamicResource SukiLowText}"
+                       FontSize="13" Text="{Binding ResourceName}" />
+            <TextBlock VerticalAlignment="Center" Margin="1 0 0 0" IsVisible="{Binding IsResourceNameVisible}"
+                       Foreground="{DynamicResource SukiLowText}"
+                       FontSize="13" Text="{Binding ResourceVersion}" />
         </StackPanel>
     </suki:SukiWindow.NonClientAreaContent>
     <suki:SukiWindow.Title>
@@ -218,52 +218,54 @@
         <suki:SukiToastHost Manager="{x:Static helper:Instances.ToastManager}" />
         <suki:SukiDialogHost Manager="{x:Static helper:Instances.DialogManager}" Name="DialogHost" />
     </suki:SukiWindow.Hosts>
-    <Grid>
-        <suki:SukiSideMenu IsMenuExpanded="False" IsSearchEnabled="False" OpenPaneLength="150">
-            <!-- <suki:SukiSideMenu.Styles> -->
-            <!--     <Style Selector="Image.AppIcon"> -->
-            <!--         <Setter Property="Transitions"> -->
-            <!--             <Transitions> -->
-            <!--                 <DoubleTransition Duration="0.1" Property="Opacity" /> -->
-            <!--             </Transitions> -->
-            <!--         </Setter> -->
-            <!--         <Style Selector="^:pointerover"> -->
-            <!--             <Setter Property="Opacity" Value="0.5" /> -->
-            <!--         </Style> -->
-            <!--     </Style> -->
-            <!-- </suki:SukiSideMenu.Styles> -->
-            <suki:SukiSideMenu.Items>
-                <suki:SukiSideMenuItem IsContentMovable="False"
-                                       Header="{markup:I18n {x:Static helper:LangKeys.Home}}"
-                                       Icon="{fluent:FluentIcon Icon=TasksApp,
+    <LayoutTransformControl LayoutTransform="{Binding ScaleTransform, Source={x:Static helper:FontService.Instance}}">
+        <Grid>
+            <suki:SukiSideMenu IsMenuExpanded="False" IsSearchEnabled="False" OpenPaneLength="150">
+                <!-- <suki:SukiSideMenu.Styles> -->
+                <!--     <Style Selector="Image.AppIcon"> -->
+                <!--         <Setter Property="Transitions"> -->
+                <!--             <Transitions> -->
+                <!--                 <DoubleTransition Duration="0.1" Property="Opacity" /> -->
+                <!--             </Transitions> -->
+                <!--         </Setter> -->
+                <!--         <Style Selector="^:pointerover"> -->
+                <!--             <Setter Property="Opacity" Value="0.5" /> -->
+                <!--         </Style> -->
+                <!--     </Style> -->
+                <!-- </suki:SukiSideMenu.Styles> -->
+                <suki:SukiSideMenu.Items>
+                    <suki:SukiSideMenuItem IsContentMovable="False"
+                                           Header="{markup:I18n {x:Static helper:LangKeys.Home}}"
+                                           Icon="{fluent:FluentIcon Icon=TasksApp,
                                                        IconVariant=Regular}"
-                                       PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:TaskQueueView}}" />
-                <suki:SukiSideMenuItem IsContentMovable="False"
-                                       Header="{markup:I18n {x:Static helper:LangKeys.ScreenshotPage}}"
-                                       Icon="{fluent:FluentIcon Icon=Screenshot,
+                                           PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:TaskQueueView}}" />
+                    <suki:SukiSideMenuItem IsContentMovable="False"
+                                           Header="{markup:I18n {x:Static helper:LangKeys.ScreenshotPage}}"
+                                           Icon="{fluent:FluentIcon Icon=Screenshot,
                                                        IconVariant=Regular}"
-                                       PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:ScreenshotView}}" />
-                <suki:SukiSideMenuItem IsContentMovable="False"
-                                       Header="{markup:I18n {x:Static helper:LangKeys.ResourceOption}}"
-                                       Icon="{fluent:FluentIcon Icon=Apps,
+                                           PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:ScreenshotView}}" />
+                    <suki:SukiSideMenuItem IsContentMovable="False"
+                                           Header="{markup:I18n {x:Static helper:LangKeys.ResourceOption}}"
+                                           Icon="{fluent:FluentIcon Icon=Apps,
                                                        IconVariant=Regular}"
-                                       IsVisible="False"
-                                       PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:ResourcesView}}" />
+                                           IsVisible="False"
+                                           PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:ResourcesView}}" />
 
-            </suki:SukiSideMenu.Items>
+                </suki:SukiSideMenu.Items>
 
-            <suki:SukiSideMenu.HeaderContent>
-                <!--  Header Content  -->
-            </suki:SukiSideMenu.HeaderContent>
+                <suki:SukiSideMenu.HeaderContent>
+                    <!--  Header Content  -->
+                </suki:SukiSideMenu.HeaderContent>
 
-            <suki:SukiSideMenu.FooterMenuItems>
-                <suki:SukiSideMenuItem IsContentMovable="False"
-                                       Header="{markup:I18n {x:Static helper:LangKeys.Settings}}"
-                                       Icon="{fluent:FluentIcon Icon=Settings,
+                <suki:SukiSideMenu.FooterMenuItems>
+                    <suki:SukiSideMenuItem IsContentMovable="False"
+                                           Header="{markup:I18n {x:Static helper:LangKeys.Settings}}"
+                                           Icon="{fluent:FluentIcon Icon=Settings,
                                                            IconVariant=Regular}"
-                                       PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:SettingsView}}" />
-            </suki:SukiSideMenu.FooterMenuItems>
-        </suki:SukiSideMenu>
-    </Grid>
+                                           PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:SettingsView}}" />
+                </suki:SukiSideMenu.FooterMenuItems>
+            </suki:SukiSideMenu>
+        </Grid>
+    </LayoutTransformControl>
 
 </suki:SukiWindow>

@@ -215,11 +215,12 @@ public static class LangKeys
 	public static readonly string LoadResourcesFailed = "LoadResourcesFailed";
 	public static readonly string LogRecord = "LogRecord";
 	public static readonly string MaaFwIsLatestVersion = "MaaFwIsLatestVersion";
-	public static readonly string MaaFWVersion = "MaaFWVersion";
-	public static readonly string MaaTouch = "MaaTouch";
-	public static readonly string MFAIsLatestVersion = "MFAIsLatestVersion";
-	public static readonly string MinimizeToTray = "MinimizeToTray";
-	public static readonly string MiniTouch = "MiniTouch";
+		public static readonly string MaaFWVersion = "MaaFWVersion";
+		public static readonly string MaaTouch = "MaaTouch";
+		public static readonly string MFAIsLatestVersion = "MFAIsLatestVersion";
+		public static readonly string MinimizeToTray = "MinimizeToTray";
+		public static readonly string MinimizeToTrayDescription = "MinimizeToTrayDescription";
+		public static readonly string MiniTouch = "MiniTouch";
 	public static readonly string MirrorAutoUpdatePrompt = "MirrorAutoUpdatePrompt";
 	public static readonly string MirrorChyan = "MirrorChyan";
 	public static readonly string MirrorUseLimitReached = "MirrorUseLimitReached";
@@ -418,7 +419,7 @@ public static class LangKeys
 	public static readonly string UnknownError = "UnknownError";
 	public static readonly string UndefinedError = "UndefinedError";
 	public static readonly string Notification = "Notification";
-	public static readonly string EmulatorMultiInstanceQuickSettings = "EmulatorMultiInstanceQuickSettings";
+	public static readonly string NotificationDescription = "NotificationDescription";public static readonly string EmulatorMultiInstanceQuickSettings = "EmulatorMultiInstanceQuickSettings";
 	public static readonly string EmulatorMultiInstanceEditor = "EmulatorMultiInstanceEditor";
 	public static readonly string MuMuEmulator = "MuMuEmulator";
 	public static readonly string XYAZ = "XYAZ";
@@ -459,7 +460,10 @@ public static class LangKeys
 		public static readonly string WeekdayFri = "WeekdayFri";
 		public static readonly string WeekdaySat = "WeekdaySat";
 		public static readonly string WeekdaySun = "WeekdaySun";
-		public static readonly string ScheduleMonthlyDay = "ScheduleMonthlyDay";
-		public static readonly string ScheduleMonthlyDays = "ScheduleMonthlyDays";
-		public static readonly string ScheduleMonthlyDaySuffix = "ScheduleMonthlyDaySuffix";
-	}
+				public static readonly string ScheduleMonthlyDay = "ScheduleMonthlyDay";
+				public static readonly string ScheduleMonthlyDays = "ScheduleMonthlyDays";
+				public static readonly string ScheduleMonthlyDaySuffix = "ScheduleMonthlyDaySuffix";
+				public static readonly string FontScaleTitle = "FontScaleTitle";
+				public static readonly string FontScaleDescription = "FontScaleDescription";
+				public static readonly string FontScaleValue = "FontScaleValue";}
+	

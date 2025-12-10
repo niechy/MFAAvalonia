@@ -193,9 +193,9 @@
                             Padding="0"
                             ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.ButtonClear}}">
                             <avalonia:FluentIcon Height="18"
-                                               Icon="ArrowSync"
-                                               IconSize="Size16"
-                                               IconVariant="Regular" />
+                                                 Icon="ArrowSync"
+                                                 IconSize="Size16"
+                                                 IconVariant="Regular" />
                         </Button>
                         <Button
                             Command="{Binding SelectBackgroundImageCommand}"
@@ -262,6 +262,38 @@
                 </StackPanel>
             </DockPanel>
         </suki:GlassCard>
+        <!-- Font Scale Settings -->
+        <suki:GlassCard Margin="0,25,0,0" Padding="25">
+            <StackPanel Spacing="10">
+                <DockPanel>
+                    <TextBlock
+                        DockPanel.Dock="Right"
+                        Text="{Binding FontScaleDisplay}"
+                        VerticalAlignment="Center"
+                        Width="60"
+                        TextAlignment="Center"
+                        FontWeight="DemiBold" />
+                    <StackPanel HorizontalAlignment="Left">
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="DemiBold"
+                            Text="{markup:I18n {x:Static helper:LangKeys.FontScaleTitle}}" />
+                        <TextBlock
+                            Foreground="{DynamicResource SukiLowText}"
+                            Margin="0,12,70,0"
+                            Text="{markup:I18n {x:Static helper:LangKeys.FontScaleDescription}}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </DockPanel>
+                <Slider
+                    Minimum="0.8"
+                    Maximum="1.5"
+                    Value="{Binding FontScale}"
+                    TickFrequency="0.1"
+                    IsSnapToTickEnabled="True"
+                    TickPlacement="BottomRight" />
+            </StackPanel>
+        </suki:GlassCard>
         <suki:GlassCard Margin="0,25,0,0" Padding="25">
             <DockPanel>
                 <ToggleSwitch
@@ -269,11 +301,16 @@
                     DockPanel.Dock="Right"
                     IsChecked="{Binding ShouldMinimizeToTray}"
                     VerticalAlignment="Top" />
-                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Left">
                     <TextBlock
                         FontSize="16"
                         FontWeight="SemiBold"
                         Text="{markup:I18n {x:Static helper:LangKeys.MinimizeToTray}}" />
+                    <TextBlock
+                        Foreground="{DynamicResource SukiLowText}"
+                        Margin="0,12,70,0"
+                        Text="{markup:I18n {x:Static helper:LangKeys.MinimizeToTrayDescription}}"
+                        TextWrapping="Wrap" />
                 </StackPanel>
             </DockPanel>
         </suki:GlassCard>
@@ -284,13 +321,20 @@
                     DockPanel.Dock="Right"
                     IsChecked="{Binding EnableToastNotification}"
                     VerticalAlignment="Top" />
-                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Left">
                     <TextBlock
                         FontSize="16"
                         FontWeight="SemiBold"
                         Text="{markup:I18n {x:Static helper:LangKeys.Notification}}" />
+                    <TextBlock
+                        Foreground="{DynamicResource SukiLowText}"
+                        Margin="0,12,70,0"
+                        Text="{markup:I18n {x:Static helper:LangKeys.NotificationDescription}}"
+                        TextWrapping="Wrap" />
                 </StackPanel>
             </DockPanel>
         </suki:GlassCard>
+
     </StackPanel>
+
 </UserControl>

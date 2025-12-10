@@ -363,16 +363,16 @@
     <data name="EmulatorSelectionMessage" xml:space="preserve">
         <value>Emulator selected: {0}</value>
     </data>
-        <data name="EnableRecording" xml:space="preserve">
+    <data name="EnableRecording" xml:space="preserve">
             <value>Enable video recording (for debugging)</value>
         </data>
-        <data name="EnableSaveDraw" xml:space="preserve">
+    <data name="EnableSaveDraw" xml:space="preserve">
             <value>Enable save draw (for debugging)</value>
         </data>
-        <data name="EnableSaveOnError" xml:space="preserve">
+    <data name="EnableSaveOnError" xml:space="preserve">
             <value>Enable save screenshot on error (for debugging)</value>
         </data>
-        <data name="EnterTaskName" xml:space="preserve">
+    <data name="EnterTaskName" xml:space="preserve">
         <value>Please enter a task name</value>
     </data>
     <data name="Error" xml:space="preserve">
@@ -639,12 +639,15 @@
     <data name="MFAIsLatestVersion" xml:space="preserve">
         <value>Software is already in the latest version!</value>
     </data>
-    <data name="MinimizeToTray" xml:space="preserve">
-        <value>Hide to tray when minimized</value>
-    </data>
-    <data name="MiniTouch" xml:space="preserve">
-        <value>MiniTouch (Old)</value>
-    </data>
+        <data name="MinimizeToTray" xml:space="preserve">
+            <value>Hide to tray when minimized</value>
+        </data>
+        <data name="MinimizeToTrayDescription" xml:space="preserve">
+            <value>When enabled, clicking the minimize button will hide the window to the system tray instead of the taskbar.</value>
+        </data>
+        <data name="MiniTouch" xml:space="preserve">
+            <value>MiniTouch (Old)</value>
+        </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
         <value>Please purchase the Mirror Chyan service to enable automatic updates, or switch the download source to GitHub</value>
     </data>
@@ -1236,10 +1239,13 @@
     <data name="UndefinedError" xml:space="preserve">
         <value>Undefined error</value>
     </data>
-    <data name="Notification" xml:space="preserve">
-        <value>Notification</value>
-    </data>
-    <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
+        <data name="Notification" xml:space="preserve">
+            <value>Notification</value>
+        </data>
+        <data name="NotificationDescription" xml:space="preserve">
+            <value>When enabled, system notifications will be displayed when tasks complete or important events occur.</value>
+        </data>
+        <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
         <value>Multi-instance Quick Settings</value>
     </data>
     <data name="EmulatorMultiInstanceEditor" xml:space="preserve">
@@ -1372,7 +1378,16 @@
         <value>Days: {0}</value>
     </data>
     <data name="ScheduleMonthlyDaySuffix" xml:space="preserve">
-        <value>th</value>
+        <value>th</value>  </data>
+    <data name="FontScaleTitle" xml:space="preserve">
+        <value>Font Size Scale</value>
     </data>
+    <data name="FontScaleDescription" xml:space="preserve">
+        <value>Adjust the overall font scale of the interface. All fonts will be scaled proportionally.</value>
+    </data>
+    <data name="FontScaleValue" xml:space="preserve">
+        <value>{0}%</value>
+    </data>
+
 
 </root>

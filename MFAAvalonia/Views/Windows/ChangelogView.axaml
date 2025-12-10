@@ -41,56 +41,59 @@
             Stretch="Uniform"
             Width="18" />
     </suki:SukiWindow.LogoContent>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <LayoutTransformControl LayoutTransform="{Binding ScaleTransform, Source={x:Static helper:FontService.Instance}}">
 
-        <full:MarkdownScrollViewer Grid.Row="0" x:Name="Viewer"
-                                   Focusable="True"
-                                   Margin="10,0,10,0"
-                                   Markdown="{Binding AnnouncementInfo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
-            <full:MarkdownScrollViewer.Engine>
-                <extensions:MarkdownExtension />
-            </full:MarkdownScrollViewer.Engine>
-            <full:MarkdownScrollViewer.Plugins>
-                <StaticResource ResourceKey="MdXamlPlugin" />
-            </full:MarkdownScrollViewer.Plugins>
-            <full:MarkdownScrollViewer.Styles>
-                <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
-                <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
-            </full:MarkdownScrollViewer.Styles>
-        </full:MarkdownScrollViewer>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <full:MarkdownScrollViewer Grid.Row="0" x:Name="Viewer"
+                                       Focusable="True"
+                                       Margin="10,0,10,0"
+                                       Markdown="{Binding AnnouncementInfo, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}">
+                <full:MarkdownScrollViewer.Engine>
+                    <extensions:MarkdownExtension />
+                </full:MarkdownScrollViewer.Engine>
+                <full:MarkdownScrollViewer.Plugins>
+                    <StaticResource ResourceKey="MdXamlPlugin" />
+                </full:MarkdownScrollViewer.Plugins>
+                <full:MarkdownScrollViewer.Styles>
+                    <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
+                    <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
+                </full:MarkdownScrollViewer.Styles>
+            </full:MarkdownScrollViewer>
 
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="150" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-            <Control Grid.Column="0"
-                     IsVisible="{Binding Converter='{converters:UniversalEqualityConverter}',
+                <Control Grid.Column="0"
+                         IsVisible="{Binding Converter='{converters:UniversalEqualityConverter}',
             Path='Type', ConverterParameter='{x:Static type:AnnouncementType.Changelog}'}">
-            </Control>
-            <Button Grid.Column="1"
-                    Click="Close"
-                    Content="{markup:I18n {x:Static helper:LangKeys.Confirm}}"
-                    Height="50"
-                    Margin="6"
-                    MaxWidth="150" />
-            <CheckBox
-                IsVisible="{Binding Converter='{converters:UniversalEqualityConverter}',
+                </Control>
+                <Button Grid.Column="1"
+                        Click="Close"
+                        Content="{markup:I18n {x:Static helper:LangKeys.Confirm}}"
+                        Height="50"
+                        Margin="6"
+                        MaxWidth="150" />
+                <CheckBox
+                    IsVisible="{Binding Converter='{converters:UniversalEqualityConverter}',
                 Path='Type', ConverterParameter='{x:Static type:AnnouncementType.Changelog}'}"
-                Content="{markup:I18n {x:Static helper:LangKeys.ShowDisclaimerNoMore}}"
-                Grid.Column="2"
-                Height="30"
-                HorizontalAlignment="Left"
-                IsChecked="{Binding DoNotRemindThisChangelogAgain}"
-                Margin="6"
-                VerticalContentAlignment="Center" />
+                    Content="{markup:I18n {x:Static helper:LangKeys.ShowDisclaimerNoMore}}"
+                    Grid.Column="2"
+                    Height="30"
+                    HorizontalAlignment="Left"
+                    IsChecked="{Binding DoNotRemindThisChangelogAgain}"
+                    Margin="6"
+                    VerticalContentAlignment="Center" />
+            </Grid>
         </Grid>
-    </Grid>
+    </LayoutTransformControl>
 </suki:SukiWindow>
