@@ -31,42 +31,30 @@ public static class PrivatePathHelper
             var libsPath = Path.Combine(baseDirectory, AppContext.GetData("SubdirectoriesToProbe") as string ?? "libs");
 
             // Windows: 使用 AddDllDirectory API 添加搜索路径（更高效，避免黑魔法）
-            // if (OperatingSystem.IsWindows())
-            // {
-            //     if (Directory.Exists(libsPath))
-            //     {
-            //         try
-            //         {
-            //             AddDllDirectory(libsPath);
-            //             LoggerHelper.Info($"Added DLL directory (Windows API): {libsPath}");
-            //         }
-            //         catch (Exception ex)
-            //         {
-            //             LoggerHelper.Warning($"Failed to add DLL directory: {ex.Message}");
-            //         }
-            //     }
-            //
-            //     if (Directory.Exists(_runtimesPath))
-            //     {
-            //         try
-            //         {
-            //             // 添加 runtimes 下的平台特定目录
-            //             string arch = VersionChecker.GetNormalizedArchitecture();
-            //             var platformDirs = Directory.GetDirectories(_runtimesPath, "*", SearchOption.AllDirectories)
-            //                 .Where(d => d.Contains(arch, StringComparison.OrdinalIgnoreCase));
-            //
-            //             foreach (var dir in platformDirs)
-            //             {
-            //                 AddDllDirectory(dir);
-            //                 LoggerHelper.Info($"Added DLL directory (Windows API): {dir}");
-            //             }
-            //         }
-            //         catch (Exception ex)
-            //         {
-            //             LoggerHelper.Warning($"Failed to add runtime directories: {ex.Message}");
-            //         }
-            //     }
-            // }
+            if (OperatingSystem.IsWindows())
+            {
+                if (Directory.Exists(libsPath))
+                {
+                    try
+                    {
+                        AddDllDirectory(libsPath);
+                        LoggerHelper.Info($"Added DLL directory (Windows API): {libsPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerHelper.Warning($"Failed to add DLL directory: {ex.Message}");
+                    }
+                }
+
+                string currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
+
+                // 检查是否已经包含该路径，避免重复添加
+                if (!currentPath.Contains(libsPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    // 将 libs 路径添加到 PATH 开头（优先搜索）
+                    Environment.SetEnvironmentVariable("PATH", libsPath + Path.PathSeparator + currentPath);
+                }
+            }
 
             AssemblyLoadContext.Default.ResolvingUnmanagedDll += (assembly, libraryName) =>
             {
