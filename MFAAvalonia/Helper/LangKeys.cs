@@ -161,8 +161,11 @@ public static class LangKeys
 	public static readonly string ExternalNotificationSmtpUser = "ExternalNotificationSmtpUser";
 	public static readonly string ExternalNotificationTelegramChatId = "ExternalNotificationTelegramChatId";
 	public static readonly string ExternalNotificationTips = "ExternalNotificationTips";
-	public static readonly string ExternalNotificationWebhookUrl = "ExternalNotificationWebhookUrl";
-	public static readonly string ExternalNotificationWxPusherUID = "ExternalNotificationWxPusherUID";
+		public static readonly string ExternalNotificationWebhookUrl = "ExternalNotificationWebhookUrl";
+		public static readonly string CustomWebhook = "CustomWebhook";public static readonly string ExternalNotificationCustomWebhookContentType = "ExternalNotificationCustomWebhookContentType";
+		public static readonly string ExternalNotificationCustomWebhookPayloadTemplate = "ExternalNotificationCustomWebhookPayloadTemplate";
+		public static readonly string ExternalNotificationCustomWebhookPayloadTemplateDescription = "ExternalNotificationCustomWebhookPayloadTemplateDescription";
+		public static readonly string ExternalNotificationWxPusherUID = "ExternalNotificationWxPusherUID";
 	public static readonly string FailToGetCurrentVersionInfo = "FailToGetCurrentVersionInfo";
 	public static readonly string FailToGetDownloadUrl = "FailToGetDownloadUrl";
 	public static readonly string FailToGetLatestVersionInfo = "FailToGetLatestVersionInfo";

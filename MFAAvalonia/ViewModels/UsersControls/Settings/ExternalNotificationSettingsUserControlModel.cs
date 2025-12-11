@@ -35,6 +35,7 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
         DiscordWebhookEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.DiscordWebhookKey);
         OnebotEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.OneBotKey);
         ServerChanEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.ServerChanKey);
+        CustomWebhookEnabled = EnabledExternalNotificationProviderList.Contains(ExternalNotificationHelper.Key.CustomWebhookKey);
     }
 
     public static readonly List<string> EnabledExternalNotificationProviderList = ExternalNotificationProviders
@@ -148,9 +149,9 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
     // [ObservableProperty] private bool _larkWebhookUsed;
 
     [ObservableProperty] private string _larkWebhookUrl = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationLarkWebhookUrl, string.Empty);
-    
+
     partial void OnLarkWebhookUrlChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationLarkWebhookUrl, SimpleEncryptionHelper.Encrypt(value));
-    
+
     [ObservableProperty] private string _larkId = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationLarkID, string.Empty);
 
     partial void OnLarkIdChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationLarkID, SimpleEncryptionHelper.Encrypt(value));
@@ -311,6 +312,22 @@ public partial class ExternalNotificationSettingsUserControlModel : ViewModelBas
 
     [ObservableProperty] private string _serverChanSendKey = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationServerChanKey, string.Empty);
     partial void OnServerChanSendKeyChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationServerChanKey, SimpleEncryptionHelper.Encrypt(value));
+
+    #endregion
+
+    #region CustomWebhook
+
+    [ObservableProperty] private bool _customWebhookEnabled;
+    partial void OnCustomWebhookEnabledChanged(bool value) => UpdateEnabledExternalNotificationProviderList(ExternalNotificationHelper.Key.CustomWebhookKey, value);
+
+    [ObservableProperty] private string _customWebhookUrl = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationCustomWebhookUrl, string.Empty);
+    partial void OnCustomWebhookUrlChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationCustomWebhookUrl, SimpleEncryptionHelper.Encrypt(value));
+
+    [ObservableProperty] private string _customWebhookContentType = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationCustomWebhookContentType, "application/json");
+    partial void OnCustomWebhookContentTypeChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationCustomWebhookContentType, SimpleEncryptionHelper.Encrypt(value));
+
+    [ObservableProperty] private string _customWebhookPayloadTemplate = ConfigurationManager.Current.GetDecrypt(ConfigurationKeys.ExternalNotificationCustomWebhookPayloadTemplate, "{\"message\": \"{message}\"}");
+    partial void OnCustomWebhookPayloadTemplateChanged(string value) => HandlePropertyChanged(ConfigurationKeys.ExternalNotificationCustomWebhookPayloadTemplate, SimpleEncryptionHelper.Encrypt(value));
 
     #endregion
 }

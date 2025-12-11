@@ -71,14 +71,14 @@ public static class ConfigurationKeys
 
     #endregion
 
-        #region 界面设置
-    
-        public const string LangIndex = "LangIndex";
-        public const string CurrentLanguage = "CurrentLanguage";
-        public const string ThemeIndex = "ThemeIndex";
-        public const string ShouldMinimizeToTray = "ShouldMinimizeToTray";
-        public const string EnableShowIcon = "EnableShowIcon";
-        public const string EnableToastNotification = "EnableToastNotification";
+    #region 界面设置
+
+    public const string LangIndex = "LangIndex";
+    public const string CurrentLanguage = "CurrentLanguage";
+    public const string ThemeIndex = "ThemeIndex";
+    public const string ShouldMinimizeToTray = "ShouldMinimizeToTray";
+    public const string EnableShowIcon = "EnableShowIcon";
+    public const string EnableToastNotification = "EnableToastNotification";
 
     public const string OtherColorTheme = "OtherColorTheme";
     public const string BackgroundStyle = "BackgroundStyle";
@@ -86,12 +86,12 @@ public static class ConfigurationKeys
     public const string BackgroundAnimations = "BackgroundAnimations";
     public const string BackgroundTransitions = "BackgroundTransitions";
     public const string ColorTheme = "ColorTheme";
-        public const string BackgroundImagePath = "BackgroundImagePath";
-        public const string BackgroundImageOpacity = "BackgroundImageOpacity";
-        public const string FontScale = "FontScale";
-        public const string FontFamily = "FontFamily";
-    
-        #endregion
+    public const string BackgroundImagePath = "BackgroundImagePath";
+    public const string BackgroundImageOpacity = "BackgroundImageOpacity";
+    public const string FontScale = "FontScale";
+    public const string FontFamily = "FontFamily";
+
+    #endregion
 
     #region 外部通知
 
@@ -127,6 +127,9 @@ public static class ConfigurationKeys
     public const string ExternalNotificationOneBotKey = "ExternalNotificationOneBotKey";
     public const string ExternalNotificationOneBotUser = "ExternalNotificationOneBotUser";
     public const string ExternalNotificationServerChanKey = "ExternalNotificationServerChanKey";
+    public const string ExternalNotificationCustomWebhookUrl = "ExternalNotificationCustomWebhookUrl";
+    public const string ExternalNotificationCustomWebhookContentType = "ExternalNotificationCustomWebhookContentType";
+    public const string ExternalNotificationCustomWebhookPayloadTemplate = "ExternalNotificationCustomWebhookPayloadTemplate";
 
     #endregion
 

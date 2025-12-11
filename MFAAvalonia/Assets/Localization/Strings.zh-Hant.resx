@@ -469,8 +469,20 @@
         <value>請注意：外部通知功能目前僅會發送「所有任務完成」 的通知。</value>
     </data>
     <data name="ExternalNotificationWebhookUrl" xml:space="preserve">
-        <value>Webhook Url</value>
-    </data>
+            <value>Webhook Url</value>
+        </data>
+    <data name="CustomWebhook" xml:space="preserve">
+            <value>自訂 Webhook</value>
+        </data>
+    <data name="ExternalNotificationCustomWebhookContentType" xml:space="preserve">
+            <value>Content-Type</value>
+        </data>
+    <data name="ExternalNotificationCustomWebhookPayloadTemplate" xml:space="preserve">
+            <value>Payload 範本</value>
+        </data>
+    <data name="ExternalNotificationCustomWebhookPayloadTemplateDescription" xml:space="preserve">
+            <value>使用 {{message}} 作為訊息佔位符，例如: {{"message": "{{message}}"}}</value>
+        </data>
     <data name="ExternalNotificationWxPusherUID" xml:space="preserve">
         <value>用戶 UID</value>
     </data>
@@ -639,13 +651,13 @@
     <data name="MFAIsLatestVersion" xml:space="preserve">
         <value>軟體已為最新版本！</value>
     </data>
-        <data name="MinimizeToTray" xml:space="preserve">
+    <data name="MinimizeToTray" xml:space="preserve">
             <value>最小化時隱藏至工作列</value>
         </data>
-        <data name="MinimizeToTrayDescription" xml:space="preserve">
+    <data name="MinimizeToTrayDescription" xml:space="preserve">
             <value>啟用後，點擊最小化按鈕時視窗將隱藏到系統工作列而不是工作列。</value>
         </data>
-        <data name="MiniTouch" xml:space="preserve">
+    <data name="MiniTouch" xml:space="preserve">
             <value>MiniTouch (舊)</value>
         </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
@@ -1239,13 +1251,13 @@
     <data name="UndefinedError" xml:space="preserve">
         <value>未定義錯誤</value>
     </data>
-        <data name="Notification" xml:space="preserve">
+    <data name="Notification" xml:space="preserve">
             <value>通知</value>
         </data>
-        <data name="NotificationDescription" xml:space="preserve">
+    <data name="NotificationDescription" xml:space="preserve">
             <value>啟用後，任務完成或發生重要事件時將顯示系統通知提醒。</value>
         </data>
-        <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
+    <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
         <value>多開快捷設定</value>
     </data>
     <data name="EmulatorMultiInstanceEditor" xml:space="preserve">

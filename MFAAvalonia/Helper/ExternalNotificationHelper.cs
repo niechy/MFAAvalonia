@@ -96,6 +96,15 @@ public static class ExternalNotificationHelper
                         cancellationToken
                     );
                     break;
+                case Key.CustomWebhookKey:
+                    await CustomWebhook.SendAsync(
+                        Instances.ExternalNotificationSettingsUserControlModel.CustomWebhookUrl,
+                        Instances.ExternalNotificationSettingsUserControlModel.CustomWebhookContentType,
+                        Instances.ExternalNotificationSettingsUserControlModel.CustomWebhookPayloadTemplate,
+                        message,
+                        cancellationToken
+                    );
+                    break;
             }
         }
     }
@@ -117,6 +126,7 @@ public static class ExternalNotificationHelper
         public const string QmsgKey = "Qmsg"; // QMsg酱
         public const string SmtpKey = "SMTP"; // SMTP协议
         public const string ServerChanKey = "ServerChan"; // Server酱
+        public const string CustomWebhookKey = "CustomWebhook"; // 通用Webhook
 
         public static readonly IReadOnlyList<string> AllKeys =
         [
@@ -130,6 +140,7 @@ public static class ExternalNotificationHelper
             SmtpKey,
             QmsgKey,
             ServerChanKey,
+            CustomWebhookKey,
         ];
     }
 
@@ -339,7 +350,7 @@ public static class ExternalNotificationHelper
                 return false;
             }
         }
-        
+
         private static bool IsValidWebHookUrl(string url)
         {
             // 1. 验证是否为绝对URL（包含协议、域名/IP）
@@ -351,7 +362,7 @@ public static class ExternalNotificationHelper
             // 2. 仅允许http或https协议（WebHook通用要求，避免非法协议风险）
             return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
         }
-        
+
         private static string GenerateSignature(string timestamp, string secret)
         {
             var stringToSign = $"{timestamp}\n{secret}";
@@ -839,6 +850,81 @@ public static class ExternalNotificationHelper
                 LoggerHelper.Error($"ServerChan消息发送错误: {ex.Message}");
                 return false;
             }
+        }
+    }
+
+    #endregion
+
+    #region 通用Webhook通知
+
+    public static class CustomWebhook
+    {
+        public async static Task<bool> SendAsync(
+            string webhookUrl,
+            string contentType,
+            string payloadTemplate,
+            string info,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(webhookUrl))
+                {
+                    LoggerHelper.Error("通用Webhook URL不能为空");
+                    return false;
+                }
+
+                if (!IsValidWebHookUrl(webhookUrl))
+                {
+                    LoggerHelper.Warning($"传入的Webhook URL不合法：{webhookUrl}（仅支持http/https协议的绝对URL）");
+                    return false;
+                }
+
+                using var client = VersionChecker.CreateHttpClientWithProxy();
+
+                // 处理payload模板，将{message}替换为实际消息
+                var payload = string.IsNullOrWhiteSpace(payloadTemplate)
+                    ? JsonConvert.SerializeObject(new
+                    {
+                        message = info
+                    })
+                    : payloadTemplate.Replace("{message}", info.Replace("\"", "\\\""));
+
+                // 确定Content-Type
+                var mediaType = string.IsNullOrWhiteSpace(contentType) ? "application/json" : contentType;
+                var content = new StringContent(payload, Encoding.UTF8, mediaType);
+
+                var response = await client.PostAsync(webhookUrl, content, cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    LoggerHelper.Info("通用Webhook消息发送成功");
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                LoggerHelper.Error($"通用Webhook消息发送失败: {response.StatusCode} {errorContent}");
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                LoggerHelper.Warning("通用Webhook消息发送已取消");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                LoggerHelper.Error($"通用Webhook消息发送错误: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static bool IsValidWebHookUrl(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+            return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
         }
     }
 

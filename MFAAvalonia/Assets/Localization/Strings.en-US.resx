@@ -469,8 +469,20 @@
         <value>Please note: The external notification feature currently only sends 「All tasks completed」 notifications.</value>
     </data>
     <data name="ExternalNotificationWebhookUrl" xml:space="preserve">
-        <value>Webhook Url</value>
-    </data>
+            <value>Webhook Url</value>
+        </data>
+    <data name="CustomWebhook" xml:space="preserve">
+            <value>Custom Webhook</value>
+        </data>
+    <data name="ExternalNotificationCustomWebhookContentType" xml:space="preserve">
+            <value>Content-Type</value>
+        </data>
+    <data name="ExternalNotificationCustomWebhookPayloadTemplate" xml:space="preserve">
+            <value>Payload Template</value>
+        </data>
+    <data name="ExternalNotificationCustomWebhookPayloadTemplateDescription" xml:space="preserve">
+            <value>Use {{message}} as message placeholder, e.g.: {{"message": "{{message}}"}}</value>
+        </data>
     <data name="ExternalNotificationWxPusherUID" xml:space="preserve">
         <value>User UID</value>
     </data>
@@ -639,13 +651,13 @@
     <data name="MFAIsLatestVersion" xml:space="preserve">
         <value>Software is already in the latest version!</value>
     </data>
-        <data name="MinimizeToTray" xml:space="preserve">
+    <data name="MinimizeToTray" xml:space="preserve">
             <value>Hide to tray when minimized</value>
         </data>
-        <data name="MinimizeToTrayDescription" xml:space="preserve">
+    <data name="MinimizeToTrayDescription" xml:space="preserve">
             <value>When enabled, clicking the minimize button will hide the window to the system tray instead of the taskbar.</value>
         </data>
-        <data name="MiniTouch" xml:space="preserve">
+    <data name="MiniTouch" xml:space="preserve">
             <value>MiniTouch (Old)</value>
         </data>
     <data name="MirrorAutoUpdatePrompt" xml:space="preserve">
@@ -1239,13 +1251,13 @@
     <data name="UndefinedError" xml:space="preserve">
         <value>Undefined error</value>
     </data>
-        <data name="Notification" xml:space="preserve">
+    <data name="Notification" xml:space="preserve">
             <value>Notification</value>
         </data>
-        <data name="NotificationDescription" xml:space="preserve">
+    <data name="NotificationDescription" xml:space="preserve">
             <value>When enabled, system notifications will be displayed when tasks complete or important events occur.</value>
         </data>
-        <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
+    <data name="EmulatorMultiInstanceQuickSettings" xml:space="preserve">
         <value>Multi-instance Quick Settings</value>
     </data>
     <data name="EmulatorMultiInstanceEditor" xml:space="preserve">
