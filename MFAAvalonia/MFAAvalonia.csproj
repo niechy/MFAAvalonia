@@ -2,8 +2,8 @@
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <Nullable>annotations</Nullable>
-		<PublishSingleFile>true</PublishSingleFile>
-		<Platforms>x64</Platforms>
+        <PublishSingleFile>true</PublishSingleFile>
+        <Platforms>x64</Platforms>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
@@ -13,25 +13,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Folder Include="Assets\Sound\" />
-        <Folder Include="Img\" />
-        <Folder Include="Models\" />
-        <AvaloniaResource Include="Assets\**" />
+        <Folder Include="Assets\Sound\"/>
+        <Folder Include="Img\"/>
+        <Folder Include="Models\"/>
+        <AvaloniaResource Include="Assets\**"/>
     </ItemGroup>
 
 
-	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-		<PackageReference Update="Packaging.Targets">
-		  <Version>0.1.232</Version>
-		</PackageReference>
-		<PackageReference Include="SharpDX" Version="4.2.0" />
-        <PackageReference Include="SharpDX.Direct3D12" Version="4.2.0" />
-	</ItemGroup>
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+        <PackageReference Update="Packaging.Targets">
+            <Version>0.1.232</Version>
+        </PackageReference>
+        <PackageReference Include="SharpDX" Version="4.2.0"/>
+        <PackageReference Include="SharpDX.Direct3D12" Version="4.2.0"/>
+    </ItemGroup>
 
     <PropertyGroup>
         <NoWarn>NU1701;NU1510</NoWarn>
     </PropertyGroup>
-	
+
     <!-- Version -->
     <PropertyGroup>
         <ApplicationRevision>0</ApplicationRevision>
@@ -44,158 +44,165 @@
 
     <!-- Build and Publish -->
     <PropertyGroup>
-		<DebianPackageDependencies>dotnet-runtime-8.0;libc6;libgtk-3-0</DebianPackageDependencies>
-        <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;win-arm64;linux-arm64;osx-arm64</RuntimeIdentifiers> 
-		<OutputPath>..\bin\$(Platform)\$(Configuration)\</OutputPath>
-		<IntermediateOutputPath>obj\$(Platform)\$(Configuration)\$(TargetFramework)\</IntermediateOutputPath>
+        <DebianPackageDependencies>dotnet-runtime-8.0;libc6;libgtk-3-0</DebianPackageDependencies>
+        <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;win-arm64;linux-arm64;osx-arm64</RuntimeIdentifiers>
+        <OutputPath>../bin/$(Platform)/$(Configuration)/</OutputPath>
+        <IntermediateOutputPath>obj/$(Platform)/$(Configuration)/$(TargetFramework)/</IntermediateOutputPath>
         <PublishReadyToRun>false</PublishReadyToRun>
-        <PublishSingleFile>true</PublishSingleFile>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PublishSingleFile>false</PublishSingleFile>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishTrimmed>false</PublishTrimmed>
         <SelfContained>false</SelfContained>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<GenerateResource>Always</GenerateResource>
-		<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+        <GenerateResource>Always</GenerateResource>
+        <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-		<MaaAgentBinaryPath>libs\MaaAgentBinary</MaaAgentBinaryPath>
+        <MaaAgentBinaryPath>libs/MaaAgentBinary</MaaAgentBinaryPath>
+        <BeautyLibsDir>./libs</BeautyLibsDir>
+        <!-- DLLs you want to exclude from being moved (e.g., critical or custom files). -->
+        <!--         <BeautyExcludes>Assets;plugins;runtimes;</BeautyExcludes> -->
+        <!-- Files to hide from end users (e.g., runtime or config files). Only supported on Windows. -->
+        <!-- <BeautyHiddens>hostfxr;hostpolicy;*.deps.json;*.runtimeconfig*.json</BeautyHiddens> -->
+        <BeautyOnPublishOnly>True</BeautyOnPublishOnly>
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.9" />
-        <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.3.9" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.9" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.9" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.9" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.9" />
-        <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.9" />
-        <PackageReference Include="AvaloniaEdit.TextMate" Version="11.3.0" />
-        <PackageReference Include="AvaloniaExtensions.Axaml" Version="11.3.9" />
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		<PackageReference Include="Avalonia.Xaml.Interactions" Version="11.3.0.6" />
-		<PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.3.0.6" />
+        <PackageReference Include="Avalonia" Version="11.3.9"/>
+        <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.3.9"/>
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.9"/>
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.9"/>
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.9"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.9"/>
+        <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.9"/>
+        <PackageReference Include="AvaloniaEdit.TextMate" Version="11.3.0"/>
+        <PackageReference Include="AvaloniaExtensions.Axaml" Version="11.3.9"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.3.0.6"/>
+        <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.3.0.6"/>
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.9" />
-        <PackageReference Include="CalcBindingAva" Version="2.5.3" />
-        <PackageReference Include="CrossPlatformProtectedData" Version="1.0.3" />
-        <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="2.0.316.1" />
-        <PackageReference Include="Lang.Avalonia" Version="11.3.9" />
-        <PackageReference Include="Maa.AgentBinary" Version="1.2.0" />
-        <PackageReference Include="Maa.Framework" Version="5.1.0-preview.3" />
-        <PackageReference Include="Maa.Framework.Binding.Extensions" Version="5.1.0-preview.3" />
-        <PackageReference Include="Maa.Framework.Binding.Native" Version="5.1.0-preview.3" />
-        <PackageReference Include="Maa.Framework.Native" Version="5.1.0-preview.3" />
-        <PackageReference Include="Maa.Framework.Runtimes" Version="5.2.3" />
-                <PackageReference Include="MailKit" Version="4.14.1" />
-        		<PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.0.0" />
-        		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
-        		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.9"/>
+        <PackageReference Include="CalcBindingAva" Version="2.5.3"/>
+        <PackageReference Include="CrossPlatformProtectedData" Version="1.0.3"/>
+        <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="2.0.316.1"/>
+        <PackageReference Include="Lang.Avalonia" Version="11.3.9"/>
+        <PackageReference Include="Maa.AgentBinary" Version="1.2.0"/>
+        <PackageReference Include="Maa.Framework" Version="5.1.0-preview.3"/>
+        <PackageReference Include="Maa.Framework.Binding.Extensions" Version="5.1.0-preview.3"/>
+        <PackageReference Include="Maa.Framework.Binding.Native" Version="5.1.0-preview.3"/>
+        <PackageReference Include="Maa.Framework.Native" Version="5.1.0-preview.3"/>
+        <PackageReference Include="Maa.Framework.Runtimes" Version="5.2.3"/>
+        <PackageReference Include="MailKit" Version="4.14.1"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.0.0"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
-        <PackageReference Include="NETCore.Encrypt" Version="2.1.1" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageReference Include="runtime.native.System.Net.Http" Version="4.3.1" />
-        <PackageReference Include="Semver" Version="3.0.0" />
-        <PackageReference Include="Serilog" Version="4.3.1-dev-02373" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageReference Include="SharpCompress" Version="0.42.1" />
-        <PackageReference Include="SharpHook" Version="7.1.0" />
-		<PackageReference Include="SkiaSharp" Version="3.119.1" />
-		<PackageReference Include="SoundFlow" Version="1.3.0" />
-        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.1" />
-        <PackageReference Include="System.Management" Version="10.0.0" />
-        <PackageReference Include="System.Net.Http" Version="4.3.4" />
-        <PackageReference Include="System.Private.Uri" Version="4.3.2" />
-        <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
-        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.1"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1"/>
+        <PackageReference Include="NETCore.Encrypt" Version="2.1.1"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
+        <PackageReference Include="nulastudio.NetBeauty" Version="2.1.5"/>
+        <PackageReference Include="runtime.native.System.Net.Http" Version="4.3.1"/>
+        <PackageReference Include="Semver" Version="3.0.0"/>
+        <PackageReference Include="Serilog" Version="4.3.1-dev-02373"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0"/>
+        <PackageReference Include="SharpCompress" Version="0.42.1"/>
+        <PackageReference Include="SharpHook" Version="7.1.0"/>
+        <PackageReference Include="SkiaSharp" Version="3.119.1"/>
+        <PackageReference Include="SoundFlow" Version="1.3.0"/>
+        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.1"/>
+        <PackageReference Include="System.Management" Version="10.0.0"/>
+        <PackageReference Include="System.Net.Http" Version="4.3.4"/>
+        <PackageReference Include="System.Private.Uri" Version="4.3.2"/>
+        <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0"/>
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3"/>
 
-		<ProjectReference Include="../LazyStaticGenerator/LazyStaticGenerator.csproj" OutputItemType="Analyzer" ExcludeAssets="runtime;build;native;contentfiles" ReferenceOutputAssembly="false" />
-		<ProjectReference Include="../SukiUI/SukiUI.csproj" />
-	    <ProjectReference Include="../Markdown.Avalonia/Markdown.Avalonia.csproj" />
-	</ItemGroup>
-	<PropertyGroup>
-		<LazyStaticGeneratedDir>$(BaseIntermediateOutputPath)\LazyStaticGenerated</LazyStaticGeneratedDir>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-	</PropertyGroup>
+        <ProjectReference Include="../LazyStaticGenerator/LazyStaticGenerator.csproj" OutputItemType="Analyzer" ExcludeAssets="runtime;build;native;contentfiles" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="../SukiUI/SukiUI.csproj"/>
+        <ProjectReference Include="../Markdown.Avalonia/Markdown.Avalonia.csproj"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <LazyStaticGeneratedDir>$(BaseIntermediateOutputPath)\LazyStaticGenerated</LazyStaticGeneratedDir>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<Compile Include="$(LazyStaticGeneratedDir)/**/*.cs" Condition="'$(EnableLazyStaticGenerator)' == 'true'" />
-		<Compile Update="Assets\Localization\LangKeys.cs">
-		  <AutoGen>True</AutoGen>
-		  <DesignTime>True</DesignTime>
-		  <DependentUpon>LangKeys.tt</DependentUpon>
-		</Compile>
+    <ItemGroup>
+        <Compile Include="$(LazyStaticGeneratedDir)/**/*.cs" Condition="'$(EnableLazyStaticGenerator)' == 'true'"/>
+        <Compile Update="Assets\Localization\LangKeys.cs">
+            <AutoGen>True</AutoGen>
+            <DesignTime>True</DesignTime>
+            <DependentUpon>LangKeys.tt</DependentUpon>
+        </Compile>
         <Compile Update="Assets\Localization\Strings.Designer.cs">
             <DesignTime>True</DesignTime>
             <AutoGen>True</AutoGen>
             <DependentUpon>Strings.resx</DependentUpon>
         </Compile>
-		<Compile Update="Helper\LangKeys.cs">
-		  <AutoGen>True</AutoGen>
-		  <DesignTime>True</DesignTime>
-		  <DependentUpon>LangKeys.tt</DependentUpon>
-		</Compile>
-		<Compile Update="Views\Pages\ScreenshotView.axaml.cs">
-		  <DependentUpon>ScreenshotView.axaml</DependentUpon>
-		  <SubType>Code</SubType>
-		</Compile>
-		<Compile Update="Views\UserControls\MultiInstanceEditorDialogView.axaml.cs">
-		  <DependentUpon>MultiInstanceEditorDialogView.axaml</DependentUpon>
-		  <SubType>Code</SubType>
-		</Compile>
-	</ItemGroup>
-    <ItemGroup>
-      <Compile Update="Assets\Localization\Strings.Designer.cs">
-        <DesignTime>True</DesignTime>
-        <AutoGen>True</AutoGen>
-        <DependentUpon>Strings.resx</DependentUpon>
-      </Compile>
+        <Compile Update="Helper\LangKeys.cs">
+            <AutoGen>True</AutoGen>
+            <DesignTime>True</DesignTime>
+            <DependentUpon>LangKeys.tt</DependentUpon>
+        </Compile>
+        <Compile Update="Views\Pages\ScreenshotView.axaml.cs">
+            <DependentUpon>ScreenshotView.axaml</DependentUpon>
+            <SubType>Code</SubType>
+        </Compile>
+        <Compile Update="Views\UserControls\MultiInstanceEditorDialogView.axaml.cs">
+            <DependentUpon>MultiInstanceEditorDialogView.axaml</DependentUpon>
+            <SubType>Code</SubType>
+        </Compile>
     </ItemGroup>
-	
-	<ItemGroup>
-		<Content Include="..\cliff.toml">
-		  <Link>cliff.toml</Link>
-		</Content>
-		<Content Include="..\README_en.md">
-		  <Link>README_en.md</Link>
-		</Content>
-		<Content Include="Assets/logo.ico" CopyToPublishDirectory="PreserveNewest">
-			<LinuxPath>/usr/share/icons/MFAAvalonia.ico</LinuxPath>
-		</Content>
-	</ItemGroup>
-	<ItemGroup>
-	  <RuntimeHostConfigurationOption Include="SubdirectoriesToProbe" Value="libs" />
-	</ItemGroup>
     <ItemGroup>
-      <Content Include="..\README.md">
-        <Link>README.md</Link>
-      </Content>
+        <Compile Update="Assets\Localization\Strings.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Strings.resx</DependentUpon>
+        </Compile>
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Assets\Localization\LangKeys.tt">
-        <Generator>TextTemplatingFileGenerator</Generator>
-        <LastGenOutput>LangKeys.cs</LastGenOutput>
-      </None>
-      <None Update="Helper\LangKeys.tt">
-        <Generator>TextTemplatingFileGenerator</Generator>
-        <LastGenOutput>LangKeys.cs</LastGenOutput>
-      </None>
+        <Content Include="..\cliff.toml">
+            <Link>cliff.toml</Link>
+        </Content>
+        <Content Include="..\README_en.md">
+            <Link>README_en.md</Link>
+        </Content>
+        <Content Include="Assets/logo.ico" CopyToPublishDirectory="PreserveNewest">
+            <LinuxPath>/usr/share/icons/MFAAvalonia.ico</LinuxPath>
+        </Content>
+    </ItemGroup>
+    <ItemGroup>
+        <RuntimeHostConfigurationOption Include="SubdirectoriesToProbe" Value="libs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Content Include="..\README.md">
+            <Link>README.md</Link>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Update="Assets\Localization\Strings*.resx">
-        <Generator>PublicResXFileCodeGenerator</Generator>
-        <LastGenOutput>Strings.Designer.cs</LastGenOutput>
-      </EmbeddedResource>
+        <None Update="Assets\Localization\LangKeys.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>LangKeys.cs</LastGenOutput>
+        </None>
+        <None Update="Helper\LangKeys.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>LangKeys.cs</LastGenOutput>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Update="Assets\Localization\Strings*.resx">
+            <Generator>PublicResXFileCodeGenerator</Generator>
+            <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
     </ItemGroup>
     <!-- 根据发布的目标系统，仅复制对应脚本到publish目录 -->
     <ItemGroup>
@@ -205,7 +212,7 @@
                  CopyToPublishDirectory="PreserveNewest">
             <Link>DependencySetup_依赖库安装_win.bat</Link>
         </Content>
-		<Content Include="InstallRuntime.ps1"
+        <Content Include="InstallRuntime.ps1"
                  Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))"
                  CopyToPublishDirectory="PreserveNewest">
             <Link>InstallRuntime.ps1</Link>
@@ -227,69 +234,28 @@
     </ItemGroup>
 
     <!-- 为Linux/macOS脚本添加可执行权限（仅对应系统发布时生效） -->
-<!--    <Target Name="SetScriptExecutionPermission" AfterTargets="Publish">-->
-<!--        &lt;!&ndash; Linux 脚本授权 &ndash;&gt;-->
-<!--        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))"-->
-<!--              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_linux.sh'" />-->
+    <!--    <Target Name="SetScriptExecutionPermission" AfterTargets="Publish">-->
+    <!--        &lt;!&ndash; Linux 脚本授权 &ndash;&gt;-->
+    <!--        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))"-->
+    <!--              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_linux.sh'" />-->
 
-<!--        &lt;!&ndash; macOS 脚本授权 &ndash;&gt;-->
-<!--        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))"-->
-<!--              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_mac.sh'" />-->
-<!--    </Target>-->
+    <!--        &lt;!&ndash; macOS 脚本授权 &ndash;&gt;-->
+    <!--        <Exec Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))"-->
+    <!--              Command="chmod +x '$(MainPublishDir)/DependencySetup_依赖库安装_mac.sh'" />-->
+    <!--    </Target>-->
 
-	<!-- 清理发布输出中不需要的文件 -->
-	<Target Name="RemoveUnwantedFiles" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
-	  <PropertyGroup>
-		<MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
-	  </PropertyGroup>
+    <!-- 清理发布输出中不需要的文件 -->
+    <Target Name="RemoveUnwantedFiles" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+        <PropertyGroup>
+            <MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
+        </PropertyGroup>
 
-	  <!-- 删除 PDB 文件 -->
-	  <ItemGroup>
-		<PdbFilesToDelete Include="$(MainPublishDir)**\*.pdb" />
-		<XmlFilesToDelete Include="$(MainPublishDir)SukiUI.xml" />
-	  </ItemGroup>
+        <!-- 删除 PDB 文件 -->
+        <ItemGroup>
+            <PdbFilesToDelete Include="$(MainPublishDir)**\*.pdb"/>
+            <XmlFilesToDelete Include="$(MainPublishDir)SukiUI.xml"/>
+        </ItemGroup>
 
-	  <Delete Files="@(PdbFilesToDelete);@(XmlFilesToDelete);@(RuntimeConfigFilesToDelete)" ContinueOnError="true" />
-	</Target>
-
-	<!-- 将库文件（DLL/SO/DYLIB）移动到 libs 文件夹 -->
-	<Target Name="MoveLibrariesToLibs" AfterTargets="RemoveUnwantedFiles" Condition="'$(PublishDir)' != ''">
-	  <PropertyGroup>
-		<MainPublishDir>$([MSBuild]::NormalizeDirectory('$(OutputPath)\$(RuntimeIdentifier)\publish'))</MainPublishDir>
-		<LibsDir>$([MSBuild]::NormalizeDirectory('$(MainPublishDir)libs'))</LibsDir>
-	  </PropertyGroup>
-
-	  <!-- 创建 libs 文件夹 -->
-	  <MakeDir Directories="$(LibsDir)" Condition="!Exists('$(LibsDir)')" />
-
-	  <!-- 根据平台收集需要移动的库文件 -->
-	  <ItemGroup>
-		<!-- Windows: 移动 DLL 文件 -->
-		<WinLibFilesToMove Include="$(MainPublishDir)*.dll" 
-						   Exclude="$(MainPublishDir)MFAAvalonia.dll;$(MainPublishDir)MFAUpdater.dll"
-						   Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-arm64'" />
-		
-		<!-- Linux: 移动 DLL 和 SO 文件 -->
-		<LinuxLibFilesToMove Include="$(MainPublishDir)*.dll" 
-							 Exclude="$(MainPublishDir)MFAAvalonia.dll;$(MainPublishDir)MFAUpdater.dll"
-							 Condition="'$(RuntimeIdentifier)' == 'linux-x64' OR '$(RuntimeIdentifier)' == 'linux-arm64'" />
-		<LinuxSoFilesToMove Include="$(MainPublishDir)*.so"
-							Condition="'$(RuntimeIdentifier)' == 'linux-x64' OR '$(RuntimeIdentifier)' == 'linux-arm64'" />
-		
-		<!-- macOS: 移动 DLL 和 DYLIB 文件 -->
-		<MacLibFilesToMove Include="$(MainPublishDir)*.dll" 
-						   Exclude="$(MainPublishDir)MFAAvalonia.dll;$(MainPublishDir)MFAUpdater.dll"
-						   Condition="'$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'osx-arm64'" />
-		<MacDylibFilesToMove Include="$(MainPublishDir)*.dylib"
-							 Condition="'$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'osx-arm64'" />
-	  </ItemGroup>
-        
-	  <!-- 移动库文件到 libs 文件夹 -->
-	  <Move SourceFiles="@(WinLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(WinLibFilesToMove)' != ''" />
-	  <Move SourceFiles="@(LinuxLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(LinuxLibFilesToMove)' != ''" />
-	  <Move SourceFiles="@(LinuxSoFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(LinuxSoFilesToMove)' != ''" />
-	  <Move SourceFiles="@(MacLibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(MacLibFilesToMove)' != ''" />
-	  <Move SourceFiles="@(MacDylibFilesToMove)" DestinationFolder="$(LibsDir)" OverwriteReadOnlyFiles="true" Condition="'@(MacDylibFilesToMove)' != ''" />
-
-	</Target>
+        <Delete Files="@(PdbFilesToDelete);@(XmlFilesToDelete);@(RuntimeConfigFilesToDelete)" ContinueOnError="true"/>
+    </Target>
 </Project>
