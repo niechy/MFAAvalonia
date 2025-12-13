@@ -139,7 +139,7 @@ MaaFramework project templates come with MFAAvalonia pre-configured.
       "name": "Task Name",
       "entry": "Task Entry",
       "default_check": true,
-      "doc": "Task Documentation",
+      "description": "Task Documentation",
       "repeatable": true,
       "repeat_count": 1
     }
@@ -154,7 +154,7 @@ MaaFramework project templates come with MFAAvalonia pre-configured.
 | `name`          | string  |    -    | Task display name                       |
 | `entry`         | string  |    -    | Task entry interface                    |
 | `default_check` | boolean | `false` | Whether selected by default             |
-| `doc`           | string  | `null`  | Task documentation (supports rich text) |
+| `description`   | string  | `null`  | Task documentation (supports rich text) |
 | `repeatable`    | boolean | `false` | Whether task can be repeated            |
 | `repeat_count`  | number  |   `1`   | Default repeat count                    |
 

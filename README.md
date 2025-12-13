@@ -141,7 +141,7 @@ MaaFramework 项目模板已内置 MFAAvalonia，创建项目时自动配置完�
       "name": "任务名称",
       "entry": "任务入口",
       "default_check": true,
-      "doc": "任务说明文档",
+      "description": "任务说明文档",
       "repeatable": true,
       "repeat_count": 1
     }
@@ -156,7 +156,7 @@ MaaFramework 项目模板已内置 MFAAvalonia，创建项目时自动配置完�
 | `name`          | string  |    -    | 任务显示名称        |
 | `entry`         | string  |    -    | 任务入口接口        |
 | `default_check` | boolean | `false` | 是否默认选中        |
-| `doc`           | string  | `null`  | 任务说明文档（支持富文本） |
+| `description`   | string  | `null`  | 任务说明文档（支持富文本） |
 | `repeatable`    | boolean | `false` | 是否可重复执行       |
 | `repeat_count`  | number  |   `1`   | 默认重复次数        |
 
