@@ -499,6 +499,9 @@ public static class VersionChecker
         var changesPath = Path.Combine(tempExtractDir, "changes.json");
         if (File.Exists(changesPath))
             isFull = false;
+        else
+            LoggerHelper.Error("No changes.json found");
+        LoggerHelper.Info((isGithub || isFull || currentVersion.Equals("v0.0.0", StringComparison.OrdinalIgnoreCase)) ? "全量更新" : "增量更新");
         if (isGithub || isFull || currentVersion.Equals("v0.0.0", StringComparison.OrdinalIgnoreCase))
         {
             if (Directory.Exists(resourcePath))
@@ -606,10 +609,6 @@ public static class VersionChecker
                 {
                     LoggerHelper.Error(e);
                 }
-            }
-            else
-            {
-                LoggerHelper.Error("No changes.json found");
             }
         }
 
@@ -2022,6 +2021,8 @@ public static class VersionChecker
             var response = httpClient.GetAsync(releaseUrl).Result;
             var jsonResponse = response.Content.ReadAsStringAsync().Result;
             var responseData = JObject.Parse(jsonResponse);
+            if (!onlyCheck)
+                LoggerHelper.Info(jsonResponse);
             Exception? exception = null;
             // 处理 HTTP 状态码
             if (!response.IsSuccessStatusCode)
