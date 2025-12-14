@@ -186,9 +186,9 @@
                                         Padding="0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.Reset}}">
                                         <avalonia1:FluentIcon Height="18"
-                                                           Icon="ArrowSync"
-                                                           IconSize="Size16"
-                                                           IconVariant="Regular" />
+                                                              Icon="ArrowSync"
+                                                              IconSize="Size16"
+                                                              IconVariant="Regular" />
                                     </Button>
                                 </StackPanel>
                             </Grid>
@@ -532,9 +532,9 @@
                                         Padding="0"
                                         ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.Custom}}">
                                     <avalonia1:FluentIcon Height="18"
-                                                       Icon="DesktopEdit"
-                                                       IconSize="Size16"
-                                                       IconVariant="Regular" />
+                                                          Icon="DesktopEdit"
+                                                          IconSize="Size16"
+                                                          IconVariant="Regular" />
                                 </Button>
                                 <Button Classes="Basic Round" ClipToBounds="False"
                                         Command="{Binding RefreshCommand}"
@@ -679,7 +679,8 @@
                                   VerticalContentAlignment="Top"
                                   ex:ScrollViewerExtensions.AutoScroll="True"
                                   ex:ScrollViewerExtensions.PanningMode="VerticalOnly">
-                        <ItemsControl ItemsSource="{Binding Path=LogItemViewModels}">
+                        <ItemsControl ItemsSource="{Binding Path=LogItemViewModels}"
+                                    >
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <VirtualizingStackPanel />
