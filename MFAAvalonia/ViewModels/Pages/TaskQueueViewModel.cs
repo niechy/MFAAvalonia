@@ -420,6 +420,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
         return false;
     }
+    
     public void AddLog(string content,
         IBrush? brush,
         string weight = "Regular",

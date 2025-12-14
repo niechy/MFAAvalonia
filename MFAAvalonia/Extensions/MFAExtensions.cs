@@ -484,36 +484,52 @@ public static class MFAExtensions
     //     
     //     return new System.Drawing.Bitmap(memory);
     // }
-    public static Bitmap DrawRectangle(this Bitmap sourceBitmap, MaaRectBuffer rect, IBrush color, double thickness = 1.5)
-    {
-        if (sourceBitmap == null)
-            throw new ArgumentNullException(nameof(sourceBitmap));
-
-        var renderBitmap = new RenderTargetBitmap(
-            sourceBitmap.PixelSize,
-            sourceBitmap.Dpi);
-
-        DispatcherHelper.PostOnMainThread(() =>
+        public static Bitmap DrawRectangle(this Bitmap sourceBitmap, MaaRectBuffer rect, IBrush color, double thickness = 1.5)
         {
-            // 使用 DrawingContext 绘制
-            using var context = renderBitmap.CreateDrawingContext();
-
-            // 1. 绘制原始图像作为背景
-            context.DrawImage(sourceBitmap, new Rect(sourceBitmap.Size));
-
-            // 2. 创建抗锯齿画笔
-            var pen = new Avalonia.Media.Pen(color, thickness)
+            if (sourceBitmap == null)
+                throw new ArgumentNullException(nameof(sourceBitmap));
+    
+            // 提前获取需要的值，避免在异步操作中访问可能已释放的对象
+            var bitmapSize = sourceBitmap.Size;
+            var pixelSize = sourceBitmap.PixelSize;
+            var dpi = sourceBitmap.Dpi;
+    
+            var renderBitmap = new RenderTargetBitmap(pixelSize, dpi);
+    
+            DispatcherHelper.PostOnMainThread(() =>
             {
-                LineJoin = PenLineJoin.Round,
-                LineCap = PenLineCap.Round
-            };
-
-            // 3. 绘制矩形边框
-            context.DrawRectangle(pen, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
-
-        });
-        return renderBitmap;
-    }
+                try
+                {
+                    // 二次检查：确保 sourceBitmap 仍然有效
+                    if (sourceBitmap == null)
+                    {
+                        LoggerHelper.Warning("DrawRectangle: sourceBitmap在异步操作中变为 null");
+                        return;
+                    }
+    
+                    // 使用 DrawingContext 绘制
+                    using var context = renderBitmap.CreateDrawingContext();
+    
+                    // 1. 绘制原始图像作为背景
+                    context.DrawImage(sourceBitmap, new Rect(bitmapSize));
+    
+                    // 2. 创建抗锯齿画笔
+                    var pen = new Avalonia.Media.Pen(color, thickness)
+                    {
+                        LineJoin = PenLineJoin.Round,
+                        LineCap = PenLineCap.Round
+                    };
+    
+                    // 3. 绘制矩形边框
+                    context.DrawRectangle(pen, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
+                }
+                catch (Exception ex)
+                {
+                    LoggerHelper.Error($"DrawRectangle 绘制失败: {ex.Message}");
+                }
+            });
+            return renderBitmap;
+        }
 
     // public static Bitmap? ToAvaloniaBitmap(this System.Drawing.Bitmap? bitmap)
     // {
