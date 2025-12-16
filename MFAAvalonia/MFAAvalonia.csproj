@@ -212,11 +212,11 @@
                  CopyToPublishDirectory="PreserveNewest">
             <Link>DependencySetup_依赖库安装_win.bat</Link>
         </Content>
-        <Content Include="InstallRuntime.ps1"
-                 Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))"
-                 CopyToPublishDirectory="PreserveNewest">
-            <Link>InstallRuntime.ps1</Link>
-        </Content>
+<!--        <Content Include="InstallRuntime.ps1"-->
+<!--                 Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))"-->
+<!--                 CopyToPublishDirectory="PreserveNewest">-->
+<!--            <Link>InstallRuntime.ps1</Link>-->
+<!--        </Content>-->
 
         <!-- Linux 脚本：匹配 linux-x64 或 linux-arm64 -->
         <Content Include="DependencySetup_依赖库安装_linux.sh"
