@@ -183,7 +183,7 @@ sealed class Program
             }
 
             var parsedArgs = ParseArguments(args);
-            var mutexName = "MFA_"
+            var mutexName = "MFAAvalonia_"
                 + Directory.GetCurrentDirectory().Replace("\\", "_")
                     .Replace("/", "_")
                     .Replace(":", string.Empty);

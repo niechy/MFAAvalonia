@@ -1004,7 +1004,6 @@ public partial class MaaInterface
             sb.Append(c);
             lastChar = c;
         }
-
         return sb.ToString();
     }
 
