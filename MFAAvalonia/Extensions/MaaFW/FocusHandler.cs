@@ -3,6 +3,7 @@ using MaaFramework.Binding.Notification;
 using MFAAvalonia.Helper;
 using MFAAvalonia.Helper.Converters;
 using MFAAvalonia.Helper.ValueType;
+using MFAAvalonia.Views.Pages;
 using MFAAvalonia.Views.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -147,8 +148,7 @@ public class FocusHandler
                 {
                     var template = item.Value<string>();
                     var displayText = ReplacePlaceholders(template!, detailsObj);
-                    var (text, color) = ParseColorText(displayText);
-                    RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
+                    RootView.AddMarkdown(TaskQueueView.ConvertCustomMarkup(displayText.ResolveContentAsync().Result));
                 }
             }
         }
@@ -157,8 +157,7 @@ public class FocusHandler
         {
             var template = templateToken.Value<string>();
             var displayText = ReplacePlaceholders(template!, detailsObj);
-            var (text, color) = ParseColorText(displayText);
-            RootView.AddLog(text, color == null ? null : BrushHelper.ConvertToBrush(color));
+            RootView.AddMarkdown(TaskQueueView.ConvertCustomMarkup(displayText.ResolveContentAsync().Result));
         }
     }
 

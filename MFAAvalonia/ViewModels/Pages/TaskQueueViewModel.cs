@@ -543,7 +543,25 @@ public partial class TaskQueueViewModel : ViewModelBase
         var brush = BrushHelper.ConvertToBrush(color, Brushes.Black);
         AddLogByKey(key, brush, changeColor, transformKey, formatArgsKeys);
     }
-
+    
+    public void AddMarkdown(string key, IBrush? brush = null, bool changeColor = true, bool transformKey = true, params string[] formatArgsKeys)
+    {
+        brush ??= Brushes.Black;
+        Task.Run(() =>
+        {
+            DispatcherHelper.PostOnMainThread(() =>
+            {
+                var log = new LogItemViewModel(key, brush, "Regular", true, "HH':'mm':'ss", changeColor: changeColor, showTime: true, transformKey: transformKey, formatArgsKeys)
+                {
+                    UseMarkdown = true
+                };
+                LogItemViewModels.Add(log);
+                LoggerHelper.Info(log.Content);
+                // 自动清理超出限制的旧日志
+                TrimExcessLogs();
+            });
+        });
+    }
     #endregion
 
     #region 连接

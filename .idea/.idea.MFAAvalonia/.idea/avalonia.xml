@@ -120,7 +120,9 @@
         <entry key="SukiUI/Theme/TabControl.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Theme/TabControlStyles.xaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Theme/TabItem.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="SukiUI/Theme/TextBlock.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Theme/TextBlock.xaml" value="MFAAvalonia/MFAAvalonia.csproj" />
+        <entry key="SukiUI/Theme/TextBox.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Theme/TextBoxStyles.xaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Theme/TextEraserButton.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />
         <entry key="SukiUI/Theme/TextStyles.axaml" value="MFAAvalonia/MFAAvalonia.csproj" />

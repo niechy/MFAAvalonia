@@ -517,7 +517,7 @@
             <suki:GlassCard Grid.Row="1"
                             Margin="0,-7,0,25"
                             x:Name="IntroductionCard"
-                            MaxHeight="{calcBinding:Binding 'Bounds.Height / 2',RelativeSource={RelativeSource FindAncestor,AncestorType=Grid}}">
+                          >
                 <suki:GroupBox>
                     <suki:GroupBox.Header>
                         <TextBlock FontSize="11"
@@ -803,24 +803,27 @@
                                     <Grid Name="ParentGrid">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock FontSize="12"
                                                    Name="FirstCol"
                                                    Foreground="{DynamicResource SukiDisabledText}"
                                                    Grid.Column="0"
                                                    HorizontalAlignment="Left"
+                                                   IsVisible="{Binding ShowTime}"
                                                    Margin="0,5,2,0"
                                                    MinWidth="55"
                                                    Text="{Binding Time}"
                                                    TextWrapping="Wrap"
-                                                   VerticalAlignment="Stretch" />
+                                                   VerticalAlignment="Top" />
+                                        <!-- 普通文本显示 -->
                                         <TextBlock FontSize="12"
                                                    FontWeight="{Binding Weight}"
                                                    Foreground="{Binding Color}"
-                                                   Background="{Binding  BackgroundColor}"
+                                                   Background="{Binding BackgroundColor}"
                                                    Grid.Column="1"
                                                    HorizontalAlignment="Stretch"
+                                                   IsVisible="{Binding !UseMarkdown}"
                                                    Margin="0,5"
                                                    TextWrapping="WrapWithOverflow"
                                                    Text="{Binding Content}"
@@ -834,6 +837,29 @@
                                                 </MultiBinding>
                                             </TextBlock.MaxWidth>
                                         </TextBlock>
+                                        <!-- Markdown显示 -->
+                                        <mdxaml:MarkdownScrollViewer Grid.Column="1"
+                                                                     IsVisible="{Binding UseMarkdown}"
+                                                                     Markdown="{Binding Content}"
+                                                                     Margin="0,0,0,0">
+                                            <mdxaml:MarkdownScrollViewer.Engine>
+                                                <ex:MarkdownExtension />
+                                            </mdxaml:MarkdownScrollViewer.Engine>
+                                            <mdxaml:MarkdownScrollViewer.Styles>
+                                                <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
+                                            </mdxaml:MarkdownScrollViewer.Styles>
+                                            <mdxaml:MarkdownScrollViewer.Plugins>
+                                                <StaticResource ResourceKey="MdXamlPlugin" />
+                                            </mdxaml:MarkdownScrollViewer.Plugins>
+                                            <mdxaml:MarkdownScrollViewer.MaxWidth>
+                                                <MultiBinding Converter="{converters:MaxWidthConverter}">
+                                                    <Binding ElementName="ParentGrid"
+                                                             Path="Bounds.Width" />
+                                                    <Binding ElementName="FirstCol"
+                                                             Path="Bounds.Width" />
+                                                </MultiBinding>
+                                            </mdxaml:MarkdownScrollViewer.MaxWidth>
+                                        </mdxaml:MarkdownScrollViewer>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

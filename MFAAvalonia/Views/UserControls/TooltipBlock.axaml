@@ -32,7 +32,6 @@
                                     </full:MarkdownScrollViewer.Plugins>
                                     <full:MarkdownScrollViewer.Styles>
                                         <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlDocStyle.axaml" />
-                                        <StyleInclude Source="avares://MFAAvalonia/Assets/Style/MdXamlStyles.axaml" />
                                     </full:MarkdownScrollViewer.Styles>
                                 </full:MarkdownScrollViewer>
                             </ScrollViewer>
