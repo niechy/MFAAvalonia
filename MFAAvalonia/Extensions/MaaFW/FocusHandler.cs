@@ -81,7 +81,7 @@ public class FocusHandler
         {
             if (taskModel["focus"] == null)
                 return;
-            
+
             var focusToken = taskModel["focus"];
             var focus = new Focus();
             JObject? newProtocolFocus = null;
@@ -119,11 +119,11 @@ public class FocusHandler
                 {
                     // 忽略详情解析错误
                 }
-            }
-            // 1. 处理新协议（如果有）
-            if (newProtocolFocus is { HasValues: true } && newProtocolFocus.TryGetValue(message, out var templateToken))
-            {
-                ProcessNewProtocol(templateToken, detailsObj);
+                // 1. 处理新协议（如果有）
+                if (newProtocolFocus is { HasValues: true } && newProtocolFocus.TryGetValue(message, out var templateToken))
+                {
+                    ProcessNewProtocol(templateToken, taskModel, detailsObj);
+                }
             }
             // 2. 处理旧协议（如果有）
             ProcessOldProtocol(focus, message, onAborted);
@@ -137,7 +137,7 @@ public class FocusHandler
     /// <summary>
     /// 处理新协议消息
     /// </summary>
-    private void ProcessNewProtocol(JToken templateToken, JObject? detailsObj)
+    private void ProcessNewProtocol(JToken templateToken, JObject taskModel, JObject? detailsObj)
     {
         // 处理字符串数组类型
         if (templateToken.Type == JTokenType.Array)
@@ -147,8 +147,8 @@ public class FocusHandler
                 if (item.Type == JTokenType.String)
                 {
                     var template = item.Value<string>();
-                    var displayText = ReplacePlaceholders(template!, detailsObj);
-                    RootView.AddMarkdown(TaskQueueView.ConvertCustomMarkup(displayText.ResolveContentAsync().Result));
+                    var displayText = ReplacePlaceholders(template!.ResolveContentAsync().Result, detailsObj);
+                    RootView.AddMarkdown(TaskQueueView.ConvertCustomMarkup(displayText));
                 }
             }
         }
@@ -156,8 +156,8 @@ public class FocusHandler
         else if (templateToken.Type == JTokenType.String)
         {
             var template = templateToken.Value<string>();
-            var displayText = ReplacePlaceholders(template!, detailsObj);
-            RootView.AddMarkdown(TaskQueueView.ConvertCustomMarkup(displayText.ResolveContentAsync().Result));
+            var displayText = ReplacePlaceholders(template!.ResolveContentAsync().Result, detailsObj);
+            RootView.AddMarkdown(TaskQueueView.ConvertCustomMarkup(displayText));
         }
     }
 
@@ -220,14 +220,17 @@ public class FocusHandler
     /// </summary>
     private string ReplacePlaceholders(string template, JObject? details)
     {
-        if (details == null)
-            return template;
-
         string result = template;
-        foreach (var prop in details.Properties())
+
+        // 再用details中的属性替换（如果有的话）
+        if (details != null)
         {
-            result = result.Replace($"{{{prop.Name}}}", prop.Value?.ToString() ?? string.Empty);
+            foreach (var prop in details.Properties())
+            {
+                result = result.Replace($"{{{prop.Name}}}", prop.Value.ToString());
+            }
         }
+
         return result;
     }
 
