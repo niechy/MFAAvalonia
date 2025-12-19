@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System;
+using System.Collections.Specialized;
 using System.Linq;
 
 namespace MFAAvalonia.Extensions;
@@ -56,61 +57,62 @@ public static class ScrollViewerExtensions
         return control.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
     }
 
-        /// <summary>
-        /// 延迟获取 ScrollViewer（等待控件模板应用并添加到可视树后）
-        /// </summary>
-        private static void WithScrollViewer(Control control, Action<ScrollViewer> action)
+    /// <summary>
+    /// 延迟获取 ScrollViewer（等待控件模板应用并添加到可视树后）
+    /// </summary>
+    private static void WithScrollViewer(Control control, Action<ScrollViewer> action)
+    {
+        var scrollViewer = GetScrollViewer(control);
+        if (scrollViewer != null)
         {
-            var scrollViewer = GetScrollViewer(control);
-            if (scrollViewer != null)
+            action(scrollViewer);
+            return;
+        }
+
+        // 需要同时等待模板应用和添加到可视树
+        // 因为 GetVisualDescendants() 只有在控件添加到可视树后才能工作
+
+        void TryGetScrollViewer()
+        {
+            var sv = GetScrollViewer(control);
+            if (sv != null)
             {
-                action(scrollViewer);
-                return;
-            }
-    
-            // 需要同时等待模板应用和添加到可视树
-            // 因为 GetVisualDescendants() 只有在控件添加到可视树后才能工作
-            
-            void TryGetScrollViewer()
-            {
-                var sv = GetScrollViewer(control);
-                if (sv != null)
-                {
-                    action(sv);
-                }
-            }
-    
-            void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
-            {
-                control.AttachedToVisualTree -= OnAttachedToVisualTree;
-                // 使用 Post 确保模板已完全应用
-                Dispatcher.UIThread.Post(TryGetScrollViewer,DispatcherPriority.Loaded);
-            }
-    
-            if (control is TemplatedControl templatedControl)
-            {
-                void OnTemplateApplied(object? sender, TemplateAppliedEventArgs e)
-                {
-                    templatedControl.TemplateApplied -= OnTemplateApplied;
-                    // 模板应用后，检查是否已在可视树中
-                    if (control.IsAttachedToVisualTree())
-                    {
-                        Dispatcher.UIThread.Post(TryGetScrollViewer, DispatcherPriority.Loaded);
-                    }
-                    else
-                    {
-                        // 还没有添加到可视树，等待添加
-                        control.AttachedToVisualTree += OnAttachedToVisualTree;
-                    }
-                }
-    
-                templatedControl.TemplateApplied += OnTemplateApplied;
-            }else
-            {
-                // 非模板控件，只等待添加到可视树
-                control.AttachedToVisualTree += OnAttachedToVisualTree;
+                action(sv);
             }
         }
+
+        void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+        {
+            control.AttachedToVisualTree -= OnAttachedToVisualTree;
+            // 使用 Post 确保模板已完全应用
+            Dispatcher.UIThread.Post(TryGetScrollViewer, DispatcherPriority.Loaded);
+        }
+
+        if (control is TemplatedControl templatedControl)
+        {
+            void OnTemplateApplied(object? sender, TemplateAppliedEventArgs e)
+            {
+                templatedControl.TemplateApplied -= OnTemplateApplied;
+                // 模板应用后，检查是否已在可视树中
+                if (control.IsAttachedToVisualTree())
+                {
+                    Dispatcher.UIThread.Post(TryGetScrollViewer, DispatcherPriority.Loaded);
+                }
+                else
+                {
+                    // 还没有添加到可视树，等待添加
+                    control.AttachedToVisualTree += OnAttachedToVisualTree;
+                }
+            }
+
+            templatedControl.TemplateApplied += OnTemplateApplied;
+        }
+        else
+        {
+            // 非模板控件，只等待添加到可视树
+            control.AttachedToVisualTree += OnAttachedToVisualTree;
+        }
+    }
 
     #endregion
 
@@ -140,73 +142,151 @@ public static class ScrollViewerExtensions
 
     private static void OnAutoScrollChanged(Control control, AvaloniaPropertyChangedEventArgs args)
     {
-        var isAutoScroll = args.NewValue is true;
+        var alwaysScrollToEnd = args.NewValue is true;
 
-        WithScrollViewer(control, scrollViewer =>
+        if (control is ScrollViewer scrollViewer)
         {
-            // 使用 Tag 存储事件处理器引用，以便后续移除
-            var handlerKey = $"AutoScrollHandler_{control.GetHashCode()}";
+            SetupScrollViewerAutoScroll(scrollViewer, alwaysScrollToEnd);
+        }
+        else if (control is ListBox listBox)
+        {
+            SetupListBoxAutoScroll(listBox, alwaysScrollToEnd);
+        }
+        else
+        {
+            // 尝试查找内部的 ScrollViewer
+            WithScrollViewer(control, sv => SetupScrollViewerAutoScroll(sv, alwaysScrollToEnd));
+        }
+    }
 
-            if (isAutoScroll)
+    private static void SetupScrollViewerAutoScroll(ScrollViewer scrollViewer, bool alwaysScrollToEnd)
+    {
+        // 获取或创建状态对象
+        var state = scrollViewer.Tag as AutoScrollState;
+        if (alwaysScrollToEnd)
+        {
+            if (state == null)
             {
-                EventHandler? layoutHandler = null;
-                EventHandler<AvaloniaPropertyChangedEventArgs>? propertyHandler = null;
+                state = new AutoScrollState();
+                scrollViewer.Tag = state;
+            }
 
-                layoutHandler = (sender, e) =>
-                {
-                    // 只有当用户在底部附近时才自动滚动
-                    if (scrollViewer.Offset.Y >= scrollViewer.ScrollBarMaximum.Y - 10)
-                    {
-                        Dispatcher.UIThread.Post(() => scrollViewer.ScrollToEnd(), DispatcherPriority.Background);
-                    }
-                };
+            // 初始状态：假设在底部
+            state.ShouldAutoScroll = true;
 
-                propertyHandler = (sender, e) =>
+            // 初始滚动到底部
+            scrollViewer.ScrollToEnd();
+
+            // 移除旧的处理器（如果有）
+            scrollViewer.ScrollChanged -= OnScrollChanged;
+            // 添加新的处理器
+            scrollViewer.ScrollChanged += OnScrollChanged;
+        }
+        else
+        {
+            scrollViewer.ScrollChanged -= OnScrollChanged;
+            if (state != null)
+            {
+                scrollViewer.Tag = null;
+            }
+        }
+    }
+
+    private static void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer scroll)
+            return;
+
+        var state = scroll.Tag as AutoScrollState;
+        if (state == null)
+            return;
+
+        // 当内容高度没有变化时（用户滚动），检查是否在底部来更新自动滚动状态
+        if (Math.Abs(e.ExtentDelta.Y) < 0.1)
+        {
+            // 检查是否在底部（允许1像素误差）
+            state.ShouldAutoScroll = Math.Abs(scroll.Offset.Y - scroll.ScrollBarMaximum.Y) < 1;
+        }
+
+        // 当内容高度变化时（新内容添加或移除），如果应该自动滚动则滚动到底部
+        if (state.ShouldAutoScroll && Math.Abs(e.ExtentDelta.Y) >= 0.1)
+        {
+            scroll.ScrollToEnd();
+        }
+    }
+
+    private static void SetupListBoxAutoScroll(ListBox listBox, bool alwaysScrollToEnd)
+    {
+        var state = listBox.Tag as ListBoxAutoScrollState;
+
+        if (alwaysScrollToEnd)
+        {
+            if (state == null)
+            {
+                state = new ListBoxAutoScrollState();
+                listBox.Tag = state;
+            }
+
+            // 移除旧的处理器
+            if (state.Handler != null && listBox.Items is INotifyCollectionChanged oldCollection)
+            {
+                oldCollection.CollectionChanged -= state.Handler;
+            }
+
+            // 创建新的处理器
+            state.Handler = (sender, arg) =>
+            {
+                if (arg.Action == NotifyCollectionChangedAction.Add && arg.NewItems != null)
                 {
-                    // 用户手动滚动时，如果不在底部则停止自动滚动
-                    if (e.Property == ScrollViewer.OffsetProperty)
+                    // 滚动到新添加的项
+                    Dispatcher.UIThread.Post(() =>
                     {
-                        var offset = scrollViewer.Offset;
-                        var maxOffset = scrollViewer.ScrollBarMaximum;
-                        // 如果用户滚动到了非底部位置，禁用自动滚动
-                        if (offset.Y < maxOffset.Y - 50)
+                        if (listBox.Items.Count > 0)
                         {
-                            control.SetValue(AutoScrollProperty, false);
+                            listBox.ScrollIntoView(listBox.Items[^1]!);
                         }
-                    }
-                };
-
-                // 存储处理器引用
-                scrollViewer.Tag = (layoutHandler, propertyHandler);
-
-                // 监听布局变化
-                scrollViewer.LayoutUpdated += layoutHandler;
-
-                // 监听用户手动滚动
-                scrollViewer.PropertyChanged += propertyHandler;
-
-                // 初始滚动到底部
-                Dispatcher.UIThread.Post(() => scrollViewer.ScrollToEnd(), DispatcherPriority.Background);
-            }
-            else
-            {
-                // 移除事件监听
-                if (scrollViewer.Tag is (EventHandler layoutHandler, EventHandler<AvaloniaPropertyChangedEventArgs> propertyHandler))
-                {
-                    scrollViewer.LayoutUpdated -= layoutHandler;
-                    scrollViewer.PropertyChanged -= propertyHandler;
-                    scrollViewer.Tag = null;
+                    }, DispatcherPriority.Background);
                 }
+            };
+
+            // 添加处理器
+            if (listBox.Items is INotifyCollectionChanged collection)
+            {
+                collection.CollectionChanged += state.Handler;
             }
-        });
+        }
+        else
+        {
+            if (state?.Handler != null && listBox.Items is INotifyCollectionChanged collection)
+            {
+                collection.CollectionChanged -= state.Handler;
+            }
+            listBox.Tag = null;
+        }
     }
 
     #endregion
-}
 
-public enum PanningMode
-{
-    VerticalOnly,
-    HorizontalOnly,
-    Both
+    /// <summary>
+    /// ScrollViewer 自动滚动状态
+    /// </summary>
+    internal class AutoScrollState
+    {
+        public bool ShouldAutoScroll { get; set; } = true;
+    }
+
+    /// <summary>
+    /// ListBox 自动滚动状态
+    /// </summary>
+    internal class ListBoxAutoScrollState
+    {
+        public NotifyCollectionChangedEventHandler? Handler { get; set; }
+    }
+
+    public enum PanningMode
+    {
+        VerticalOnly,
+        HorizontalOnly,
+        Both
+    }
 }
