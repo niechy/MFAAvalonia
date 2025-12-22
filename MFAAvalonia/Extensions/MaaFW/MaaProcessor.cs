@@ -922,8 +922,8 @@ public class MaaProcessor
                             });
                         }
                     }
-
                 }
+                
                 if (jObject["action_id"] != null)
                 {
                     var actionId = Convert.ToInt64(jObject["action_id"]?.ToString() ?? string.Empty);
