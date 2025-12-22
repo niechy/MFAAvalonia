@@ -227,16 +227,24 @@ public partial class RootView : SukiWindow
                         await Task.Delay(300);
                         if ((MaaProcessor.Interface?.Controller?.Count ?? 0) == 1 || !ConfigurationManager.Current.ContainsKey(ConfigurationKeys.CurrentController))
                             Instances.TaskQueueViewModel.CurrentController = (MaaProcessor.Interface?.Controller?.FirstOrDefault()?.Type).ToMaaControllerTypes(Instances.TaskQueueViewModel.CurrentController);
+                        var beforeTask = ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None");
                         if (!Convert.ToBoolean(GlobalConfiguration.GetValue(ConfigurationKeys.NoAutoStart, bool.FalseString))
-                            && ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("Startup", StringComparison.OrdinalIgnoreCase))
+                            && (beforeTask.Contains("Startup", StringComparison.OrdinalIgnoreCase) || beforeTask.Equals("StartupScriptOnly", StringComparison.OrdinalIgnoreCase)))
                         {
-                            MaaProcessor.Instance.TaskQueue.Enqueue(new MFATask
+                            // 只有当不是 StartupScriptOnly 时才启动游戏
+                            if (!beforeTask.Equals("StartupScriptOnly", StringComparison.OrdinalIgnoreCase))
                             {
-                                Name = "启动前",
-                                Type = MFATask.MFATaskType.MFA,
-                                Action = async () => await MaaProcessor.Instance.WaitSoftware(),
-                            });
-                            MaaProcessor.Instance.Start(!ConfigurationManager.Current.GetValue(ConfigurationKeys.BeforeTask, "None").Contains("And", StringComparison.OrdinalIgnoreCase), checkUpdate: true);
+                                MaaProcessor.Instance.TaskQueue.Enqueue(new MFATask
+                                {
+                                    Name = "启动前",
+                                    Type = MFATask.MFATaskType.MFA,
+                                    Action = async () => await MaaProcessor.Instance.WaitSoftware(),
+                                });
+                            }
+                            // StartupScriptOnly 或 StartupSoftwareAndScript 时启动脚本 (onlyStart = false)
+                            // StartupSoftware 时只启动游戏不启动脚本 (onlyStart = true)
+                            var onlyStart = beforeTask.Equals("StartupSoftware", StringComparison.OrdinalIgnoreCase);
+                            MaaProcessor.Instance.Start(onlyStart, checkUpdate: true);
                         }
                         else
                         {

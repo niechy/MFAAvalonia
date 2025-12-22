@@ -887,12 +887,15 @@
     <data name="StartupSoftware" xml:space="preserve">
         <value>启动游戏</value>
     </data>
-    <data name="StartupSoftwareAndScript" xml:space="preserve">
-        <value>启动游戏并启动脚本</value>
-    </data>
-    <data name="Stopping" xml:space="preserve">
-        <value>正在停止......</value>
-    </data>
+        <data name="StartupSoftwareAndScript" xml:space="preserve">
+            <value>启动游戏并启动脚本</value>
+        </data>
+        <data name="StartupScriptOnly" xml:space="preserve">
+            <value>仅启动脚本</value>
+        </data>
+        <data name="Stopping" xml:space="preserve">
+            <value>正在停止......</value>
+        </data>
     <data name="StoppingFailed" xml:space="preserve">
         <value>停止任务失败</value>
     </data>

@@ -84,6 +84,7 @@ public partial class StartSettingsUserControlModel : ViewModelBase
         new("None"),
         new("StartupSoftware"),
         new("StartupSoftwareAndScript"),
+        new("StartupScriptOnly"),
     ];
 
 
@@ -112,7 +113,7 @@ public partial class StartSettingsUserControlModel : ViewModelBase
     {
         ConfigurationManager.Current.SetValue(ConfigurationKeys.AfterTask, value);
     }
-    
+
     [RelayCommand]
     private void QuickSettings()
     {

@@ -879,12 +879,15 @@
     <data name="StartupSoftware" xml:space="preserve">
         <value>Startup game</value>
     </data>
-    <data name="StartupSoftwareAndScript" xml:space="preserve">
-        <value>Startup game and script</value>
-    </data>
-    <data name="Stopping" xml:space="preserve">
-        <value>Stopping......</value>
-    </data>
+        <data name="StartupSoftwareAndScript" xml:space="preserve">
+            <value>Startup game and script</value>
+        </data>
+        <data name="StartupScriptOnly" xml:space="preserve">
+            <value>Startup script only</value>
+        </data>
+        <data name="Stopping" xml:space="preserve">
+            <value>Stopping......</value>
+        </data>
     <data name="StoppingFailed" xml:space="preserve">
         <value>Failed to stop the task</value>
     </data>
