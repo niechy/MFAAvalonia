@@ -457,11 +457,10 @@ public static class MFAExtensions
 
         try
         {
-            using (encodedDataStream)
-            {
-                encodedDataStream.Seek(0, SeekOrigin.Begin);
-                return new Bitmap(encodedDataStream);
-            }
+
+            encodedDataStream.Seek(0, SeekOrigin.Begin);
+            return new Bitmap(encodedDataStream);
+
         }
         catch (Exception ex)
         {
@@ -493,33 +492,37 @@ public static class MFAExtensions
         var pixelSize = sourceBitmap.PixelSize;
         var dpi = sourceBitmap.Dpi;
 
+        // 提前获取矩形的值，因为 MaaRectBuffer 可能会被释放
+        var rectX = rect.X;
+        var rectY = rect.Y;
+        var rectWidth = rect.Width;
+        var rectHeight = rect.Height;
+
         var renderBitmap = new RenderTargetBitmap(pixelSize, dpi);
 
-        DispatcherHelper.PostOnMainThread(() =>
+        try
         {
-            try
+            // 使用 DrawingContext 绘制（同步执行，避免异步导致的资源释放问题）
+            using var context = renderBitmap.CreateDrawingContext();
+
+            // 1. 绘制原始图像作为背景
+            context.DrawImage(sourceBitmap, new Rect(bitmapSize));
+
+            // 2. 创建抗锯齿画笔
+            var pen = new Avalonia.Media.Pen(color, thickness)
             {
-                // 使用 DrawingContext 绘制
-                using var context = renderBitmap.CreateDrawingContext();
+                LineJoin = PenLineJoin.Round,
+                LineCap = PenLineCap.Round
+            };
 
-                // 1. 绘制原始图像作为背景
-                context.DrawImage(sourceBitmap, new Rect(bitmapSize));
+            // 3. 绘制矩形边框
+            context.DrawRectangle(pen, new Rect(rectX, rectY, rectWidth, rectHeight));
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error($"DrawRectangle 绘制失败: {ex.Message}");
+        }
 
-                // 2. 创建抗锯齿画笔
-                var pen = new Avalonia.Media.Pen(color, thickness)
-                {
-                    LineJoin = PenLineJoin.Round,
-                    LineCap = PenLineCap.Round
-                };
-
-                // 3. 绘制矩形边框
-                context.DrawRectangle(pen, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
-            }
-            catch (Exception ex)
-            {
-                LoggerHelper.Error($"DrawRectangle 绘制失败: {ex.Message}");
-            }
-        });
         return renderBitmap;
     }
 
