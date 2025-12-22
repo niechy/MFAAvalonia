@@ -343,7 +343,7 @@ public partial class TaskQueueView : UserControl
         IntroductionCard.ClearValue(MaxHeightProperty);
         IntroductionCard.MaxHeight = double.PositiveInfinity;
     }
-    
+
     /// <summary>
     /// 设置仅显示 SettingCard 的模式（隐藏 IntroductionCard，SettingCard 占满）
     /// </summary>
@@ -355,7 +355,7 @@ public partial class TaskQueueView : UserControl
         IntroductionCard.Margin = new Thickness(0, -7, 0, 25);
         Grid.SetRow(IntroductionCard, 1);
     }
-    
+
     private bool _maxHeightBindingActive = false;
 
     /// <summary>
@@ -1649,7 +1649,7 @@ public partial class TaskQueueView : UserControl
                         },
                         new ColumnDefinition
                         {
-                            Width = new GridLength(40)
+                            Width = GridLength.Auto
                         }
                     }
                 };
@@ -1665,17 +1665,15 @@ public partial class TaskQueueView : UserControl
                 iconDisplay.Bind(IsVisibleProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.HasIcon)));
                 Grid.SetColumn(iconDisplay, 0);
 
-                var textBlock = new TextBlock
+                var marqueeText = new MarqueeTextBlock
                 {
-                    TextTrimming = TextTrimming.WordEllipsis,
-                    TextWrapping = TextWrapping.NoWrap,
-                    VerticalAlignment = VerticalAlignment.Center
+                    VerticalContentAlignment = VerticalAlignment.Center
                 };
-                textBlock.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
-                textBlock.Bind(TextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
-                textBlock.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
-                ToolTip.SetShowDelay(textBlock, 100);
-                Grid.SetColumn(textBlock, 1);
+                marqueeText.Bind(MarqueeTextBlock.ForegroundProperty, new DynamicResourceExtension("SukiText"));
+                marqueeText.Bind(MarqueeTextBlock.TextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
+                marqueeText.Bind(ToolTip.TipProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayName)));
+                ToolTip.SetShowDelay(marqueeText, 100);
+                Grid.SetColumn(marqueeText, 1);
 
                 var tooltipBlock = new TooltipBlock();
                 tooltipBlock.Bind(TooltipBlock.TooltipTextProperty, new Binding(nameof(MaaInterface.MaaInterfaceOptionCase.DisplayDescription)));
@@ -1683,7 +1681,7 @@ public partial class TaskQueueView : UserControl
                 Grid.SetColumn(tooltipBlock, 2);
 
                 itemGrid.Children.Add(iconDisplay);
-                itemGrid.Children.Add(textBlock);
+                itemGrid.Children.Add(marqueeText);
                 itemGrid.Children.Add(tooltipBlock);
                 return itemGrid;
             }),
@@ -1703,7 +1701,7 @@ public partial class TaskQueueView : UserControl
                         },
                         new ColumnDefinition
                         {
-                            Width = new GridLength(40)
+                            Width = GridLength.Auto
                         }
                     }
                 };

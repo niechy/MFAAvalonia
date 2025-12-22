@@ -14,6 +14,7 @@
                 <ResourceInclude Source="avares://MFAAvalonia/Views/UserControls/TooltipBlock.axaml" />
                 <ResourceInclude Source="avares://MFAAvalonia/Views/UserControls/DisplayIcon.axaml" />
                 <ResourceInclude Source="avares://MFAAvalonia/Views/UserControls/SchedulePicker.axaml" />
+                <ResourceInclude Source="avares://MFAAvalonia/Views/UserControls/MarqueeTextBlock.axaml" />
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceInclude Source="avares://MFAAvalonia/Assets/Theme/LightTheme.axaml" x:Key="Light" />
@@ -24,10 +25,10 @@
     </Application.Resources>
     <Application.Styles>
         <FluentTheme />
-        <styling:FluentAvaloniaTheme /> 
+        <styling:FluentAvaloniaTheme />
         <sukiUi:SukiTheme ThemeColor="Blue" />
         <StyleInclude Source="avares://MFAAvalonia/Views/UserControls/HotKeyEditor.axaml" />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
-       
+
     </Application.Styles>
 </Application>
