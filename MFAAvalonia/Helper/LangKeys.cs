@@ -468,5 +468,8 @@ public static class LangKeys
 				public static readonly string ScheduleMonthlyDaySuffix = "ScheduleMonthlyDaySuffix";
 				public static readonly string FontScaleTitle = "FontScaleTitle";
 				public static readonly string FontScaleDescription = "FontScaleDescription";
-				public static readonly string FontScaleValue = "FontScaleValue";}
+				public static readonly string FontScaleValue = "FontScaleValue";
+	public static readonly string ResourceAutoSwitched = "ResourceAutoSwitched";
+	public static readonly string ResourceNotSupportController = "ResourceNotSupportController";
+}
 	
