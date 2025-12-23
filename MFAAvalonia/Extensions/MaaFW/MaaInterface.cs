@@ -655,6 +655,23 @@ public partial class MaaInterface
         [JsonProperty("controller")]
         public List<string>? Controller { get; set; }
 
+        /// <summary>
+        /// 资源包的全局选项配置。
+        /// 这些选项会在任务列表中显示为一个特殊的任务项（位于最前面），
+        /// checkbox 默认选中且不可更改。
+        /// 该项不参与任务执行，但其 option 生成的参数会参与到所有任务的 MaaToken merge 中，
+        /// 起到全局参数传递的作用。
+        /// </summary>
+        [JsonProperty("option")]
+        [JsonConverter(typeof(GenericSingleOrListConverter<string>))]
+        public List<string>? Option { get; set; }
+
+        /// <summary>
+        /// 运行时使用的选项配置（与 MaaInterfaceTask.Option 类似）
+        /// </summary>
+        [JsonIgnore]
+        public List<MaaInterfaceSelectOption>? SelectOptions { get; set; }
+
         [JsonIgnore]
         public List<string>? ResolvedPath { get; set; }
 

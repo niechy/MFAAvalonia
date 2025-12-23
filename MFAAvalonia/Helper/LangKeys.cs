@@ -257,6 +257,7 @@ public static class LangKeys
 	public static readonly string RegisteringCustomAction = "RegisteringCustomAction";
 	public static readonly string RegisteringCustomRecognizer = "RegisteringCustomRecognizer";
 	public static readonly string RememberAdb = "RememberAdb";
+	public static readonly string UseFingerprintMatching = "UseFingerprintMatching";
 	public static readonly string RepeatOption = "RepeatOption";
 	public static readonly string RescanController = "RescanController";
 	public static readonly string ResourceDownloadSource = "ResourceDownloadSource";
@@ -469,5 +470,7 @@ public static class LangKeys
 				public static readonly string ScheduleMonthlyDaySuffix = "ScheduleMonthlyDaySuffix";
 				public static readonly string FontScaleTitle = "FontScaleTitle";
 				public static readonly string FontScaleDescription = "FontScaleDescription";
-				public static readonly string FontScaleValue = "FontScaleValue";}
+				public static readonly string FontScaleValue = "FontScaleValue";
+				public static readonly string ResourcePresetConfig = "ResourcePresetConfig";
+}
 	

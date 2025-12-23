@@ -1413,5 +1413,11 @@
     <data name="FontScaleValue" xml:space="preserve">
         <value>{0}%</value>
     </data>
-
+    <data name="ResourcePresetConfig" xml:space="preserve">
+        <value>资源预设配置</value>
+    </data>
+    <data name="UseFingerprintMatching" xml:space="preserve">
+        <value>使用指纹匹配设备</value>
+    </data>
 </root>
+

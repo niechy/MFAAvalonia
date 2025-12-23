@@ -1406,6 +1406,11 @@
     <data name="FontScaleValue" xml:space="preserve">
         <value>{0}%</value>
     </data>
-
-
+    <data name="ResourcePresetConfig" xml:space="preserve">
+        <value>Resource Preset Config</value>
+    </data>
+    <data name="UseFingerprintMatching" xml:space="preserve">
+        <value>Use Fingerprint Matching</value>
+    </data>
 </root>
+

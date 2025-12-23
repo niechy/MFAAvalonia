@@ -1058,56 +1058,70 @@ public partial class TaskQueueViewModel : ViewModelBase
                 AutoDetectDevice(_refreshCancellationTokenSource.Token);
             return;
         }
-        // 使用指纹匹配设备，而不是直接使用保存的设备信息
-        // 因为雷电模拟器等的AdbSerial每次启动都会变化
-        LoggerHelper.Info("Reading saved ADB device from configuration, using fingerprint matching.");
-        LoggerHelper.Info($"Saved device fingerprint: {savedDevice.GenerateDeviceFingerprint()}");
+        // 检查是否启用指纹匹配功能
+        var useFingerprintMatching = ConfigurationManager.Current.GetValue(ConfigurationKeys.UseFingerprintMatching, true);
 
-        // 搜索当前可用的设备
-        var currentDevices = MaaProcessor.Toolkit.AdbDevice.Find();
-
-        // 尝试通过指纹匹配找到对应的设备（当任一方index为-1时不比较index）
-        AdbDeviceInfo? matchedDevice = null;
-        foreach (var device in currentDevices)
+        if (useFingerprintMatching)
         {
-            if (device.MatchesFingerprint(savedDevice))
+            // 使用指纹匹配设备，而不是直接使用保存的设备信息
+            // 因为雷电模拟器等的AdbSerial每次启动都会变化
+            LoggerHelper.Info("Reading saved ADB device from configuration, using fingerprint matching.");
+            LoggerHelper.Info($"Saved device fingerprint: {savedDevice.GenerateDeviceFingerprint()}");
+
+            // 搜索当前可用的设备
+            var currentDevices = MaaProcessor.Toolkit.AdbDevice.Find();
+
+            // 尝试通过指纹匹配找到对应的设备（当任一方index为-1时不比较index）
+            AdbDeviceInfo? matchedDevice = null;
+            foreach (var device in currentDevices)
             {
-                matchedDevice = device;
-                LoggerHelper.Info($"Found matching device by fingerprint: {device.Name} ({device.AdbSerial})");
-                break;
+                if (device.MatchesFingerprint(savedDevice))
+                {
+                    matchedDevice = device;
+                    LoggerHelper.Info($"Found matching device by fingerprint: {device.Name} ({device.AdbSerial})");
+                    break;
+                }
             }
-        }
 
-
-        if (matchedDevice != null)
-        {
-            // 使用新搜索到的设备信息（AdbSerial等可能已更新）
-            DispatcherHelper.PostOnMainThread(() =>
+            if (matchedDevice != null)
             {
-                Devices = new ObservableCollection<object>(currentDevices);
-                CurrentDevice = matchedDevice;
-            });
-            ChangedDevice(matchedDevice);
+                // 使用新搜索到的设备信息（AdbSerial等可能已更新）
+                DispatcherHelper.PostOnMainThread(() =>
+                {
+                    Devices = new ObservableCollection<object>(currentDevices);
+                    CurrentDevice = matchedDevice;
+                });
+                ChangedDevice(matchedDevice);
+            }
+            else
+            {
+                // 没有找到匹配的设备，执行自动检测
+                LoggerHelper.Info("No matching device found by fingerprint, performing auto detection.");
+                _refreshCancellationTokenSource?.Cancel();
+                _refreshCancellationTokenSource = new CancellationTokenSource();
+                if (InTask)
+                    TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token), name: "刷新设备");
+                else
+                    AutoDetectDevice(_refreshCancellationTokenSource.Token);
+            }
         }
         else
         {
-            // 没有找到匹配的设备，执行自动检测
-            LoggerHelper.Info("No matching device found by fingerprint, performing auto detection.");
-            _refreshCancellationTokenSource?.Cancel();
-            _refreshCancellationTokenSource = new CancellationTokenSource();
-            if (InTask)
-                TaskManager.RunTask(() => AutoDetectDevice(_refreshCancellationTokenSource.Token), name: "刷新设备");
-            else
-                AutoDetectDevice(_refreshCancellationTokenSource.Token);
+            // 不使用指纹匹配，直接使用保存的设备信息
+            LoggerHelper.Info("Reading saved ADB device from configuration, fingerprint matching disabled.");
+            DispatcherHelper.PostOnMainThread(() =>
+            {
+                Devices = [savedDevice];
+                CurrentDevice = savedDevice;
+            });
+            ChangedDevice(savedDevice);
         }
     }
 
     #endregion
-
     #region 资源
 
     [ObservableProperty] private ObservableCollection<MaaInterface.MaaInterfaceResource> _currentResources = [];
-
 
     public string CurrentResource
     {
@@ -1125,33 +1139,142 @@ public partial class TaskQueueViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 根据当前资源更新任务列表的可见性
+    /// 根据当前资源更新任务列表的可见性和资源选项项
     /// </summary>
     /// <param name="resourceName">资源包名称</param>
     public void UpdateTasksForResource(string? resourceName)
     {
+        // 查找当前资源
+        var currentResource = CurrentResources.FirstOrDefault(r => r.Name == resourceName);
+        var hasResourceOption = currentResource?.Option != null && currentResource.Option.Count > 0;
+
+        // 查找当前的资源选项项
+        var existingResourceOptionItem = TaskItemViewModels.FirstOrDefault(t => t.IsResourceOptionItem);
+
+        if (hasResourceOption)
+        {
+            // 初始化资源的 SelectOptions
+            InitializeResourceSelectOptions(currentResource!);
+
+            if (existingResourceOptionItem == null)
+            {
+                // 需要添加资源选项项
+                var resourceOptionItem = new DragItemViewModel(currentResource!);
+                resourceOptionItem.IsVisible = true;
+
+                // 从配置中恢复已保存的选项值
+                RestoreResourceOptionValues(currentResource!);
+
+                TaskItemViewModels.Insert(0, resourceOptionItem);
+            }
+            else if (existingResourceOptionItem.ResourceItem?.Name != currentResource!.Name)
+            {
+                // 资源选项项属于不同的资源，需要替换
+                var index = TaskItemViewModels.IndexOf(existingResourceOptionItem);
+                TaskItemViewModels.Remove(existingResourceOptionItem);
+
+                var resourceOptionItem = new DragItemViewModel(currentResource);
+                resourceOptionItem.IsVisible = true;
+
+                // 从配置中恢复已保存的选项值
+                RestoreResourceOptionValues(currentResource);
+
+                TaskItemViewModels.Insert(index >= 0 ? index : 0, resourceOptionItem);
+            }
+            else
+            {
+                // 同一资源，更新 SelectOptions
+                existingResourceOptionItem.ResourceItem = currentResource;
+            }
+        }
+        else
+        {
+            // 当前资源没有 option，移除资源选项项
+            if (existingResourceOptionItem != null)
+            {
+                if (existingResourceOptionItem.EnableSetting)
+                {
+                    existingResourceOptionItem.EnableSetting = false;
+                }
+                TaskItemViewModels.Remove(existingResourceOptionItem);
+            }
+        }
+
+        // 更新每个任务的资源支持状态
         foreach (var task in TaskItemViewModels)
         {
-            // 更新每个任务的资源支持状态
-            task.UpdateResourceSupport(resourceName);
+            if (!task.IsResourceOptionItem)
+            {
+                task.UpdateResourceSupport(resourceName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 初始化资源的 SelectOptions
+    /// </summary>
+    private void InitializeResourceSelectOptions(MaaInterface.MaaInterfaceResource resource)
+    {
+        if (resource.Option == null || resource.Option.Count == 0)
+        {
+            resource.SelectOptions = null;
+            return;
+        }
+
+        resource.SelectOptions = resource.Option.Select(optionName =>
+        {
+            var selectOption = new MaaInterface.MaaInterfaceSelectOption
+            {
+                Name = optionName
+            };
+            TaskLoader.SetDefaultOptionValue(MaaProcessor.Interface, selectOption);
+            return selectOption;
+        }).ToList();
+    }
+
+    /// <summary>
+    /// 从配置中恢复资源选项的已保存值
+    /// </summary>
+    private void RestoreResourceOptionValues(MaaInterface.MaaInterfaceResource resource)
+    {
+        if (resource.SelectOptions == null)
+            return;
+
+        var savedResourceOptions = ConfigurationManager.Current.GetValue(
+            ConfigurationKeys.ResourceOptionItems,
+            new Dictionary<string, List<MaaInterface.MaaInterfaceSelectOption>>());
+
+        if (savedResourceOptions.TryGetValue(resource.Name ?? string.Empty, out var savedOptions) && savedOptions != null)
+        {
+            var savedDict = savedOptions.ToDictionary(o => o.Name ?? string.Empty);
+            foreach (var opt in resource.SelectOptions)
+            {
+                if (savedDict.TryGetValue(opt.Name ?? string.Empty, out var savedOpt))
+                {
+                    opt.Index = savedOpt.Index;
+                    opt.Data = savedOpt.Data;
+                    opt.SubOptions = savedOpt.SubOptions;
+                }
+            }
         }
     }
 
     #endregion
-
     #region 缩放
 
-    // 三列宽度配置
+// 三列宽度配置
     private const string DefaultColumn1Width = "350";
     private const string DefaultColumn2Width = "1*";
     private const string DefaultColumn3Width = "1*";
 
-    // 使用属性，标记为可通知属性，确保UI能正确绑定和监听变化
+// 使用属性，标记为可通知属性，确保UI能正确绑定和监听变化
     [ObservableProperty] private GridLength _column1Width;
+
     [ObservableProperty] private GridLength _column2Width;
+
     [ObservableProperty] private GridLength _column3Width;
 
-    // 添加记录拖拽开始的状态
+// 添加记录拖拽开始的状态
     private GridLength _dragStartCol1Width;
     private GridLength _dragStartCol2Width;
     private GridLength _dragStartCol3Width;
@@ -1212,7 +1335,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
     }
 
-    // 添加辅助方法用于精确比较两个GridLength
+// 添加辅助方法用于精确比较两个GridLength
     private bool AreGridLengthsEqual(GridLength a, GridLength b)
     {
         if (a.GridUnitType != b.GridUnitType)
@@ -1231,7 +1354,6 @@ public partial class TaskQueueViewModel : ViewModelBase
 
         return a.Value == b.Value;
     }
-
     partial void OnColumn1WidthChanged(GridLength value)
     {
         if (SuppressPropertyChangedCallbacks) return;
@@ -1253,7 +1375,6 @@ public partial class TaskQueueViewModel : ViewModelBase
             LoggerHelper.Error($"保存列宽1失败: {ex.Message}");
         }
     }
-
     partial void OnColumn2WidthChanged(GridLength value)
     {
         if (SuppressPropertyChangedCallbacks) return;
@@ -1275,7 +1396,6 @@ public partial class TaskQueueViewModel : ViewModelBase
             LoggerHelper.Error($"保存列宽2失败: {ex.Message}");
         }
     }
-
     partial void OnColumn3WidthChanged(GridLength value)
     {
         if (SuppressPropertyChangedCallbacks) return;
@@ -1297,10 +1417,13 @@ public partial class TaskQueueViewModel : ViewModelBase
             LoggerHelper.Error($"保存列宽3失败: {ex.Message}");
         }
     }
+    public bool SuppressPropertyChangedCallbacks
+    {
+        get;
+        set;
+    }
 
-    public bool SuppressPropertyChangedCallbacks { get; set; }
-
-    // 保存列宽配置到磁盘
+// 保存列宽配置到磁盘
     public void SaveColumnWidths()
     {
         if (SuppressPropertyChangedCallbacks) return;
@@ -1345,7 +1468,7 @@ public partial class TaskQueueViewModel : ViewModelBase
         }
     }
 
-    // 添加辅助方法用于比较GridLength
+// 添加辅助方法用于比较GridLength
     private bool CompareGridLength(string storedValue, GridLength newValue)
     {
         // 先检查字符串是否完全相同

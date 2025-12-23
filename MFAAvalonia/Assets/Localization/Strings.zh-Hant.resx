@@ -1398,5 +1398,10 @@
     <data name="ScheduleMonthlyDaySuffix" xml:space="preserve">
         <value>號</value>
     </data>
-
+    <data name="ResourcePresetConfig" xml:space="preserve">
+        <value>資源預設配置</value>
+    </data>
+    <data name="UseFingerprintMatching" xml:space="preserve">
+        <value>使用指紋匹配裝置</value>
+    </data>
 </root>

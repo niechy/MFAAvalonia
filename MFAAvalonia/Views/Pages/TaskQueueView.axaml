@@ -340,10 +340,10 @@
                                                       Content="{Binding }"
                                                       Grid.Column="0"
                                                       MinWidth="150"
-                                                      ex:CheckBoxExtensions.EnableRightClickNull="True"
+                                                      ex:CheckBoxExtensions.EnableRightClickNull="{Binding !IsResourceOptionItem}"
                                                       HorizontalAlignment="Left"
                                                       ex:CheckBoxExtensions.LimitDragDrop="True"
-                                                      IsEnabled="{Binding Idle,Source={x:Static helper:Instances.RootViewModel}}"
+                                                      IsEnabled="{Binding !IsResourceOptionItem}"
                                                       IsChecked="{Binding IsCheckedWithNull}">
                                                 <CheckBox.ContentTemplate>
                                                     <DataTemplate x:DataType="valueType:DragItemViewModel">

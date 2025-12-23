@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MFAAvalonia.Configuration;
+using MFAAvalonia.Extensions;
 using MFAAvalonia.Extensions.MaaFW;
 using Newtonsoft.Json;
 using System;
@@ -12,9 +13,38 @@ public partial class DragItemViewModel : ObservableObject
     public DragItemViewModel(MaaInterface.MaaInterfaceTask? interfaceItem)
     {
         InterfaceItem = interfaceItem;
-        Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName, InterfaceItem.Name ?? LangKeys.Unnamed);
-        InterfaceItem?.InitializeIcon();
+        if (interfaceItem != null)
+        {
+            Name = LanguageHelper.GetLocalizedDisplayName(interfaceItem.DisplayName, interfaceItem.Name ?? LangKeys.Unnamed);
+            interfaceItem.InitializeIcon();
+        }
+        else
+        {
+            Name = LangKeys.Unnamed.ToLocalization();
+        }
         UpdateIconFromInterfaceItem();
+        LanguageHelper.LanguageChanged += OnLanguageChanged;
+    }
+
+    /// <summary>
+    /// 构造函数，用于创建全局资源设置项
+    /// </summary>
+    /// <param name="resource">资源配置</param>
+    public DragItemViewModel(MaaInterface.MaaInterfaceResource resource)
+    {
+        ResourceItem = resource;
+        IsResourceOptionItem = true;
+        // 使用 i18n 本地化名称 "资源预设配置"
+        Name = LangKeys.ResourcePresetConfig.ToLocalization();
+
+        // 设置图标
+        ResolvedIcon = resource.ResolvedIcon;
+        HasIcon = resource.HasIcon;
+
+        // 全局资源设置项默认选中且不可更改
+        _isCheckedWithNull = true; // null 表示选中但不可更改
+        _isInitialized = true;
+
         LanguageHelper.LanguageChanged += OnLanguageChanged;
     }
 
@@ -104,6 +134,19 @@ public partial class DragItemViewModel : ObservableObject
     [ObservableProperty] private bool _isVisible = true;
 
     /// <summary>
+    /// 指示这是否是一个全局资源设置项。
+    /// 全局资源设置项的 checkbox 默认选中且不可更改，不参与任务执行，
+    /// 但其 option 生成的参数会参与到所有任务的 MaaToken merge 中。
+    /// </summary>
+    [ObservableProperty] [JsonIgnore] private bool _isResourceOptionItem = false;
+
+    /// <summary>
+    /// 对应的资源配置（仅当 IsResourceOptionItem 为 true 时有效）
+    /// </summary>
+    [JsonIgnore]
+    public MaaInterface.MaaInterfaceResource? ResourceItem { get; set; }
+    
+    /// <summary>
     /// 指示任务是否支持当前选中的资源包。
     /// 当资源包变化时，此属性会被更新。
     /// </summary>
@@ -137,14 +180,21 @@ public partial class DragItemViewModel : ObservableObject
     {
         IsResourceSupported = SupportsResource(resourceName);
     }
-
+    
     private void UpdateContent()
     {
-        if (!string.IsNullOrEmpty(InterfaceItem?.DisplayName ?? LangKeys.Unnamed))
+        if (IsResourceOptionItem && ResourceItem != null)
+        {
+            // 使用 i18n 本地化名称 "资源预设配置"
+            Name = LangKeys.ResourcePresetConfig.ToLocalization();
+            ResolvedIcon = ResourceItem.ResolvedIcon;
+            HasIcon = ResourceItem.HasIcon;
+        }
+        else if (!string.IsNullOrEmpty(InterfaceItem?.DisplayName ?? LangKeys.Unnamed))
         {
             Name = LanguageHelper.GetLocalizedDisplayName(InterfaceItem.DisplayName, InterfaceItem.Name ?? LangKeys.Unnamed);
+            UpdateIconFromInterfaceItem();
         }
-        UpdateIconFromInterfaceItem();
     }
 
     private void UpdateIconFromInterfaceItem()
@@ -172,11 +222,19 @@ public partial class DragItemViewModel : ObservableObject
     /// <returns>A new <see cref="DragItemViewModel"/> instance that is a deep copy of the current instance.</returns>
     public DragItemViewModel Clone()
     {
-        // Clone the InterfaceItem if it's not null
-        MaaInterface.MaaInterfaceTask? clonedInterfaceItem = InterfaceItem?.Clone();
+        DragItemViewModel clone;
 
-        // Create a new DragItemViewModel instance with the cloned InterfaceItem
-        DragItemViewModel clone = new(clonedInterfaceItem);
+        if (IsResourceOptionItem && ResourceItem != null)
+        {
+            // 克隆资源设置项
+            clone = new DragItemViewModel(ResourceItem);
+        }
+        else
+        {
+            // 克隆普通任务项
+            MaaInterface.MaaInterfaceTask? clonedInterfaceItem = InterfaceItem?.Clone();
+            clone = new(clonedInterfaceItem);
+        }
 
         // Copy all other properties to the new instance
         clone.Name = this.Name;
@@ -186,6 +244,7 @@ public partial class DragItemViewModel : ObservableObject
         clone.IsResourceSupported = this.IsResourceSupported;
         clone.ResolvedIcon = this.ResolvedIcon;
         clone.HasIcon = this.HasIcon;
+        clone.IsResourceOptionItem = this.IsResourceOptionItem;
 
         return clone;
     }

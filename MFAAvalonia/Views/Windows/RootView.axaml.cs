@@ -269,13 +269,20 @@ public partial class RootView : SukiWindow
                         DragItemViewModel tempTask = null;
                         foreach (var task in Instances.TaskQueueViewModel.TaskItemViewModels)
                         {
-                            if (task.InterfaceItem?.Advanced is { Count: > 0 }
+                            // 优先选择资源选项项
+                            if (task.IsResourceOptionItem && task.ResourceItem?.SelectOptions is { Count: > 0 })
+                            {
+                                tempTask ??= task;
+                            }
+                            else if (task.InterfaceItem?.Advanced is { Count: > 0 }
                                 || task.InterfaceItem?.Option is { Count: > 0 }
                                 || !string.IsNullOrWhiteSpace(task.InterfaceItem?.Description)
                                 || task.InterfaceItem?.Document != null
                                 || task.InterfaceItem?.Repeatable == true)
                             {
-                                tempTask ??= task;
+                                // 如果还没有找到资源选项项，则选择第一个有配置的普通任务
+                                if (tempTask == null || !tempTask.IsResourceOptionItem)
+                                    tempTask ??= task;
                             }
                             task.EnableSetting = true;
                         }

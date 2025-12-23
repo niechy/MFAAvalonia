@@ -1779,8 +1779,9 @@ public class MaaProcessor
         if (InitializeData())
         {
             // 排除不支持当前资源包的任务（IsResourceSupported 为 false 的任务）
+            // 排除 resource option 项（它们不参与任务执行，只提供参数）
             var tasks = Instances.TaskQueueViewModel.TaskItemViewModels.ToList()
-                .FindAll(task => (task.IsChecked || task.IsCheckedWithNull == null) && task.IsResourceSupported);
+                .FindAll(task => (task.IsChecked || task.IsCheckedWithNull == null) && task.IsResourceSupported && !task.IsResourceOptionItem);
             StartTask(tasks, onlyStart, checkUpdate);
         }
     }
@@ -2016,6 +2017,9 @@ public class MaaProcessor
             DefaultValueHandling = DefaultValueHandling.Ignore
         })).ToMaaToken();
 
+        // 首先合并当前资源的全局选项参数
+        MergeResourceOptionParams(ref taskModels);
+
         UpdateTaskDictionary(ref taskModels, task.InterfaceItem?.Option, task.InterfaceItem?.Advanced);
 
         var taskParams = SerializeTaskParams(taskModels);
@@ -2037,6 +2041,29 @@ public class MaaProcessor
             // Tasks = tasks,
             Param = taskParams
         };
+    }
+
+    /// <summary>
+    /// 合并当前资源的全局选项参数到任务参数中
+    /// </summary>
+    private void MergeResourceOptionParams(ref MaaToken taskModels)
+    {
+        // 获取当前资源
+        var currentResourceName = Instances.TaskQueueViewModel.CurrentResource;
+        var currentResource = Instances.TaskQueueViewModel.CurrentResources
+            .FirstOrDefault(r => r.Name == currentResourceName);
+
+        if (currentResource?.SelectOptions == null || currentResource.SelectOptions.Count == 0)
+            return;
+
+        // 查找任务列表中的资源设置项，获取用户选择的值
+        var resourceOptionItem = Instances.TaskQueueViewModel.TaskItemViewModels
+            .FirstOrDefault(t => t.IsResourceOptionItem && t.ResourceItem?.Name == currentResourceName);
+
+        var selectOptions = resourceOptionItem?.ResourceItem?.SelectOptions ?? currentResource.SelectOptions;
+
+        // 处理资源的全局选项
+        ProcessOptions(ref taskModels, selectOptions);
     }
 
     private void InitializeConnectionTasksAsync(CancellationToken token)

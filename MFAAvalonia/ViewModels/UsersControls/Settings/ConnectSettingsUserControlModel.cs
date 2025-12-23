@@ -17,6 +17,13 @@ public partial class ConnectSettingsUserControlModel : ViewModelBase
         ConfigurationManager.Current.SetValue(ConfigurationKeys.RememberAdb, value);
     }
 
+    [ObservableProperty] private bool _useFingerprintMatching = ConfigurationManager.Current.GetValue(ConfigurationKeys.UseFingerprintMatching, true);
+
+    partial void OnUseFingerprintMatchingChanged(bool value)
+    {
+        ConfigurationManager.Current.SetValue(ConfigurationKeys.UseFingerprintMatching, value);
+    }
+
     public static ObservableCollection<LocalizationViewModel> AdbControlScreenCapTypes =>
     [
         new("Default")
