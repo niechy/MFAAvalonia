@@ -2071,7 +2071,7 @@ public class MaaProcessor
             RootView.AddLogByKeys(LangKeys.ConnectingTo, null, true, isAdb ? LangKeys.Emulator : LangKeys.Window);
         else
             ToastHelper.Info(LangKeys.Tip.ToLocalization(), LangKeys.ConnectingTo.ToLocalizationFormatted(true, isAdb ? LangKeys.Emulator : LangKeys.Window));
-        if (Instances.TaskQueueViewModel.CurrentDevice == null)
+        if (Instances.TaskQueueViewModel.CurrentDevice == null && Instances.ConnectSettingsUserControlModel.AutoDetectOnConnectionFailed)
             Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false, true);
         var tuple = await TryConnectAsync(token);
         var connected = tuple.Item1;
@@ -2099,7 +2099,7 @@ public class MaaProcessor
         var retrySteps = new List<Func<CancellationToken, Task<bool>>>
         {
             async t => await RetryConnectionAsync(t, showMessage, StartSoftware, LangKeys.TryToStartEmulator, Instances.ConnectSettingsUserControlModel.RetryOnDisconnected,
-                () => Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false, true)),
+                () => { if (Instances.ConnectSettingsUserControlModel.AutoDetectOnConnectionFailed) Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false, true); }),
             async t => await RetryConnectionAsync(t, showMessage, ReconnectByAdb, LangKeys.TryToReconnectByAdb),
             async t => await RetryConnectionAsync(t, showMessage, RestartAdb, LangKeys.RestartAdb, Instances.ConnectSettingsUserControlModel.AllowAdbRestart),
             async t => await RetryConnectionAsync(t, showMessage, HardRestartAdb, LangKeys.HardRestartAdb, Instances.ConnectSettingsUserControlModel.AllowAdbHardRestart)

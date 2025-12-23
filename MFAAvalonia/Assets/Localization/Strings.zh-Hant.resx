@@ -798,6 +798,9 @@
     <data name="RetryOnDisconnected" xml:space="preserve">
         <value>ADB 連線失敗時嘗試啟動模擬器</value>
     </data>
+    <data name="AutoDetectOnConnectionFailed" xml:space="preserve">
+        <value>連線失敗時自動重新搜尋可用裝置</value>
+    </data>
     <data name="RunningSettings" xml:space="preserve">
         <value>執行設定</value>
     </data>

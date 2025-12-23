@@ -270,6 +270,7 @@ public static class LangKeys
 	public static readonly string RestartMFA = "RestartMFA";
 	public static readonly string RestartPC = "RestartPC";
 	public static readonly string RetryOnDisconnected = "RetryOnDisconnected";
+	public static readonly string AutoDetectOnConnectionFailed = "AutoDetectOnConnectionFailed";
 	public static readonly string RunningSettings = "RunningSettings";
 	public static readonly string SaveFailureMessage = "SaveFailureMessage";
 	public static readonly string SavePipelineSuccess = "SavePipelineSuccess";

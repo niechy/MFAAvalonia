@@ -798,6 +798,9 @@
     <data name="RetryOnDisconnected" xml:space="preserve">
         <value>Retry launching the emulator when ADB connection fails</value>
     </data>
+    <data name="AutoDetectOnConnectionFailed" xml:space="preserve">
+        <value>Auto detect available devices on connection failed</value>
+    </data>
     <data name="RunningSettings" xml:space="preserve">
         <value>Running</value>
     </data>
