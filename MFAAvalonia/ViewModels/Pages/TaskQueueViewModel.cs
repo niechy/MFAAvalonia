@@ -231,7 +231,7 @@ public partial class TaskQueueViewModel : ViewModelBase
     /// <summary>
     /// 日志最大数量限制，超出后自动清理旧日志
     /// </summary>
-    private const int MaxLogCount = 50;
+    private const int MaxLogCount = 150;
 
     /// <summary>
     /// 每次清理时移除的日志数量
