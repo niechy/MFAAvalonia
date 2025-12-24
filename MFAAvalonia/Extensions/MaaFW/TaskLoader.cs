@@ -37,8 +37,18 @@ public class TaskLoader(MaaInterface? maaInterface)
             ConfigurationManager.Current.SetValue(ConfigurationKeys.CurrentTasks, currentTasks);
         }
 
-        var items = ConfigurationManager.Current.GetValue(ConfigurationKeys.TaskItems, new List<MaaInterface.MaaInterfaceTask>()) ?? new List<MaaInterface.MaaInterfaceTask>();
-        var drags = (oldDrags?.ToList() ?? new List<DragItemViewModel>()).Union(items.Select(interfaceItem => new DragItemViewModel(interfaceItem))).ToList();
+        // 如果传入了 oldDrags（用户当前的任务列表），优先使用它来保留用户的顺序和 check 状态
+        // 只有当 oldDrags 为空时，才从配置中读取
+        List<DragItemViewModel> drags;
+        if (oldDrags != null && oldDrags.Count > 0)
+        {
+            drags = oldDrags.ToList();
+        }
+        else
+        {
+            var items = ConfigurationManager.Current.GetValue(ConfigurationKeys.TaskItems, new List<MaaInterface.MaaInterfaceTask>()) ?? new List<MaaInterface.MaaInterfaceTask>();
+            drags = items.Select(interfaceItem => new DragItemViewModel(interfaceItem)).ToList();
+        }
 
         if (firstTask)
         {
@@ -97,7 +107,10 @@ public class TaskLoader(MaaInterface? maaInterface)
 
         resource.SelectOptions = resource.Option.Select(optionName =>
         {
-            var selectOption = new MaaInterface.MaaInterfaceSelectOption { Name = optionName };
+            var selectOption = new MaaInterface.MaaInterfaceSelectOption
+            {
+                Name = optionName
+            };
             SetDefaultOptionValue(maaInterface, selectOption);
             return selectOption;
         }).ToList();
@@ -158,12 +171,18 @@ public class TaskLoader(MaaInterface? maaInterface)
 
         if (drags.Count == 0) return (updateList, removeList);
 
+        // 记录已经处理过的任务（用于避免重复添加）
+        var processedTasks = new HashSet<(string? Name, string? Entry)>();
+
         foreach (var oldItem in drags)
         {
+            var taskKey = (oldItem.InterfaceItem?.Name, oldItem.InterfaceItem?.Entry);
+
             if (newDict.TryGetValue((oldItem.InterfaceItem?.Name, oldItem.InterfaceItem?.Entry), out var newItem))
             {
                 UpdateExistingItem(oldItem, newItem);
                 updateList.Add(oldItem);
+                processedTasks.Add(taskKey);
             }
             else
             {
@@ -172,21 +191,25 @@ public class TaskLoader(MaaInterface? maaInterface)
                 {
                     UpdateExistingItem(oldItem, sameNameTasks.First(), tasks.Any(t => t.Name == sameNameTasks.First().Name));
                     updateList.Add(oldItem);
+                    processedTasks.Add((sameNameTasks.First().Name, sameNameTasks.First().Entry));
                 }
                 else removeList.Add(oldItem);
             }
         }
 
+        // 只添加尚未处理的新任务
         foreach (var task in tasks)
         {
-            if (!currentTaskSet.Contains((task.Name, task.Entry)))
+            var taskKey = (task.Name, task.Entry);
+            if (!processedTasks.Contains(taskKey) && !currentTaskSet.Contains((task.Name ?? string.Empty, task.Entry ?? string.Empty)))
             {
                 updateList.Add(new DragItemViewModel(task));
-                currentTasks.Add($"{task.Name}:{task.Entry}");
+                currentTasks.Add($"{task.Name}{NEW_SEPARATOR}{task.Entry}");
             }
         }
         return (updateList, removeList);
     }
+
 
     private void UpdateExistingItem(DragItemViewModel oldItem, MaaInterface.MaaInterfaceTask newItem, bool updateName = false)
     {
@@ -212,7 +235,6 @@ public class TaskLoader(MaaInterface? maaInterface)
         UpdateAdvancedOptions(oldItem, newItem);
         UpdateOptions(oldItem, newItem);
     }
-    
 
 
     private void UpdateAdvancedOptions(DragItemViewModel oldItem, MaaInterface.MaaInterfaceTask newItem)
@@ -299,10 +321,10 @@ public class TaskLoader(MaaInterface? maaInterface)
         var currentResourceName = Instances.TaskQueueViewModel.CurrentResource;
         var currentResource = Instances.TaskQueueViewModel.CurrentResources
             .FirstOrDefault(r => r.Name == currentResourceName);
-        
+
         // 创建最终的任务列表
         var finalItems = new List<DragItemViewModel>();
-        
+
         // 如果当前资源有 option 配置，在最前面添加资源设置项
         if (currentResource?.Option != null && currentResource.Option.Count > 0)
         {
@@ -312,7 +334,7 @@ public class TaskLoader(MaaInterface? maaInterface)
                 finalItems.Add(resourceOptionItem);
             }
         }
-        
+
         // 添加普通任务项
         if (drags.Any())
         {
@@ -351,7 +373,7 @@ public class TaskLoader(MaaInterface? maaInterface)
         // 检查是否已经存在对应的资源设置项
         var existingResourceItem = existingDrags?.FirstOrDefault(d =>
             d.IsResourceOptionItem && d.ResourceItem?.Name == resource.Name);
-        
+
         if (existingResourceItem != null)
         {
             // 更新已存在的资源设置项的 SelectOptions
@@ -384,10 +406,10 @@ public class TaskLoader(MaaInterface? maaInterface)
 
         // 创建新的资源设置项
         var resourceItem = new DragItemViewModel(resource);
-        
+
         // 设置 IsVisible 为 true，因为资源设置项有选项需要显示
         resourceItem.IsVisible = true;
-        
+
         return resourceItem;
     }
 
@@ -421,5 +443,3 @@ public class TaskLoader(MaaInterface? maaInterface)
         }).ToList();
     }
 }
-
-

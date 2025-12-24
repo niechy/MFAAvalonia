@@ -923,7 +923,7 @@ public class MaaProcessor
                         }
                     }
                 }
-                
+
                 if (jObject["action_id"] != null)
                 {
                     var actionId = Convert.ToInt64(jObject["action_id"]?.ToString() ?? string.Empty);
@@ -959,8 +959,8 @@ public class MaaProcessor
                             bitmapToSet?.Dispose();
                             bitmapToSet = null;
                         }
-                
-                
+
+
                         if (bitmapToSet != null)
                         {
                             var finalBitmap = bitmapToSet;
@@ -1776,7 +1776,10 @@ public class MaaProcessor
 
     public void Start(bool onlyStart = false, bool checkUpdate = false)
     {
-        if (InitializeData())
+        // 保存当前的任务列表，以便在重新加载时保留用户调整的顺序和 check 状态
+        var currentTasks = new Collection<DragItemViewModel>(Instances.TaskQueueViewModel.TaskItemViewModels.ToList());
+
+        if (InitializeData(currentTasks))
         {
             // 排除不支持当前资源包的任务（IsResourceSupported 为 false 的任务）
             // 排除 resource option 项（它们不参与任务执行，只提供参数）
@@ -1788,7 +1791,10 @@ public class MaaProcessor
 
     public void Start(List<DragItemViewModel> dragItemViewModels, bool onlyStart = false, bool checkUpdate = false)
     {
-        if (InitializeData())
+        // 保存当前的任务列表，以便在重新加载时保留用户调整的顺序和 check 状态
+        var currentTasks = new Collection<DragItemViewModel>(Instances.TaskQueueViewModel.TaskItemViewModels.ToList());
+
+        if (InitializeData(currentTasks))
         {
             var tasks = dragItemViewModels;
             StartTask(tasks, onlyStart, checkUpdate);
@@ -2126,7 +2132,10 @@ public class MaaProcessor
         var retrySteps = new List<Func<CancellationToken, Task<bool>>>
         {
             async t => await RetryConnectionAsync(t, showMessage, StartSoftware, LangKeys.TryToStartEmulator, Instances.ConnectSettingsUserControlModel.RetryOnDisconnected,
-                () => { if (Instances.ConnectSettingsUserControlModel.AutoDetectOnConnectionFailed) Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false, true); }),
+                () =>
+                {
+                    if (Instances.ConnectSettingsUserControlModel.AutoDetectOnConnectionFailed) Instances.TaskQueueViewModel.TryReadAdbDeviceFromConfig(false, true);
+                }),
             async t => await RetryConnectionAsync(t, showMessage, ReconnectByAdb, LangKeys.TryToReconnectByAdb),
             async t => await RetryConnectionAsync(t, showMessage, RestartAdb, LangKeys.RestartAdb, Instances.ConnectSettingsUserControlModel.AllowAdbRestart),
             async t => await RetryConnectionAsync(t, showMessage, HardRestartAdb, LangKeys.HardRestartAdb, Instances.ConnectSettingsUserControlModel.AllowAdbHardRestart)
