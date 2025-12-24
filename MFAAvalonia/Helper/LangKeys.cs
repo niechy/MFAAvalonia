@@ -257,6 +257,7 @@ public static class LangKeys
 	public static readonly string RegisteringCustomAction = "RegisteringCustomAction";
 	public static readonly string RegisteringCustomRecognizer = "RegisteringCustomRecognizer";
 	public static readonly string RememberAdb = "RememberAdb";
+	public static readonly string UseFingerprintMatching = "UseFingerprintMatching";
 	public static readonly string RepeatOption = "RepeatOption";
 	public static readonly string RescanController = "RescanController";
 	public static readonly string ResourceDownloadSource = "ResourceDownloadSource";
@@ -270,6 +271,7 @@ public static class LangKeys
 	public static readonly string RestartMFA = "RestartMFA";
 	public static readonly string RestartPC = "RestartPC";
 	public static readonly string RetryOnDisconnected = "RetryOnDisconnected";
+	public static readonly string AutoDetectOnConnectionFailed = "AutoDetectOnConnectionFailed";
 	public static readonly string RunningSettings = "RunningSettings";
 	public static readonly string SaveFailureMessage = "SaveFailureMessage";
 	public static readonly string SavePipelineSuccess = "SavePipelineSuccess";
@@ -471,5 +473,6 @@ public static class LangKeys
 				public static readonly string FontScaleValue = "FontScaleValue";
 	public static readonly string ResourceAutoSwitched = "ResourceAutoSwitched";
 	public static readonly string ResourceNotSupportController = "ResourceNotSupportController";
+				public static readonly string ResourcePresetConfig = "ResourcePresetConfig";
 }
 	

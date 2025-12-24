@@ -806,6 +806,9 @@
     <data name="RetryOnDisconnected" xml:space="preserve">
         <value>ADB 连接失败时尝试启动模拟器</value>
     </data>
+    <data name="AutoDetectOnConnectionFailed" xml:space="preserve">
+        <value>连接失败时自动重新搜寻可用设备</value>
+    </data>
     <data name="RunningSettings" xml:space="preserve">
         <value>运行设置</value>
     </data>
@@ -1417,4 +1420,11 @@
         <value>当前控制器 {1} 不支持资源 {0}，已自动切换为 {2}，请检查资源设置</value>
     </data>
 
+    <data name="ResourcePresetConfig" xml:space="preserve">
+        <value>资源预设配置</value>
+    </data>
+    <data name="UseFingerprintMatching" xml:space="preserve">
+        <value>使用指纹匹配设备</value>
+    </data>
 </root>
+

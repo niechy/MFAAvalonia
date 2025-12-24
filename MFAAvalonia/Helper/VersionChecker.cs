@@ -89,8 +89,8 @@ public static class VersionChecker
     }
 
     public static void CheckCDKAsync() => TaskManager.RunTaskAsync(() => CheckForCDK(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "查询CDK剩余时间");
-    public static void CheckMFAVersionAsync() => TaskManager.RunTaskAsync(() => CheckForMFAUpdates(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "检测MFA版本");
-    public static void CheckResourceVersionAsync() => TaskManager.RunTaskAsync(() => CheckForResourceUpdates(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "检测资源版本");
+    public static void CheckMFAVersionAsync() => TaskManager.RunTaskAsync(async () => await CheckForMFAUpdatesAsync(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "检测MFA版本");
+    public static void CheckResourceVersionAsync() => TaskManager.RunTaskAsync(async () => await CheckForResourceUpdatesAsync(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "检测资源版本");
     public static void UpdateResourceAsync(string
         currentVersion = "") => TaskManager.RunTaskAsync(() => UpdateResource(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0, currentVersion: currentVersion), name: "更新MFA");
     public static void UpdateMFAAsync() => TaskManager.RunTaskAsync(() => UpdateMFA(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0), name: "更新资源");
@@ -101,7 +101,7 @@ public static class VersionChecker
     {
         Queue.Enqueue(new ValueType.MFATask
         {
-            Action = async () => CheckForResourceUpdates(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0),
+            Action = async () => await CheckForResourceUpdatesAsync(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0),
             Name = "更新资源"
         });
     }
@@ -110,7 +110,7 @@ public static class VersionChecker
     {
         Queue.Enqueue(new ValueType.MFATask
         {
-            Action = async () => CheckForMFAUpdates(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0),
+            Action = async () => await CheckForMFAUpdatesAsync(Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex == 0),
             Name = "更新软件"
         });
     }
@@ -163,7 +163,7 @@ public static class VersionChecker
         }
     }
 
-    public static void CheckForResourceUpdates(bool isGithub = true)
+    public static async Task CheckForResourceUpdatesAsync(bool isGithub = true)
     {
         Instances.RootViewModel.SetUpdating(true);
         var url = MaaProcessor.Interface?.Github ?? MaaProcessor.Interface?.Url ?? string.Empty;
@@ -191,7 +191,11 @@ public static class VersionChecker
             string latestVersion = string.Empty;
             string sha256 = string.Empty;
             if (isGithub)
-                GetLatestVersionAndDownloadUrlFromGithub(out var downloadUrl, out latestVersion, out sha256, strings[0], strings[1], true, currentVersion: resourceVersion);
+            {
+                var result = await GetLatestVersionAndDownloadUrlFromGithubAsync(strings[0], strings[1], true, currentVersion: resourceVersion).ConfigureAwait(false);
+                latestVersion = result.latestVersion;
+                sha256 = result.sha256;
+            }
             else
                 GetDownloadUrlFromMirror(resourceVersion, GetResourceID(), CDK(), out _, out latestVersion, out sha256, out _, onlyCheck: true, currentVersion: resourceVersion);
 
@@ -238,7 +242,7 @@ public static class VersionChecker
         }
     }
 
-    public static void CheckForMFAUpdates(bool isGithub = true)
+    public static async Task CheckForMFAUpdatesAsync(bool isGithub = true)
     {
         try
         {
@@ -247,7 +251,11 @@ public static class VersionChecker
             string latestVersion = string.Empty;
             string sha256 = string.Empty;
             if (isGithub)
-                GetLatestVersionAndDownloadUrlFromGithub(out _, out latestVersion, out sha256);
+            {
+                var result = await GetLatestVersionAndDownloadUrlFromGithubAsync().ConfigureAwait(false);
+                latestVersion = result.latestVersion;
+                sha256 = result.sha256;
+            }
             else
                 GetDownloadUrlFromMirror(localVersion, "MFAAvalonia", CDK(), out _, out latestVersion, out sha256, out _, isUI: true, onlyCheck: true);
             var mirrocS = false;
@@ -293,6 +301,7 @@ public static class VersionChecker
             LoggerHelper.Error(ex);
         }
     }
+
 
     public async static Task UpdateResource(bool isGithub = true, bool closeDialog = false, bool noDialog = false, Action action = null, string currentVersion = "")
     {
@@ -354,7 +363,12 @@ public static class VersionChecker
         try
         {
             if (isGithub)
-                GetLatestVersionAndDownloadUrlFromGithub(out downloadUrl, out latestVersion, out sha256, strings[0], strings[1], currentVersion: localVersion);
+            {
+                var result = await GetLatestVersionAndDownloadUrlFromGithubAsync(strings[0], strings[1], false, "", localVersion).ConfigureAwait(false);
+                downloadUrl = result.url;
+                latestVersion = result.latestVersion;
+                sha256 = result.sha256;
+            }
             else
                 GetDownloadUrlFromMirror(localVersion, GetResourceID(), CDK(), out downloadUrl, out latestVersion, out sha256, out isFull, currentVersion: localVersion);
         }
@@ -1031,9 +1045,13 @@ public static class VersionChecker
             string downloadUrl, latestVersion, sha256;
             try
             {
-
                 if (isGithub)
-                    GetLatestVersionAndDownloadUrlFromGithub(out downloadUrl, out latestVersion, out sha256);
+                {
+                    var result = await GetLatestVersionAndDownloadUrlFromGithubAsync().ConfigureAwait(false);
+                    downloadUrl = result.url;
+                    latestVersion = result.latestVersion;
+                    sha256 = result.sha256;
+                }
                 else
                     GetDownloadUrlFromMirror(GetLocalVersion(), "MFAAvalonia", CDK(), out downloadUrl, out latestVersion, out sha256, out _, isUI: true);
             }
@@ -1053,7 +1071,11 @@ public static class VersionChecker
             {
                 latestVersion = GetMaxVersion();
                 if (isGithub)
-                    GetLatestVersionAndDownloadUrlFromGithub(out downloadUrl, out _, out sha256, targetVersion: latestVersion);
+                {
+                    var result = await GetLatestVersionAndDownloadUrlFromGithubAsync(targetVersion: latestVersion).ConfigureAwait(false);
+                    downloadUrl = result.url;
+                    sha256 = result.sha256;
+                }
                 else
                 {
                     mirrocS = true;
@@ -1583,9 +1605,7 @@ public static class VersionChecker
     }
 
 
-    public static void GetLatestVersionAndDownloadUrlFromGithub(out string url,
-        out string latestVersion,
-        out string sha256,
+    public static async Task<(string url, string latestVersion, string sha256)> GetLatestVersionAndDownloadUrlFromGithubAsync(
         string owner = "SweetSmellFox",
         string repo = "MFAAvalonia",
         bool onlyCheck = false,
@@ -1595,11 +1615,11 @@ public static class VersionChecker
         var versionType = repo.Equals("MFAAvalonia", StringComparison.OrdinalIgnoreCase)
             ? Instances.VersionUpdateSettingsUserControlModel.UIUpdateChannelIndex.ToVersionType()
             : Instances.VersionUpdateSettingsUserControlModel.ResourceUpdateChannelIndex.ToVersionType();
-        url = string.Empty;
-        latestVersion = string.Empty;
-        sha256 = string.Empty;
+        string url = string.Empty;
+        string latestVersion = string.Empty;
+        string sha256 = string.Empty;
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repo))
-            return;
+            return (url, latestVersion, sha256);
 
         var releaseUrl = $"https://api.github.com/repos/{owner}/{repo}/releases";
         int page = 1;
@@ -1625,12 +1645,10 @@ public static class VersionChecker
             var urlWithParams = $"{releaseUrl}?per_page={perPage}&page={page}";
             try
             {
-                var response = httpClient.GetAsync(urlWithParams).Result;
+                var response = await httpClient.GetAsync(urlWithParams).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
-                    var read = response.Content.ReadAsStringAsync();
-                    read.Wait();
-                    string json = read.Result;
+                    string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     var tags = JArray.Parse(json);
                     if (tags.Count == 0)
                     {
@@ -1673,8 +1691,8 @@ public static class VersionChecker
                                 if (!onlyCheck && repo != "MFAAvalonia")
                                     SaveChangelog(tag, "body");
                             }
-                            GetDownloadUrlFromGitHubRelease(latestVersion, owner, repo, out url, out sha256);
-                            return;
+                            (url, sha256) = await GetDownloadUrlFromGitHubReleaseAsync(latestVersion, owner, repo).ConfigureAwait(false);
+                            return (url, latestVersion, sha256);
                         }
 
                         // 比较版本，找到符合条件的最新版本
@@ -1688,7 +1706,7 @@ public static class VersionChecker
                         }
                     }
                 }
-                else if (response.StatusCode == HttpStatusCode.Forbidden && response.ReasonPhrase.Contains("403"))
+                else if (response.StatusCode == HttpStatusCode.Forbidden && response.ReasonPhrase?.Contains("403") == true)
                 {
                     LoggerHelper.Error("GitHub API速率限制已超出，请稍后再试。");
                     throw new Exception("GitHub API速率限制已超出，请稍后再试。");
@@ -1699,7 +1717,7 @@ public static class VersionChecker
                     throw new Exception($"请求GitHub时发生错误: {response.StatusCode} - {response.ReasonPhrase}");
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OperationCanceledException)
             {
                 LoggerHelper.Error($"处理GitHub响应时发生错误: {e.Message}");
                 throw new Exception($"处理GitHub响应时发生错误: {e.Message}");
@@ -1718,8 +1736,9 @@ public static class VersionChecker
                 if (!onlyCheck && repo != "MFAAvalonia")
                     SaveChangelog(bestRelease, "body");
             }
-            GetDownloadUrlFromGitHubRelease(latestVersion, owner, repo, out url, out sha256);
+            (url, sha256) = await GetDownloadUrlFromGitHubReleaseAsync(latestVersion, owner, repo).ConfigureAwait(false);
         }
+        return (url, latestVersion, sha256);
     }
 
     private static string ExtractSha256FromDigest(string? digest)
@@ -1901,10 +1920,10 @@ public static class VersionChecker
         return $@"\b{osOrFamily}-{arch}\b";
     }
 
-    private static void GetDownloadUrlFromGitHubRelease(string version, string owner, string repo, out string downloadUrl, out string sha256)
+    private static async Task<(string downloadUrl, string sha256)> GetDownloadUrlFromGitHubReleaseAsync(string version, string owner, string repo)
     {
-        downloadUrl = string.Empty;
-        sha256 = string.Empty;
+        string downloadUrl = string.Empty;
+        string sha256 = string.Empty;
         // 获取系统信息（具体系统 + 家族）
         var (osPlatform, osFamily) = GetNormalizedOSInfo();
         var cpuArch = GetNormalizedArchitecture();
@@ -1924,10 +1943,10 @@ public static class VersionChecker
 
         try
         {
-            var response = httpClient.GetAsync(releaseUrl).Result;
+            var response = await httpClient.GetAsync(releaseUrl).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                var jsonResponse = response.Content.ReadAsStringAsync().Result;
+                var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var releaseData = JObject.Parse(jsonResponse);
 
                 if (releaseData["assets"] is JArray { Count: > 0 } assets)
@@ -1961,11 +1980,12 @@ public static class VersionChecker
                 throw new Exception($"{response.StatusCode} - {response.ReasonPhrase}");
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not OperationCanceledException)
         {
             LoggerHelper.Error($"处理GitHub响应时发生错误: {e.Message}");
             throw;
         }
+        return (downloadUrl, sha256);
     }
 
 
@@ -2171,6 +2191,7 @@ public static class VersionChecker
     {
         return MaaProcessor.Interface?.MFAMaxVersion ?? string.Empty;
     }
+
     private static string GetMinVersion()
     {
         return MaaProcessor.Interface?.MFAMinVersion ?? string.Empty;
@@ -2388,12 +2409,14 @@ public static class VersionChecker
     {
         return Instances.VersionUpdateSettingsUserControlModel.CdkPassword;
     }
+
     private static void SetText(TextBlock? block, string text)
     {
         if (block == null)
             return;
         DispatcherHelper.PostOnMainThread(() => block.Text = text);
     }
+
     private static void SetProgress(ProgressBar? bar, double percentage)
     {
         if (bar == null)
@@ -2486,13 +2509,63 @@ public static class VersionChecker
     public static HttpClient CreateHttpClientWithProxy()
     {
         bool disableSSL = File.Exists(Path.Combine(AppContext.BaseDirectory, "NO_SSL"));
-        LoggerHelper.Info($"SSL验证状态: {(disableSSL ? "已禁用" : "已启用")}");
 
         var _proxyAddress = Instances.VersionUpdateSettingsUserControlModel.ProxyAddress;
         NetworkCredential? credentials = null;
 
+        // 创建带有 SSL 处理的 HttpClientHandler
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (sender, cert, chain, errors) =>
+            {
+                // 如果禁用 SSL 验证，直接放行
+                if (disableSSL)
+                {
+                    return true;
+                }
+
+                // 只在有错误时记录详细信息，避免日志冗余
+                if (errors != SslPolicyErrors.None)
+                {
+                    LoggerHelper.Warning($"证书验证警告: {cert?.Subject ?? "null"}");
+                    LoggerHelper.Warning($"证书错误类型: {errors}");
+
+                    if (chain != null)
+                    {
+                        foreach (var status in chain.ChainStatus)
+                        {
+                            LoggerHelper.Warning($"证书链状态: {status.Status}, {status.StatusInformation}");
+                        }
+                    }
+                }
+
+                if (errors == SslPolicyErrors.RemoteCertificateChainErrors)
+                {
+                    bool onlyTimeError = (chain?.ChainStatus ?? []).All(s =>
+                        s.Status == X509ChainStatusFlags.NotTimeValid || s.Status == X509ChainStatusFlags.NoError);
+
+                    if (onlyTimeError)
+                    {
+                        LoggerHelper.Warning("证书时间无效，但已放行");
+                        return true;
+                    }
+                }
+
+                return errors == SslPolicyErrors.None;
+            },
+            UseCookies = false,
+            SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13
+        };
+
+        // 如果没有代理地址，直接返回带SSL 处理的 HttpClient
         if (string.IsNullOrWhiteSpace(_proxyAddress))
-            return new HttpClient();
+        {
+            return new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromSeconds(60),
+                DefaultRequestVersion = HttpVersion.Version11
+            };
+        }
 
         try
         {
@@ -2500,7 +2573,6 @@ public static class VersionChecker
             string endpointPart;
             if (userHostParts.Length == 2)
             {
-
                 var credentialsPart = userHostParts[0];
                 endpointPart = userHostParts[1];
                 var creds = credentialsPart.Split(':');
@@ -2520,40 +2592,6 @@ public static class VersionChecker
             if (hostParts.Length != 2)
                 throw new FormatException("主机部分格式错误，应为 '<host>:<port>'");
 
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (sender, cert, chain, errors) =>
-                {
-                    LoggerHelper.Info($"证书验证: {cert?.Subject ?? "null"}");
-                    LoggerHelper.Info($"证书错误类型: {errors}");
-
-                    if (chain != null)
-                    {
-                        foreach (var status in chain.ChainStatus)
-                        {
-                            LoggerHelper.Info($"证书链状态: {status.Status}, {status.StatusInformation}");
-                        }
-                    }
-
-                    if (errors == SslPolicyErrors.RemoteCertificateChainErrors)
-                    {
-                        bool onlyTimeError = (chain?.ChainStatus ?? []).All(s =>
-                            s.Status == X509ChainStatusFlags.NotTimeValid || s.Status == X509ChainStatusFlags.NoError);
-
-                        if (onlyTimeError)
-                        {
-                            LoggerHelper.Warning("证书时间无效，但已放行");
-                            return true;
-                        }
-                    }
-
-                    return errors == SslPolicyErrors.None;
-                },
-                UseCookies = false,
-                // 临时增加对低版本协议的支持（仅用于测试）
-                SslProtocols = SslProtocols.None
-            };
-
             switch (Instances.VersionUpdateSettingsUserControlModel.ProxyType)
             {
                 case VersionUpdateSettingsUserControlModel.UpdateProxyType.Socks5:
@@ -2561,7 +2599,7 @@ public static class VersionChecker
                     handler.UseProxy = true;
                     return new HttpClient(handler)
                     {
-                        Timeout = TimeSpan.FromSeconds(30),
+                        Timeout = TimeSpan.FromSeconds(60),
                         DefaultRequestVersion = HttpVersion.Version11
                     };
                 default:
@@ -2569,7 +2607,7 @@ public static class VersionChecker
                     handler.UseProxy = true;
                     return new HttpClient(handler)
                     {
-                        Timeout = TimeSpan.FromSeconds(30),
+                        Timeout = TimeSpan.FromSeconds(60),
                         DefaultRequestVersion = HttpVersion.Version11
                     };
             }
@@ -2577,9 +2615,16 @@ public static class VersionChecker
         catch (Exception ex)
         {
             LoggerHelper.Error($"代理初始化失败: {ex.Message}");
-            return new HttpClient();
+            return new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromSeconds(60),
+                DefaultRequestVersion = HttpVersion.Version11
+            };
         }
+
     }
+
+
     /// <summary>
     /// 从URL中提取文件扩展名
     /// </summary>
@@ -2600,6 +2645,7 @@ public static class VersionChecker
             return string.Empty;
         }
     }
+
     /// <summary>
     /// 从Content-Disposition头解析文件名（可选增强）
     /// </summary>

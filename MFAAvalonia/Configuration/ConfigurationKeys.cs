@@ -19,6 +19,7 @@ public static class ConfigurationKeys
 
     public const string EnableEdit = "EnableEdit";
     public const string TaskItems = "TaskItems";
+    public const string ResourceOptionItems = "ResourceOptionItems";
 
     #endregion
 
@@ -42,10 +43,11 @@ public static class ConfigurationKeys
 
     #endregion
 
-    #region 连接设置
-
-    public const string RememberAdb = "RememberAdb";
-    public const string AdbControlScreenCapType = "AdbControlScreenCapType";
+        #region 连接设置
+    
+        public const string RememberAdb = "RememberAdb";
+        public const string UseFingerprintMatching = "UseFingerprintMatching";
+        public const string AdbControlScreenCapType = "AdbControlScreenCapType";
     public const string AdbControlInputType = "AdbControlInputType";
     public const string Win32ControlScreenCapType = "Win32ControlScreenCapType";
     public const string Win32ControlMouseType = "Win32ControlMouseType";
@@ -53,6 +55,7 @@ public static class ConfigurationKeys
     public const string AllowAdbRestart = "AllowAdbRestart";
     public const string AllowAdbHardRestart = "AllowAdbHardRestart";
     public const string RetryOnDisconnected = "RetryOnDisconnected";
+    public const string AutoDetectOnConnectionFailed = "AutoDetectOnConnectionFailed";
     public const string AdbDevice = "AdbDevice";
     public const string CurrentController = "CurrentController";
 

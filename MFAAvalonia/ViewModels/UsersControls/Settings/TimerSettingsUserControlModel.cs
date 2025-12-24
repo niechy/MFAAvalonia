@@ -32,7 +32,7 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
 
     public partial class TimerModel
     {
-        public partial class TimerProperties : ObservableObject
+        public partial class TimerProperties : ViewModelBase
         {
             public TimerProperties(int timeId, bool isOn, string time, string? timerConfig, string? scheduleConfig)
             {
@@ -48,7 +48,7 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
                 {
                     _timerConfig = timerConfig;
                 }
-                _scheduleConfig = new TimerScheduleConfig(scheduleConfig ?? string.Empty);
+                ScheduleConfig = new TimerScheduleConfig(scheduleConfig ?? string.Empty);
                 LanguageHelper.LanguageChanged += OnLanguageChanged;
             }
 
@@ -117,8 +117,10 @@ public partial class TimerSettingsUserControlModel : ViewModelBase
                 get => _scheduleConfig;
                 set
                 {
-                    SetProperty(ref _scheduleConfig, value);
-                    GlobalConfiguration.SetTimerSchedule(TimerId, _scheduleConfig.Serialize());
+                    // 不使用 SetProperty 的返回值判断，因为 SchedulePicker 会修改同一个对象的内部属性
+                    // 然后重新设置相同的对象引用，此时需要确保配置被保存
+                    SetNewProperty(ref _scheduleConfig, value);
+                    GlobalConfiguration.SetTimerSchedule(TimerId, _scheduleConfig?.Serialize() ?? string.Empty);
                     OnPropertyChanged(nameof(ScheduleDisplayText));
                 }
             }

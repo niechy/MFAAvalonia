@@ -74,6 +74,21 @@
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
+                    <DockPanel IsVisible="{Binding RememberAdb}">
+                        <ToggleSwitch
+                            Classes="Switch"
+                            DockPanel.Dock="Right"
+                            IsChecked="{Binding UseFingerprintMatching}"
+                            IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                            VerticalAlignment="Top" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Text="{markup:I18n {x:Static helper:LangKeys.UseFingerprintMatching}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
                     <DockPanel>
                         <ToggleSwitch
                             Classes="Switch"
@@ -116,6 +131,21 @@
                                 FontSize="16"
                                 FontWeight="SemiBold"
                                 Text="{markup:I18n {x:Static helper:LangKeys.AllowAdbHardRestart}}"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel>
+                        <ToggleSwitch
+                            Classes="Switch"
+                            DockPanel.Dock="Right"
+                            IsChecked="{Binding AutoDetectOnConnectionFailed}"
+                            IsEnabled="{Binding Idle, Source={x:Static helper:Instances.RootViewModel}}"
+                            VerticalAlignment="Top" />
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Text="{markup:I18n {x:Static helper:LangKeys.AutoDetectOnConnectionFailed}}"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>

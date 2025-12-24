@@ -17,6 +17,13 @@ public partial class ConnectSettingsUserControlModel : ViewModelBase
         ConfigurationManager.Current.SetValue(ConfigurationKeys.RememberAdb, value);
     }
 
+    [ObservableProperty] private bool _useFingerprintMatching = ConfigurationManager.Current.GetValue(ConfigurationKeys.UseFingerprintMatching, true);
+
+    partial void OnUseFingerprintMatchingChanged(bool value)
+    {
+        ConfigurationManager.Current.SetValue(ConfigurationKeys.UseFingerprintMatching, value);
+    }
+
     public static ObservableCollection<LocalizationViewModel> AdbControlScreenCapTypes =>
     [
         new("Default")
@@ -119,4 +126,8 @@ public partial class ConnectSettingsUserControlModel : ViewModelBase
     [ObservableProperty] private bool _allowAdbHardRestart = ConfigurationManager.Current.GetValue(ConfigurationKeys.AllowAdbHardRestart, true);
 
     partial void OnAllowAdbHardRestartChanged(bool value) => HandlePropertyChanged(ConfigurationKeys.AllowAdbHardRestart, value);
+
+    [ObservableProperty] private bool _autoDetectOnConnectionFailed = ConfigurationManager.Current.GetValue(ConfigurationKeys.AutoDetectOnConnectionFailed, true);
+
+    partial void OnAutoDetectOnConnectionFailedChanged(bool value) => HandlePropertyChanged(ConfigurationKeys.AutoDetectOnConnectionFailed, value);
 }

@@ -90,6 +90,4 @@ public static class GlobalConfiguration
     {
         SetValue($"Timer.Timer{i + 1}.Schedule", value);
     }
-
-
 }

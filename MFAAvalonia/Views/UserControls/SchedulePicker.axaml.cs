@@ -195,10 +195,13 @@ public class SchedulePicker : TemplatedControl
 
     private void OnScheduleChanged()
     {
-        // 触发属性变更通知
+        // 触发属性变更通知，强制更新绑定
+        // 由于设置同一个对象引用时，Avalonia 绑定系统不会检测到变化
+        // 需要先清除值再重新设置，以强制触发双向绑定更新 ViewModel
         var config = ScheduleConfig;
         if (config != null)
         {
+            ClearValue(ScheduleConfigProperty);
             SetValue(ScheduleConfigProperty, config);
         }
     }
